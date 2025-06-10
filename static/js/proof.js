@@ -1,3 +1,5 @@
+// /static/js/proof.js
+
 // **************
 // DISPLAY CONFIG
 // **************
@@ -74,6 +76,13 @@ function buildProof(proofAsJson, $container) {
         createOption($container, 'autoReverse', 'Auto-reverse','auto-reverse-dialog', function () {
             switchOffOption($container,'proofTransformation');
         }, autoReverseContainer);
+    }
+
+    if (options.intuitionisticMode) {
+        createOption($container, 'intuitionisticMode', 'Intuitionistic mode','intuitionistic-mode-dialog', function () {
+            // FIXME: Switch off the other options maybe?
+            // switchOffOption($container,'proofTransformation');
+        }, toggleIntuitionisticMode);
     }
 
     if (options.cutMode) {
@@ -859,6 +868,22 @@ function autoReverseSequent($sequentTable) {
         error: onAjaxError
     });
 }
+
+// FIXME: New option, for intuitionistic linear logic 
+// 
+// *******************
+// INTUITIONISTIC MODE
+// *******************
+
+function toggleIntuitionisticMode($container, intuitionisticMode) {
+    if (intuitionisticMode) {
+        // FIXME: Do something here
+        console.log("ILL slider stub toggled");
+        //let $mainSequentTable = $container.find('table').last();
+        //autoReverseSequentPremises($mainSequentTable);
+    }
+}
+
 
 // ********
 // CUT MODE

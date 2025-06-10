@@ -1,3 +1,5 @@
+// /static/js/app.js
+
 $( function() {
     $('form').each(function (i, item) {
         $(item).on('submit', function(e) {
@@ -93,7 +95,9 @@ function initMainProof(proofAsJson) {
         }
     }
 
-    for (let option of ['autoReverse', 'cutMode', 'proofTransformation']) {
+    // TODO: Check for problems
+    // I've added 'intuitionisticMode' here
+    for (let option of ['autoReverse', 'intuitionisticMode', 'cutMode', 'proofTransformation']) {
         if (getQueryParamInUrl(option) !== '0') {
             options[option] = {
                 value: getQueryParamInUrl(option) === '1',
