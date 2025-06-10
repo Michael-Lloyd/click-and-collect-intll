@@ -218,11 +218,17 @@ function applyRule(ruleRequest, $sequentTable) {
 
     let notations = getNotations($container);
 
+    // FIXME: Make sure this works properly 
+    // NEW: Gather intuitionisticMode value
+    let intuitionisticMode = options.intuitionisticMode?.value || false;
+
     $.ajax({
         type: 'POST',
         url: '/apply_rule',
         contentType:'application/json; charset=utf-8',
-        data: compressJson(JSON.stringify({ ruleRequest, sequent, notations })),
+        data: compressJson(JSON.stringify({ 
+            ruleRequest, sequent, notations, intuitionisticMode 
+        })),
         success: function(data)
         {
             if (data.success === true) {
@@ -869,21 +875,30 @@ function autoReverseSequent($sequentTable) {
     });
 }
 
-// FIXME: New option, for intuitionistic linear logic 
+// FIXME: Check that this works as intended 
 // 
 // *******************
 // INTUITIONISTIC MODE
 // *******************
 
 function toggleIntuitionisticMode($container, intuitionisticMode) {
-    if (intuitionisticMode) {
-        // FIXME: Do something here
-        console.log("ILL slider stub toggled");
-        //let $mainSequentTable = $container.find('table').last();
-        //autoReverseSequentPremises($mainSequentTable);
-    }
-}
+    let options = $container.data('options');
+    let $divProof = $container.children('div.proof');
 
+    if (intuitionisticMode) {
+        $divProof.addClass('intuitionistic-mode');
+    } else {
+        $divProof.removeClass('intuitionistic-mode');
+    }
+
+    // Re-initialize the proof with the updated mode
+    // This causes the proof to be re-rendered with the new mode
+    let proof = getProofAsJson($container);
+    let $mainSequentTable = $container.find('table').last();
+    let $sequentContainer = removeSequentTable($mainSequentTable);
+
+    createSubProof(proof, $sequentContainer, options);
+}
 
 // ********
 // CUT MODE

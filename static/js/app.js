@@ -68,9 +68,13 @@ function submitSequent(element, autoSubmit = false) {
 }
 
 function parseSequentAsString(sequentAsString, $container) {
+
+    // FIXME: Ensure this works correctly 
+    let options = $container.data('options') || {};
+    let intuitionisticMode = options.intuitionisticMode?.value ? '1' : '0';
     $.ajax({
         type: 'GET',
-        url: `/parse_sequent/${urlEncode(sequentAsString)}`,
+        url: `/parse_sequent/${urlEncode(sequentAsString)}?intuitionisticMode=${intuitionisticMode}`,
         success: function(data)
         {
             if (data['is_valid']) {
