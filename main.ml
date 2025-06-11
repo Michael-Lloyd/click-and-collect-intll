@@ -65,11 +65,25 @@ let index_handler _request =
     Response.of_file "./index.html" ~mime:"text/html; charset=utf-8";;
 
 (* Parse a sequent from URL parameter and return proof structure
-   GET /parse_sequent/:sequent_as_string
+   GET /parse_sequent/:sequent_as_string?intuitionisticMode=0|1
    Example: /parse_sequent/A,A^ will parse "A,A^" as a sequent
+   Routes to ILL or LL parser based on intuitionisticMode parameter
 *)
 let parse_sequent_handler req =
-    common_get_handler Parse_sequent.safe_parse "sequent_as_string" req ;;
+    (* Extract intuitionistic mode from query parameters *)
+    let intuitionistic_mode = 
+        try 
+            match Request.query "intuitionisticMode" req with
+            | Some value -> bool_from_string value
+            | None -> false
+        with _ -> false
+    in
+    if intuitionistic_mode then
+        (* Route to ILL parser *)
+        common_get_handler Ill_parse_sequent.safe_parse "sequent_as_string" req
+    else
+        (* Standard Linear Logic parser *)
+        common_get_handler Parse_sequent.safe_parse "sequent_as_string" req ;;
 
 (* Parse empty sequent (for initialization)
    GET /parse_sequent/
@@ -97,26 +111,67 @@ let is_valid_litt_handler req =
 let is_sequent_provable_handler req =
     json_handler Is_sequent_provable.is_sequent_provable req
 
+(* Helper function to detect intuitionistic mode from JSON request body *)
+let get_intuitionistic_mode_from_json request_json =
+    try 
+        let mode_json = Request_utils.get_key request_json "intuitionisticMode" in
+        match mode_json with 
+        | `String s -> bool_from_string s
+        | `Bool b -> b
+        | _ -> false
+    with _ -> false
+
 (* Apply a single inference rule to a sequent
    POST /apply_rule  
    Body: JSON with rule application request
+   Routes to ILL or LL rule application based on mode in request
 *)
 let apply_rule_handler req =
-    json_handler Apply_rule.apply_rule req
+    (* Create a custom handler that checks intuitionistic mode *)
+    let routing_handler request_json =
+        let intuitionistic_mode = get_intuitionistic_mode_from_json request_json in
+        if intuitionistic_mode then
+            (* Route to ILL rule application *)
+            Ill_apply_rule.apply_rule request_json
+        else
+            (* Standard Linear Logic rule application *)
+            Apply_rule.apply_rule request_json
+    in
+    json_handler routing_handler req
 
 (* Apply reversible rules automatically to simplify sequent
    POST /auto_reverse_sequent
    Body: JSON with sequent data
+   Routes to ILL or LL auto-reverse based on mode in request
 *)
 let auto_reverse_handler req =
-    json_handler Auto_reverse_sequent.auto_reverse_sequent req
+    let routing_handler request_json =
+        let intuitionistic_mode = get_intuitionistic_mode_from_json request_json in
+        if intuitionistic_mode then
+            (* Route to ILL auto-reverse *)
+            Ill_auto_reverse_sequent.auto_reverse_sequent request_json
+        else
+            (* Standard Linear Logic auto-reverse *)
+            Auto_reverse_sequent.auto_reverse_sequent request_json
+    in
+    json_handler routing_handler req
 
 (* Attempt to automatically prove a sequent
    POST /auto_prove_sequent
    Body: JSON with sequent data
+   Routes to ILL or LL auto-prover based on mode in request
 *)
 let auto_prove_handler req =
-    json_handler Auto_prove_sequent.auto_prove_sequent req
+    let routing_handler request_json =
+        let intuitionistic_mode = get_intuitionistic_mode_from_json request_json in
+        if intuitionistic_mode then
+            (* Route to ILL auto-prover *)
+            Ill_auto_prove_sequent.auto_prove_sequent request_json
+        else
+            (* Standard Linear Logic auto-prover *)
+            Auto_prove_sequent.auto_prove_sequent request_json
+    in
+    json_handler routing_handler req
 
 (* Compress a proof for efficient storage/transmission
    POST /compress_proof
