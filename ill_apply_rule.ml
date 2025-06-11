@@ -22,6 +22,97 @@ open Ill_rule_request
 (* Exception for rule application errors *)
 exception ILL_Rule_Application_Exception of bool * string;;
 
+(* ILL CONSTRAINT VALIDATION AND PARSING *)
+
+(* Convert raw sequent (from JSON) to ILL sequent format.
+   @param raw_seq - Raw sequent from JSON parsing
+   @return ill_sequent - Converted ILL sequent
+   @raises ILL_Rule_Application_Exception for invalid ILL sequent
+*)
+let rec convert_raw_sequent_to_ill raw_seq =
+    try
+        (* Convert raw formulas to ILL formulas *)
+        let context_formulas = List.map convert_raw_formula_to_ill raw_seq.Raw_sequent.hyp in
+        let conclusion_formulas = List.map convert_raw_formula_to_ill raw_seq.Raw_sequent.cons in
+        
+        (* ILL requires exactly one conclusion *)
+        match conclusion_formulas with
+        | [] ->
+            raise (ILL_Rule_Application_Exception (true, "ILL sequent must have exactly one conclusion"))
+        | [goal] ->
+            { context = context_formulas; goal = goal }
+        | _ ->
+            raise (ILL_Rule_Application_Exception (true, "ILL sequent can have only one conclusion formula"))
+    with
+    | ILL_Rule_Application_Exception (_, _) as e -> raise e
+    | _ -> raise (ILL_Rule_Application_Exception (false, "Failed to convert raw sequent to ILL"))
+
+(* Convert raw formula to ILL formula.
+   @param raw_formula - Raw formula from JSON
+   @return formula - ILL formula
+   @raises ILL_Rule_Application_Exception for non-ILL connectives
+*)
+and convert_raw_formula_to_ill = function
+    | Raw_sequent.One -> One
+    | Raw_sequent.Top -> Top
+    | Raw_sequent.Litt s -> Litt s
+    | Raw_sequent.Tensor (f1, f2) -> 
+        Tensor (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
+    | Raw_sequent.Plus (f1, f2) -> 
+        Plus (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
+    | Raw_sequent.Lollipop (f1, f2) ->
+        Lollipop (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
+    
+    (* Invalid connectives for ILL *)
+    | Raw_sequent.Bottom -> 
+        raise (ILL_Rule_Application_Exception (true, "⊥ (bottom) is not allowed in ILL"))
+    | Raw_sequent.Zero -> 
+        raise (ILL_Rule_Application_Exception (true, "0 (zero) is not allowed in ILL"))
+    | Raw_sequent.Dual _ -> 
+        raise (ILL_Rule_Application_Exception (true, "^ (dual) is not allowed in ILL"))
+    | Raw_sequent.Par (_, _) -> 
+        raise (ILL_Rule_Application_Exception (true, "⅋ (par) is not allowed in ILL"))
+    | Raw_sequent.With (_, _) -> 
+        raise (ILL_Rule_Application_Exception (true, "& (with) is not allowed in ILL"))
+    | Raw_sequent.Ofcourse _ -> 
+        raise (ILL_Rule_Application_Exception (true, "! (of course) is not allowed in ILL"))
+    | Raw_sequent.Whynot _ -> 
+        raise (ILL_Rule_Application_Exception (true, "? (why not) is not allowed in ILL"))
+
+(* Validate that an ILL sequent satisfies all ILL constraints.
+   @param ill_seq - ILL sequent to validate
+   @raises ILL_Rule_Application_Exception for constraint violations
+*)
+and validate_ill_sequent_constraints ill_seq =
+    (* ILL constraint: exactly one formula on the right-hand side *)
+    validate_single_conclusion ill_seq;
+    
+    (* Validate that all formulas use only ILL connectives *)
+    validate_ill_formulas_only ill_seq
+
+(* Validate that sequent has exactly one conclusion (ILL constraint).
+   @param ill_seq - ILL sequent to validate
+   @raises ILL_Rule_Application_Exception if multiple conclusions
+*)
+and validate_single_conclusion _ill_seq =
+    (* In our ILL sequent structure, we already enforce single conclusion by design *)
+    (* The goal field contains exactly one formula *)
+    ()
+
+(* Validate that sequent uses only ILL connectives.
+   @param ill_seq - ILL sequent to validate
+   @raises ILL_Rule_Application_Exception for non-ILL connectives
+*)
+and validate_ill_formulas_only ill_seq =
+    let rec validate_formula = function
+        | One | Top | Litt _ -> ()
+        | Tensor (f1, f2) | Plus (f1, f2) | Lollipop (f1, f2) ->
+            validate_formula f1;
+            validate_formula f2
+    in
+    List.iter validate_formula ill_seq.context;
+    validate_formula ill_seq.goal
+
 (* RULE APPLICATION CORE *)
 
 (* Apply an ILL rule to a sequent with full error handling.
@@ -30,22 +121,25 @@ exception ILL_Rule_Application_Exception of bool * string;;
    @return ill_proof - New proof tree with rule applied
    @raises ILL_Rule_Application_Exception for invalid applications
 *)
-let rec apply_rule_with_exceptions request_as_json =
+and apply_rule_with_exceptions request_as_json =
     try
         (* Extract rule request from JSON *)
         let rule_request_json = Request_utils.get_key request_as_json "ruleRequest" in
         let rule_request = from_json rule_request_json in
         
-        (* Extract sequent with notations *)
-        let _sequent_json = Request_utils.get_key request_as_json "sequent" in
-        (* TODO: Parse sequent from JSON properly *)
-        let stub_sequent = { context = [Litt "A"]; goal = Litt "A" } in
+        (* Extract sequent from JSON and parse it using existing infrastructure *)
+        let sequent_json = Request_utils.get_key request_as_json "sequent" in
+        let raw_sequent = Raw_sequent.from_json sequent_json in
+        let ill_sequent = convert_raw_sequent_to_ill raw_sequent in
+        
+        (* Validate ILL constraints *)
+        validate_ill_sequent_constraints ill_sequent;
         
         (* Extract notations (if any) *)
-        let notations = [] in  (* TODO: Parse notations *)
+        let notations = [] in  (* TODO: Parse notations properly *)
         
         (* Apply the rule *)
-        apply_ill_rule_internal rule_request stub_sequent notations
+        apply_ill_rule_internal rule_request ill_sequent notations
         
     with
     | Request_utils.Bad_request_exception msg -> 
@@ -95,6 +189,9 @@ and apply_ill_rule_internal rule_req ill_seq _notations =
    @return ill_proof - Axiom proof
 *)
 and apply_axiom_rule ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
     match ill_seq.context, ill_seq.goal with
     | [Litt a], Litt b when a = b ->
         ILL_Axiom_proof a
@@ -106,6 +203,9 @@ and apply_axiom_rule ill_seq =
    @return ill_proof - One proof
 *)
 and apply_one_rule ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
     match ill_seq.context, ill_seq.goal with
     | [], One ->
         ILL_One_proof
@@ -117,6 +217,9 @@ and apply_one_rule ill_seq =
    @return ill_proof - Top proof
 *)
 and apply_top_rule ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
     match ill_seq.goal with
     | Top ->
         ILL_Top_proof ill_seq.context
@@ -129,12 +232,20 @@ and apply_top_rule ill_seq =
    @return ill_proof - Tensor proof with two premises
 *)
 and apply_tensor_rule _rule_req ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
     match ill_seq.goal with
     | Tensor (a, b) ->
         (* Split context between the two premises *)
         let ctx1, ctx2 = Ill_rule_request.split_context_simple ill_seq.context in
         let premise1 = { context = ctx1; goal = a } in
         let premise2 = { context = ctx2; goal = b } in
+        
+        (* Validate that both premises maintain ILL constraints *)
+        validate_ill_sequent_constraints premise1;
+        validate_ill_sequent_constraints premise2;
+        
         let subproof1 = ILL_Hypothesis_proof premise1 in
         let subproof2 = ILL_Hypothesis_proof premise2 in
         ILL_Tensor_proof (ill_seq.context, a, b, subproof1, subproof2)
@@ -146,12 +257,19 @@ and apply_tensor_rule _rule_req ill_seq =
    @return ill_proof - Tensor left proof
 *)
 and apply_tensor_left_rule ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
     (* Find first tensor in context and expand it *)
     let rec find_and_expand_tensor acc = function
         | [] -> raise (ILL_Rule_Application_Exception (true, "Tensor left rule requires A⊗B in context"))
         | Tensor (a, b) :: rest ->
             let new_context = acc @ [a; b] @ rest in
             let premise = { context = new_context; goal = ill_seq.goal } in
+            
+            (* Validate that premise maintains ILL constraints *)
+            validate_ill_sequent_constraints premise;
+            
             let subproof = ILL_Hypothesis_proof premise in
             ILL_Tensor_left_proof (ill_seq.context, a, b, subproof)
         | f :: rest -> find_and_expand_tensor (acc @ [f]) rest
@@ -163,9 +281,16 @@ and apply_tensor_left_rule ill_seq =
    @return ill_proof - Plus left proof
 *)
 and apply_plus_left_rule ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
     match ill_seq.goal with
     | Plus (a, b) ->
         let premise = { context = ill_seq.context; goal = a } in
+        
+        (* Validate that premise maintains ILL constraints *)
+        validate_ill_sequent_constraints premise;
+        
         let subproof = ILL_Hypothesis_proof premise in
         ILL_Plus_left_proof (ill_seq.context, a, b, subproof)
     | _ ->
@@ -176,9 +301,16 @@ and apply_plus_left_rule ill_seq =
    @return ill_proof - Plus right proof
 *)
 and apply_plus_right_rule ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
     match ill_seq.goal with
     | Plus (a, b) ->
         let premise = { context = ill_seq.context; goal = b } in
+        
+        (* Validate that premise maintains ILL constraints *)
+        validate_ill_sequent_constraints premise;
+        
         let subproof = ILL_Hypothesis_proof premise in
         ILL_Plus_right_proof (ill_seq.context, a, b, subproof)
     | _ ->
@@ -189,9 +321,16 @@ and apply_plus_right_rule ill_seq =
    @return ill_proof - Lollipop proof
 *)
 and apply_lollipop_rule ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
     match ill_seq.goal with
     | Lollipop (a, b) ->
         let premise = { context = a :: ill_seq.context; goal = b } in
+        
+        (* Validate that premise maintains ILL constraints *)
+        validate_ill_sequent_constraints premise;
+        
         let subproof = ILL_Hypothesis_proof premise in
         ILL_Lollipop_proof (ill_seq.context, a, b, subproof)
     | _ ->
@@ -202,6 +341,9 @@ and apply_lollipop_rule ill_seq =
    @return ill_proof - Lollipop left proof with two premises
 *)
 and apply_lollipop_left_rule ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
     (* Find first lollipop in context and extract it *)
     let rec find_and_extract_lollipop acc = function
         | [] -> raise (ILL_Rule_Application_Exception (true, "Lollipop left rule requires A⊸B in context"))
@@ -209,6 +351,11 @@ and apply_lollipop_left_rule ill_seq =
             let remaining_context = acc @ rest in
             let premise1 = { context = remaining_context; goal = a } in
             let premise2 = { context = b :: remaining_context; goal = ill_seq.goal } in
+            
+            (* Validate that both premises maintain ILL constraints *)
+            validate_ill_sequent_constraints premise1;
+            validate_ill_sequent_constraints premise2;
+            
             let subproof1 = ILL_Hypothesis_proof premise1 in
             let subproof2 = ILL_Hypothesis_proof premise2 in
             ILL_Lollipop_left_proof (ill_seq.context, a, b, subproof1, subproof2)
