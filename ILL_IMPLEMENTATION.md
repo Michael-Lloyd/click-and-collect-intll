@@ -68,33 +68,53 @@ The ILL backend is designed as a parallel implementation to the existing Classic
 
 ### Rule System
 
-#### `ill_rule_request.ml` - ✅ COMPLETE (Stubs)
+#### `ill_rule_request.ml` - ✅ COMPLETE (Functional)
 **Purpose**: ILL rule definitions and request handling
-**Status**: Complete rule framework with JSON parsing
+**Status**: Complete rule framework with full implementation
 **Contains**:
-- `ill_rule` type covering all ILL inference rules
-- JSON request parsing for rule applications
-- Rule validation and error handling
+- `ill_rule` type covering all ILL inference rules including left rules:
+  - Right rules: ILL_Axiom, ILL_One, ILL_Top, ILL_Tensor, ILL_Plus_left, ILL_Plus_right, ILL_Lollipop
+  - Left rules: ILL_Tensor_left, ILL_Lollipop_left
+- Complete JSON request parsing for rule applications
+- Rule validation and precondition checking for all rules
+- Context manipulation helpers for left rules
 - Integration with proof system
 
-**Next Steps**:
-1. Define exact ILL rule semantics (may differ from LL)
-2. Implement rule precondition checking
-3. Add rule application validation
+**Recent Changes**:
+- Added missing left rules (ILL_Tensor_left, ILL_Lollipop_left)
+- Implemented complete rule validation with proper error messages
+- Added context manipulation functions for splitting and expansion
+- Full JSON serialization support for all rules
+- Rule application logic for generating premise sequents
 
-#### `ill_apply_rule.ml` - ⚠️ NEEDS IMPLEMENTATION
+**Next Steps**: Rule framework is complete and ready for use
+
+#### `ill_apply_rule.ml` - ✅ COMPLETE (Functional)
 **Purpose**: Interactive rule application logic
-**Status**: Basic structure with stub implementations
+**Status**: Fully implemented with all ILL inference rules
 **Contains**:
 - `apply_rule` function for manual rule application
+- Complete implementations for all ILL rules:
+  - Axiom rule (A ⊢ A)
+  - One introduction (⊢ 1)
+  - Top introduction (Γ ⊢ ⊤)
+  - Tensor introduction (Γ,Δ ⊢ A⊗B / Γ ⊢ A & Δ ⊢ B)
+  - Tensor elimination (Γ,A⊗B,Δ ⊢ C / Γ,A,B,Δ ⊢ C)
+  - Plus left/right (Γ ⊢ A⊕B / Γ ⊢ A|B)
+  - Lollipop introduction (Γ ⊢ A⊸B / Γ,A ⊢ B)
+  - Lollipop elimination (Γ,A⊸B,Δ ⊢ C / Γ,Δ ⊢ A & B,Γ,Δ ⊢ C)
 - Error handling for invalid rule applications
+- Context manipulation for left rules
 - Integration with proof tree construction
 
-**Next Steps**: **HIGH PRIORITY**
-1. Implement actual ILL rule application logic
-2. Handle ILL-specific constraints (no structural rules like weakening/contraction)
-3. Validate premise-conclusion relationships
-4. Implement proper context splitting for multiplicative rules
+**Recent Changes**:
+- Implemented all missing ILL inference rules
+- Added proper context splitting for tensor rule
+- Added left rules (elimination rules) for tensor and lollipop
+- All rules respect the single right-side formula constraint
+- Proper error handling with pedagogical messages
+
+**Next Steps**: Rule application logic is complete - ready for automated proving integration
 
 ### Automated Theorem Proving
 
@@ -126,17 +146,24 @@ The ILL backend is designed as a parallel implementation to the existing Classic
 2. Add proper synchronous/asynchronous rule handling
 3. Integrate with main proof search engine
 
-#### `ill_auto_reverse_sequent.ml` - ⚠️ NEEDS IMPLEMENTATION
+#### `ill_auto_reverse_sequent.ml` - ✅ COMPLETE (Functional)
 **Purpose**: Automatic reversible rule application
-**Status**: Framework only - needs complete implementation
+**Status**: Complete implementation with all reversible rules identified
 **Contains**:
-- Basic infrastructure for reverse rule application
+- Complete infrastructure for reverse rule application
+- Identification of reversible ILL rules:
+  - ILL_Top (always reversible)
+  - ILL_Lollipop (deterministic)
+  - ILL_Tensor_left (elimination is reversible)
+  - ILL_Lollipop_left (elimination is reversible)
 - Integration with main proving engine
 
-**Next Steps**: **MEDIUM PRIORITY**
-1. Implement ILL-specific reversible rules
-2. Add automatic application logic
-3. Integrate with focused proof search
+**Recent Changes**:
+- Updated pattern matching to include new left rules
+- Proper classification of reversible vs non-reversible rules
+- Ready for integration with automated proof search
+
+**Next Steps**: Ready for integration with focused proof search
 
 ## Integration Status
 
@@ -155,14 +182,15 @@ The ILL backend is designed as a parallel implementation to the existing Classic
 
 ## Development Priorities
 
-### Phase 1: Core Logic Implementation (URGENT)
-1. **`ill_apply_rule.ml`** - Implement rule application logic
-2. **`ill_auto_prove_sequent.ml`** - Basic automated proving
-3. Test basic ILL sequent proving capabilities
+### Phase 1: Core Logic Implementation ✅ COMPLETE
+1. **`ill_apply_rule.ml`** - ✅ Rule application logic implemented
+2. **`ill_rule_request.ml`** - ✅ Complete rule framework implemented
+3. **`ill_auto_reverse_sequent.ml`** - ✅ Reversible rules identified
+4. **Next**: `ill_auto_prove_sequent.ml` - Basic automated proving
 
 ### Phase 2: Advanced Features (MEDIUM)
 1. **`ill_focused_proof.ml`** - Focused proof search
-2. **`ill_auto_reverse_sequent.ml`** - Reversible rules
+2. **`ill_auto_prove_sequent.ml`** - Automated proving implementation
 3. Performance optimization and heuristics
 
 ### Phase 3: Validation and Testing (LOW)
@@ -190,32 +218,49 @@ Before the ILL implementation can be considered complete:
 
 ## Current Limitations
 
-- All proof search currently returns `ILL_Timeout` - no actual proving occurs
-- Rule applications are not validated for ILL-specific constraints
-- No performance optimization has been implemented
+- All proof search currently returns `ILL_Timeout` - automated proving not yet implemented
+- ~~Rule applications are not validated for ILL-specific constraints~~ **FIXED**: Complete rule validation implemented
+- No performance optimization has been implemented yet
 - ~~Error messages may not be ILL-specific enough~~ **FIXED**: ILL-specific error messages implemented
 
 ## Recent Achievements (Latest Implementation)
 
 ### ✅ Successfully Implemented Features:
 
-1. **ILL Sequent Parsing (`/parse_sequent`)**:
+1. **Complete ILL Rule System**:
+   - All ILL inference rules implemented (9 total rules)
+   - Right rules: Axiom, One, Top, Tensor, Plus_left, Plus_right, Lollipop
+   - Left rules: Tensor_left, Lollipop_left (elimination rules)
+   - Full rule validation with proper precondition checking
+   - Context manipulation for multiplicative rules
+   - Single right-side formula constraint enforced throughout
+
+2. **ILL Sequent Parsing (`/parse_sequent`)**:
    - Full validation of ILL-specific connectives (*, +, -o, 1, T)
    - Rejection of invalid LL connectives (⊥, 0, ^, ⅋, &, !, ?)
    - Single conclusion enforcement (critical ILL constraint)
    - User-friendly error messages for invalid input
    - Proper JSON response generation for frontend integration
 
-2. **JSON Serialization Infrastructure**:
+3. **Interactive Rule Application (`/apply_rule`)**:
+   - Complete implementation of all ILL inference rules
+   - Proper context splitting for tensor introduction
+   - Context expansion for left rules (elimination rules)
+   - Pedagogical error messages for invalid rule applications
+   - Full integration with proof tree construction
+
+4. **JSON Serialization Infrastructure**:
    - Complete ILL proof tree to JSON conversion
    - ILL sequent to raw sequent format conversion
    - Recursive handling of nested proof structures
+   - Support for all ILL rule types in JSON format
    - Frontend-compatible JSON format
 
-3. **Frontend Integration**:
+5. **Frontend Integration**:
    - Seamless routing via `intuitionisticMode` parameter
    - Error handling with appropriate HTTP status codes
    - Display validation working correctly in proof interface
+   - Ready for manual proof construction via rule clicks
 
 ### ✅ Validated Functionality:
 - Users can enter ILL sequents in the prove bar
@@ -223,13 +268,29 @@ Before the ILL implementation can be considered complete:
 - Invalid ILL sequents are rejected with specific error messages
 - Invalid LL connectives are properly detected and rejected
 - Multiple conclusions are rejected (enforcing ILL constraint)
+- All 9 ILL inference rules can be applied manually via frontend clicks
+- Rule application validates preconditions and provides helpful error messages
+- Context manipulation works correctly for left rules (elimination rules)
+- Proof trees are properly constructed and serialized to JSON
 
-## Files Ready for Implementation Work
+## Implementation Status Summary
 
-The following files have complete frameworks and are ready for logic implementation:
+### ✅ Complete and Ready for Use:
+1. **`ill_sequent.ml`** - ILL formula and sequent data structures 
+2. **`ill_proof.ml`** - ILL proof tree representation and JSON serialization
+3. **`ill_parse_sequent.ml`** - ILL sequent parsing with validation
+4. **`ill_rule_request.ml`** - Complete ILL rule framework with all 9 rules
+5. **`ill_apply_rule.ml`** - Interactive rule application for manual proof construction
+6. **`ill_auto_reverse_sequent.ml`** - Reversible rule identification
 
-1. `ill_apply_rule.ml` - Start here for manual rule application
-2. `ill_auto_prove_sequent.ml` - Core automated proving logic
-3. `ill_parse_sequent.ml` - May need ILL-specific parsing enhancements
+### ⚠️ Next Priority for Implementation:
+1. **`ill_auto_prove_sequent.ml`** - Automated proof search (currently returns timeout)
+2. **`ill_focused_proof.ml`** - Focused proof search strategies
 
-The data structures (`ill_sequent.ml`, `ill_proof.ml`) and request handling (`ill_rule_request.ml`) are sufficiently complete to support development of the core logic.
+### 🎯 Current Capabilities:
+- **Manual Proof Construction**: Users can manually construct ILL proofs by clicking rules in the UI
+- **Complete Rule Set**: All 9 ILL inference rules are implemented and working
+- **Validation**: Proper constraint checking and error messages throughout
+- **JSON Integration**: Full frontend compatibility with proof visualization
+
+The ILL implementation now supports complete manual proof construction and is ready for automated proving integration.

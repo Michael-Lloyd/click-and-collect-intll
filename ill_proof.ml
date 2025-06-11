@@ -28,9 +28,11 @@ type ill_proof =
     | ILL_One_proof                                                       (* 1: ⊢ 1 *)
     | ILL_Top_proof of formula list                                       (* ⊤: Γ ⊢ ⊤ *)
     | ILL_Tensor_proof of formula list * formula * formula * ill_proof * ill_proof  (* ⊗: Γ,Δ ⊢ A⊗B / Γ ⊢ A & Δ ⊢ B *)
+    | ILL_Tensor_left_proof of formula list * formula * formula * ill_proof         (* ⊗L: Γ,A⊗B,Δ ⊢ C / Γ,A,B,Δ ⊢ C *)
     | ILL_Plus_left_proof of formula list * formula * formula * ill_proof          (* ⊕₁: Γ ⊢ A⊕B / Γ ⊢ A *)
     | ILL_Plus_right_proof of formula list * formula * formula * ill_proof         (* ⊕₂: Γ ⊢ A⊕B / Γ ⊢ B *)
     | ILL_Lollipop_proof of formula list * formula * formula * ill_proof           (* ⊸: Γ ⊢ A⊸B / Γ,A ⊢ B *)
+    | ILL_Lollipop_left_proof of formula list * formula * formula * ill_proof * ill_proof  (* ⊸L: Γ,A⊸B,Δ ⊢ C / Γ,Δ ⊢ A & B,Γ,Δ ⊢ C *)
     | ILL_Hypothesis_proof of ill_sequent;;                              (* open goal (leaf) *)
 
 (* Exception for invalid proof operations *)
@@ -52,12 +54,16 @@ let get_conclusion_sequent = function
         { context = context; goal = Top }
     | ILL_Tensor_proof (context, f1, f2, _, _) -> 
         { context = context; goal = Tensor (f1, f2) }
+    | ILL_Tensor_left_proof (context, _, _, _) -> 
+        { context = context; goal = Top }  (* Goal extracted from premise *)
     | ILL_Plus_left_proof (context, f1, f2, _) -> 
         { context = context; goal = Plus (f1, f2) }
     | ILL_Plus_right_proof (context, f1, f2, _) -> 
         { context = context; goal = Plus (f1, f2) }
     | ILL_Lollipop_proof (context, f1, f2, _) -> 
         { context = context; goal = Lollipop (f1, f2) }
+    | ILL_Lollipop_left_proof (context, _, _, _, _) -> 
+        { context = context; goal = Top }  (* Goal extracted from premise *)
     | ILL_Hypothesis_proof sequent -> 
         sequent
 
@@ -70,9 +76,11 @@ let get_premises = function
     | ILL_One_proof -> []
     | ILL_Top_proof _ -> []
     | ILL_Tensor_proof (_, _, _, p1, p2) -> [p1; p2]
+    | ILL_Tensor_left_proof (_, _, _, p) -> [p]
     | ILL_Plus_left_proof (_, _, _, p) -> [p]
     | ILL_Plus_right_proof (_, _, _, p) -> [p]
     | ILL_Lollipop_proof (_, _, _, p) -> [p]
+    | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> [p1; p2]
     | ILL_Hypothesis_proof _ -> []
 
 (* Replace the premises of a proof tree with new sub-proofs.
@@ -86,9 +94,11 @@ let set_premises proof new_premises = match proof, new_premises with
     | ILL_One_proof, [] -> proof
     | ILL_Top_proof _, [] -> proof
     | ILL_Tensor_proof (ctx, f1, f2, _, _), [p1; p2] -> ILL_Tensor_proof (ctx, f1, f2, p1, p2)
+    | ILL_Tensor_left_proof (ctx, f1, f2, _), [p] -> ILL_Tensor_left_proof (ctx, f1, f2, p)
     | ILL_Plus_left_proof (ctx, f1, f2, _), [p] -> ILL_Plus_left_proof (ctx, f1, f2, p)
     | ILL_Plus_right_proof (ctx, f1, f2, _), [p] -> ILL_Plus_right_proof (ctx, f1, f2, p)
     | ILL_Lollipop_proof (ctx, f1, f2, _), [p] -> ILL_Lollipop_proof (ctx, f1, f2, p)
+    | ILL_Lollipop_left_proof (ctx, f1, f2, _, _), [p1; p2] -> ILL_Lollipop_left_proof (ctx, f1, f2, p1, p2)
     | ILL_Hypothesis_proof _, [] -> proof
     | _ -> raise (ILL_Proof_Exception (false, "Invalid premise count for proof type"))
 
@@ -119,9 +129,11 @@ let rec is_complete_proof = function
     | ILL_One_proof -> true
     | ILL_Top_proof _ -> true
     | ILL_Tensor_proof (_, _, _, p1, p2) -> is_complete_proof p1 && is_complete_proof p2
+    | ILL_Tensor_left_proof (_, _, _, p) -> is_complete_proof p
     | ILL_Plus_left_proof (_, _, _, p) -> is_complete_proof p
     | ILL_Plus_right_proof (_, _, _, p) -> is_complete_proof p
     | ILL_Lollipop_proof (_, _, _, p) -> is_complete_proof p
+    | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> is_complete_proof p1 && is_complete_proof p2
 
 (* Check if a proof tree is valid (rules correctly applied).
    @param proof - ILL proof tree to validate
@@ -136,9 +148,11 @@ let rec is_valid_proof proof =
     | ILL_One_proof -> true
     | ILL_Top_proof _ -> true
     | ILL_Tensor_proof (_, _, _, p1, p2) -> is_valid_proof p1 && is_valid_proof p2
+    | ILL_Tensor_left_proof (_, _, _, p) -> is_valid_proof p
     | ILL_Plus_left_proof (_, _, _, p) -> is_valid_proof p
     | ILL_Plus_right_proof (_, _, _, p) -> is_valid_proof p
     | ILL_Lollipop_proof (_, _, _, p) -> is_valid_proof p
+    | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> is_valid_proof p1 && is_valid_proof p2
 
 (* JSON SERIALIZATION *)
 
@@ -184,9 +198,11 @@ let rec to_json proof =
             | ILL_One_proof -> "one"
             | ILL_Top_proof _ -> "top"
             | ILL_Tensor_proof _ -> "tensor"
+            | ILL_Tensor_left_proof _ -> "tensor_left"
             | ILL_Plus_left_proof _ -> "plus_left"
             | ILL_Plus_right_proof _ -> "plus_right"
             | ILL_Lollipop_proof _ -> "lollipop"
+            | ILL_Lollipop_left_proof _ -> "lollipop_left"
             | _ -> "unknown"
         in
         let rule_request_json = `Assoc [("rule", `String rule_name)] in
@@ -247,9 +263,11 @@ let rec count_inference_rules = function
     | ILL_One_proof -> 1
     | ILL_Top_proof _ -> 1
     | ILL_Tensor_proof (_, _, _, p1, p2) -> 1 + count_inference_rules p1 + count_inference_rules p2
+    | ILL_Tensor_left_proof (_, _, _, p) -> 1 + count_inference_rules p
     | ILL_Plus_left_proof (_, _, _, p) -> 1 + count_inference_rules p
     | ILL_Plus_right_proof (_, _, _, p) -> 1 + count_inference_rules p
     | ILL_Lollipop_proof (_, _, _, p) -> 1 + count_inference_rules p
+    | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> 1 + count_inference_rules p1 + count_inference_rules p2
 
 (* Count the number of open hypotheses in a proof.
    @param proof - ILL proof tree  
@@ -261,6 +279,8 @@ let rec count_open_hypotheses = function
     | ILL_One_proof -> 0
     | ILL_Top_proof _ -> 0
     | ILL_Tensor_proof (_, _, _, p1, p2) -> count_open_hypotheses p1 + count_open_hypotheses p2
+    | ILL_Tensor_left_proof (_, _, _, p) -> count_open_hypotheses p
     | ILL_Plus_left_proof (_, _, _, p) -> count_open_hypotheses p
     | ILL_Plus_right_proof (_, _, _, p) -> count_open_hypotheses p
     | ILL_Lollipop_proof (_, _, _, p) -> count_open_hypotheses p
+    | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> count_open_hypotheses p1 + count_open_hypotheses p2

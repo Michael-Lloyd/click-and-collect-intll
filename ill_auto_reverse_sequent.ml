@@ -233,6 +233,8 @@ and try_auto_reverse_subproofs proof config =
 let is_reversible_rule = function
     | ILL_Top -> true           (* Top is always reversible *)
     | ILL_Lollipop -> true      (* Lollipop is reversible *)
+    | ILL_Tensor_left -> true   (* Tensor left is reversible *)
+    | ILL_Lollipop_left -> true (* Lollipop left is reversible *)
     | ILL_Axiom -> false        (* Axiom requires specific conditions *)
     | ILL_One -> false          (* One requires empty context *)
     | ILL_Tensor -> false       (* Tensor requires context split choice *)

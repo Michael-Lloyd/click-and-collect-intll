@@ -21,16 +21,19 @@
 open Ill_sequent
 
 (* ILL inference rule types.
-   Each rule corresponds to an introduction rule for the respective connective.
+   Each rule corresponds to an introduction or elimination rule for the respective connective.
+   ILL requires both left (elimination) and right (introduction) rules.
 *)
 type ill_rule = 
     | ILL_Axiom
     | ILL_One
     | ILL_Top
     | ILL_Tensor
+    | ILL_Tensor_left
     | ILL_Plus_left
     | ILL_Plus_right
     | ILL_Lollipop
+    | ILL_Lollipop_left
 
 (* Rule request data structure.
    Contains the rule to apply and additional parameters like formula position.
@@ -78,6 +81,12 @@ let can_apply_rule rule ill_seq =
          | Tensor (_, _) -> (true, "")
          | _ -> (false, "Tensor rule requires goal A⊗B"))
     
+    | ILL_Tensor_left ->
+        (* Tensor left rule requires A⊗B in context *)
+        let has_tensor = List.exists is_tensor ill_seq.context in
+        if has_tensor then (true, "")
+        else (false, "Tensor left rule requires A⊗B in context")
+    
     | ILL_Plus_left | ILL_Plus_right ->
         (* Plus rules require goal A⊕B *)
         (match ill_seq.goal with
@@ -89,6 +98,39 @@ let can_apply_rule rule ill_seq =
         (match ill_seq.goal with
          | Lollipop (_, _) -> (true, "")
          | _ -> (false, "Lollipop rule requires goal A⊸B"))
+    
+    | ILL_Lollipop_left ->
+        (* Lollipop left rule requires A⊸B in context *)
+        let has_lollipop = List.exists is_lollipop ill_seq.context in
+        if has_lollipop then (true, "")
+        else (false, "Lollipop left rule requires A⊸B in context")
+
+(* CONTEXT MANIPULATION HELPERS *)
+
+(* Split context for tensor rule - simple implementation *)
+let split_context_simple ctx =
+    match ctx with
+    | [] -> ([], [])
+    | [f] -> ([f], [])
+    | f1 :: rest -> ([f1], rest)
+
+(* Expand tensor formula in context: A⊗B becomes A,B *)
+let expand_tensor_in_context ctx =
+    let rec expand_first_tensor acc = function
+        | [] -> acc
+        | Tensor (a, b) :: rest -> acc @ [a; b] @ rest
+        | f :: rest -> expand_first_tensor (acc @ [f]) rest
+    in
+    expand_first_tensor [] ctx
+
+(* Extract first lollipop formula from context *)
+let extract_lollipop_from_context ctx =
+    let rec extract acc = function
+        | [] -> (acc, None)
+        | Lollipop (a, b) :: rest -> (acc @ rest, Some (Lollipop (a, b)))
+        | f :: rest -> extract (acc @ [f]) rest
+    in
+    extract [] ctx
 
 (* RULE APPLICATION *)
 
@@ -115,10 +157,15 @@ let apply_rule_to_sequent rule_req ill_seq =
         (* Tensor rule: Γ,Δ ⊢ A⊗B becomes Γ ⊢ A and Δ ⊢ B *)
         (match ill_seq.goal with
          | Tensor (a, b) ->
-             (* TODO: Implement context splitting logic *)
-             (* For now, return stub premises *)
-             [{ context = []; goal = a }; { context = []; goal = b }]
+             (* Split context between the two premises *)
+             let ctx1, ctx2 = split_context_simple ill_seq.context in
+             [{ context = ctx1; goal = a }; { context = ctx2; goal = b }]
          | _ -> [])
+    
+    | ILL_Tensor_left ->
+        (* Tensor left: Γ,A⊗B,Δ ⊢ C becomes Γ,A,B,Δ ⊢ C *)
+        let updated_context = expand_tensor_in_context ill_seq.context in
+        [{ context = updated_context; goal = ill_seq.goal }]
     
     | ILL_Plus_left ->
         (* Plus left: Γ ⊢ A⊕B becomes Γ ⊢ A *)
@@ -140,6 +187,15 @@ let apply_rule_to_sequent rule_req ill_seq =
          | Lollipop (a, b) ->
              [{ context = a :: ill_seq.context; goal = b }]
          | _ -> [])
+    
+    | ILL_Lollipop_left ->
+        (* Lollipop left: Γ,A⊸B,Δ ⊢ C becomes Γ,Δ ⊢ A and B,Γ,Δ ⊢ C *)
+        let (ctx_without_lollipop, lollipop_formula) = extract_lollipop_from_context ill_seq.context in
+        (match lollipop_formula with
+         | Some (Lollipop (a, b)) ->
+             [{ context = ctx_without_lollipop; goal = a };
+              { context = b :: ctx_without_lollipop; goal = ill_seq.goal }]
+         | _ -> [])
 
 (* JSON PARSING *)
 
@@ -148,7 +204,6 @@ let apply_rule_to_sequent rule_req ill_seq =
    @return ill_rule - Parsed rule
 *)
 let rule_from_json json =
-    (* TODO: Implement JSON parsing for ILL rules *)
     match json with
     | `Assoc assoc_list ->
         (match List.assoc_opt "rule" assoc_list with
@@ -156,9 +211,11 @@ let rule_from_json json =
          | Some (`String "one") -> ILL_One
          | Some (`String "top") -> ILL_Top
          | Some (`String "tensor") -> ILL_Tensor
+         | Some (`String "tensor_left") -> ILL_Tensor_left
          | Some (`String "plus_left") -> ILL_Plus_left
          | Some (`String "plus_right") -> ILL_Plus_right
          | Some (`String "lollipop") -> ILL_Lollipop
+         | Some (`String "lollipop_left") -> ILL_Lollipop_left
          | _ -> raise (ILL_Rule_Json_Exception "Unknown ILL rule"))
     | _ -> raise (ILL_Rule_Json_Exception "Invalid rule JSON format")
 
@@ -204,9 +261,11 @@ let rule_to_json = function
     | ILL_One -> `String "one"
     | ILL_Top -> `String "top"
     | ILL_Tensor -> `String "tensor"
+    | ILL_Tensor_left -> `String "tensor_left"
     | ILL_Plus_left -> `String "plus_left"
     | ILL_Plus_right -> `String "plus_right"
     | ILL_Lollipop -> `String "lollipop"
+    | ILL_Lollipop_left -> `String "lollipop_left"
 
 (* Convert ILL rule request to JSON representation.
    @param rule_req - ILL rule request
@@ -253,9 +312,11 @@ let rule_description = function
     | ILL_One -> "One introduction: ⊢ 1"  
     | ILL_Top -> "Top introduction: Γ ⊢ ⊤"
     | ILL_Tensor -> "Tensor introduction: Γ,Δ ⊢ A⊗B / Γ ⊢ A & Δ ⊢ B"
+    | ILL_Tensor_left -> "Tensor elimination: Γ,A⊗B,Δ ⊢ C / Γ,A,B,Δ ⊢ C"
     | ILL_Plus_left -> "Plus left: Γ ⊢ A⊕B / Γ ⊢ A"
     | ILL_Plus_right -> "Plus right: Γ ⊢ A⊕B / Γ ⊢ B"
     | ILL_Lollipop -> "Lollipop introduction: Γ ⊢ A⊸B / Γ,A ⊢ B"
+    | ILL_Lollipop_left -> "Lollipop elimination: Γ,A⊸B,Δ ⊢ C / Γ,Δ ⊢ A & B,Γ,Δ ⊢ C"
 
 (* Get rule name for display in proof trees.
    @param rule - ILL rule
@@ -266,6 +327,8 @@ let rule_name = function
     | ILL_One -> "1"
     | ILL_Top -> "⊤"
     | ILL_Tensor -> "⊗"
+    | ILL_Tensor_left -> "⊗L"
     | ILL_Plus_left -> "⊕₁"
     | ILL_Plus_right -> "⊕₂"
     | ILL_Lollipop -> "⊸"
+    | ILL_Lollipop_left -> "⊸L"
