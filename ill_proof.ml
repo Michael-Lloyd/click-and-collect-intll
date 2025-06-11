@@ -142,34 +142,98 @@ let rec is_valid_proof proof =
 
 (* JSON SERIALIZATION *)
 
+(* Convert ILL sequent to raw sequent format for JSON serialization.
+   @param ill_seq - ILL sequent
+   @return Raw_sequent.raw_sequent - Raw sequent representation
+*)
+let ill_sequent_to_raw_sequent ill_seq =
+    let rec ill_formula_to_raw = function
+        | One -> Raw_sequent.One
+        | Top -> Raw_sequent.Top
+        | Litt s -> Raw_sequent.Litt s
+        | Tensor (f1, f2) -> Raw_sequent.Tensor (ill_formula_to_raw f1, ill_formula_to_raw f2)
+        | Plus (f1, f2) -> Raw_sequent.Plus (ill_formula_to_raw f1, ill_formula_to_raw f2)
+        | Lollipop (f1, f2) -> Raw_sequent.Lollipop (ill_formula_to_raw f1, ill_formula_to_raw f2)
+    in
+    let raw_context = List.map ill_formula_to_raw ill_seq.context in
+    let raw_goal = ill_formula_to_raw ill_seq.goal in
+    { Raw_sequent.hyp = raw_context; cons = [raw_goal] }
+
 (* Convert ILL proof tree to JSON representation for frontend.
    @param proof - ILL proof tree
    @return Yojson.Basic.t - JSON representation
 *)
-let to_json proof =
-    (* TODO: Implement JSON serialization for ILL proofs *)
-    (* For now, return a basic structure *)
+let rec to_json proof =
+    let get_sequent_json proof =
+        let ill_seq = get_conclusion_sequent proof in
+        let raw_seq = ill_sequent_to_raw_sequent ill_seq in
+        Raw_sequent.to_json raw_seq
+    in
+    
     match proof with
     | ILL_Hypothesis_proof _ill_seq ->
         `Assoc [
-            ("s", `Assoc [("cons", `List [])]);  (* Stub sequent *)
-            ("ar", `Null)  (* No applied rule *)
+            ("sequent", get_sequent_json proof);
+            ("appliedRule", `Null)
         ]
     | _ ->
+        (* For non-hypothesis proofs, we need to include rule information *)
+        let premises_json = List.map to_json (get_premises proof) in
+        let rule_name = match proof with
+            | ILL_Axiom_proof _ -> "axiom"
+            | ILL_One_proof -> "one"
+            | ILL_Top_proof _ -> "top"
+            | ILL_Tensor_proof _ -> "tensor"
+            | ILL_Plus_left_proof _ -> "plus_left"
+            | ILL_Plus_right_proof _ -> "plus_right"
+            | ILL_Lollipop_proof _ -> "lollipop"
+            | _ -> "unknown"
+        in
+        let rule_request_json = `Assoc [("rule", `String rule_name)] in
+        let applied_rule_json = `Assoc [
+            ("ruleRequest", rule_request_json);
+            ("premises", `List premises_json)
+        ] in
         `Assoc [
-            ("s", `Assoc [("cons", `List [])]);  (* Stub sequent *)
-            ("ar", `Assoc [("rr", `Assoc [("r", `String "stub")]); ("p", `List [])])
+            ("sequent", get_sequent_json proof);
+            ("appliedRule", applied_rule_json)
         ]
 
 (* Parse ILL proof tree from JSON representation.
    @param json - JSON representation from frontend
    @return ill_proof - Parsed ILL proof tree
 *)
-let from_json _json =
-    (* TODO: Implement JSON deserialization for ILL proofs *)
-    (* For now, return a simple hypothesis proof *)
-    let stub_sequent = { context = []; goal = Litt "A" } in
-    ILL_Hypothesis_proof stub_sequent
+let from_json json =
+    (* Extract sequent from JSON *)
+    let sequent_json = Yojson.Basic.Util.member "sequent" json in
+    let raw_seq = Raw_sequent.from_json sequent_json in
+    
+    (* Convert raw sequent to ILL sequent *)
+    let rec raw_to_ill_formula = function
+        | Raw_sequent.One -> One
+        | Raw_sequent.Top -> Top
+        | Raw_sequent.Litt s -> Litt s
+        | Raw_sequent.Tensor (f1, f2) -> Tensor (raw_to_ill_formula f1, raw_to_ill_formula f2)
+        | Raw_sequent.Plus (f1, f2) -> Plus (raw_to_ill_formula f1, raw_to_ill_formula f2)
+        | Raw_sequent.Lollipop (f1, f2) -> Lollipop (raw_to_ill_formula f1, raw_to_ill_formula f2)
+        | _ -> raise (ILL_Proof_Exception (false, "Invalid formula type for ILL"))
+    in
+    
+    let context = List.map raw_to_ill_formula raw_seq.hyp in
+    let goal = match raw_seq.cons with
+        | [g] -> raw_to_ill_formula g
+        | _ -> raise (ILL_Proof_Exception (false, "ILL sequent must have exactly one conclusion"))
+    in
+    
+    let ill_seq = { context = context; goal = goal } in
+    
+    (* Check if there's an applied rule *)
+    let applied_rule_json = Yojson.Basic.Util.member "appliedRule" json in
+    if applied_rule_json = `Null then
+        ILL_Hypothesis_proof ill_seq
+    else
+        (* For now, just return hypothesis proof - full rule parsing would need more implementation *)
+        ILL_Hypothesis_proof ill_seq
 
 (* PROOF STATISTICS *)
 
