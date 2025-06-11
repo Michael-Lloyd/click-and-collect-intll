@@ -1,27 +1,43 @@
 open Sequent
 open Rule_request
 
-(* PROOF *)
+(* PROOF TREE REPRESENTATION
+   
+   This module defines the core data structure for Linear Logic proofs
+   and operations for constructing and manipulating proof trees.
+   
+   Each proof is represented as a tree where:
+   - Leaves are axioms or hypotheses
+   - Internal nodes are inference rules with their premises as children
+   - The root represents the conclusion sequent
+*)
 
+(* Algebraic data type representing Linear Logic proof trees.
+   Each constructor corresponds to an inference rule in the sequent calculus.
+   
+   The naming pattern is: [Rule]_proof with the rule's conclusion data and premises.
+   For example, Tensor_proof stores the tensor formula being decomposed,
+   its context, and the two sub-proofs for the left and right components.
+*)
 type proof =
-    | Axiom_proof of formula
-    | One_proof
-    | Top_proof of formula list * formula list
-    | Bottom_proof of formula list * formula list * proof
-    | Tensor_proof of formula list * formula * formula * formula list * proof * proof
-    | Par_proof of formula list * formula * formula * formula list * proof
-    | With_proof of formula list * formula * formula * formula list * proof * proof
-    | Plus_left_proof of formula list * formula * formula * formula list * proof
-    | Plus_right_proof of formula list * formula * formula * formula list * proof
-    | Promotion_proof of formula list * formula * formula list * proof
-    | Dereliction_proof of formula list * formula * formula list * proof
-    | Weakening_proof of formula list * formula * formula list * proof
-    | Contraction_proof of formula list * formula * formula list * proof
-    | Exchange_proof of sequent * int list * int list * proof
-    | Cut_proof of formula list * formula * formula list * proof * proof
-    | Unfold_litt_proof of formula list * string * formula list * proof
-    | Unfold_dual_proof of formula list * string * formula list * proof
-    | Hypothesis_proof of sequent;;
+    | Axiom_proof of formula                                                      (* ax: A, A^ *)
+    | One_proof                                                                   (* 1: ⊢ 1 *)  
+    | Top_proof of formula list * formula list                                   (* ⊤: Γ, ⊤, Δ *)
+    | Bottom_proof of formula list * formula list * proof                        (* ⊥: Γ, ⊥, Δ / Γ, Δ *)
+    | Tensor_proof of formula list * formula * formula * formula list * proof * proof  (* ⊗: Γ, A⊗B, Δ / Γ₁, A / B, Δ₁ *)
+    | Par_proof of formula list * formula * formula * formula list * proof       (* ⅋: Γ, A⅋B, Δ / Γ, A, B, Δ *)
+    | With_proof of formula list * formula * formula * formula list * proof * proof   (* &: Γ, A&B, Δ / Γ, A, Δ & Γ, B, Δ *)
+    | Plus_left_proof of formula list * formula * formula * formula list * proof      (* ⊕₁: Γ, A⊕B, Δ / Γ, A, Δ *)
+    | Plus_right_proof of formula list * formula * formula * formula list * proof     (* ⊕₂: Γ, A⊕B, Δ / Γ, B, Δ *)
+    | Promotion_proof of formula list * formula * formula list * proof           (* !: ?Γ, !A, ?Δ / ?Γ, A, ?Δ *)
+    | Dereliction_proof of formula list * formula * formula list * proof         (* ?d: Γ, ?A, Δ / Γ, A, Δ *)
+    | Weakening_proof of formula list * formula * formula list * proof           (* ?w: Γ, ?A, Δ / Γ, Δ *)
+    | Contraction_proof of formula list * formula * formula list * proof         (* ?c: Γ, ?A, Δ / Γ, ?A, ?A, Δ *)
+    | Exchange_proof of sequent * int list * int list * proof                    (* ech: permute formulas *)
+    | Cut_proof of formula list * formula * formula list * proof * proof         (* cut: Γ, Δ / Γ, A & A^, Δ *)
+    | Unfold_litt_proof of formula list * string * formula list * proof          (* def: unfold notation *)
+    | Unfold_dual_proof of formula list * string * formula list * proof          (* def: unfold dual notation *)
+    | Hypothesis_proof of sequent;;                                              (* open goal (leaf) *)
 
 
 (* PERMUTATIONS *)

@@ -2,18 +2,28 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
     <head>
+        <!-- Canonical URL for SEO -->
         <link rel="canonical" href="https://click-and-collect.linear-logic.org/" />
+        
+        <!-- jQuery libraries for DOM manipulation and UI components -->
         <script src="static/jquery/jquery-3.6.0.min.js" type="text/javascript"></script>
         <script src="static/jquery/jquery-ui.min.js" type="text/javascript"></script>
-        <!-- JQuery on mobile -->
+        <!-- Mobile touch support for drag-and-drop on tablets/phones -->
         <script type="text/javascript" src="static/jquery/jquery.ui.touch-punch.min.js"></script>
-        <script type="text/javascript" src="static/js/sequent.js"></script>
-        <script type="text/javascript" src="static/js/proof.js"></script>
-        <script type="text/javascript" src="static/js/app.js"></script>
+        
+        <!-- Application JavaScript modules -->
+        <script type="text/javascript" src="static/js/sequent.js"></script>    <!-- Formula rendering and interaction -->
+        <script type="text/javascript" src="static/js/proof.js"></script>      <!-- Proof tree visualization -->
+        <script type="text/javascript" src="static/js/app.js"></script>        <!-- Main application logic -->
+        
+        <!-- jQuery UI styling for dialogs, buttons, and interactions -->
         <link rel="stylesheet" type="text/css" href="static/css/jquery-ui.min.css">
         <link rel="stylesheet" type="text/css" href="static/css/jquery-ui.structure.min.css">
         <link rel="stylesheet" type="text/css" href="static/css/jquery-ui.theme.min.css">
+        <!-- Custom application styles -->
         <link href="static/css/style.css" rel="stylesheet" type="text/css">
+        
+        <!-- Page metadata -->
         <title>C1ick ⅋ c⊗LLec⊥ - Interactive linear logic prover</title>
         <link rel="shortcut icon" type="image/jpg" href="static/images/favicon.ico"/>
         <meta name="description" content="An interactive tool to build proofs in the sequent calculus of Linear Logic">
@@ -31,12 +41,14 @@
         </script>
     </head>
     <body>
+        <!-- Main header section with application title and sequent input form -->
         <div class="section-wrapper">
             <div class="section">
                 <h2>C1ick <span class="flip">&</span> c⊗LLec⊥</h2>
                 <h1>Interactive linear logic prover</h1>
             </div>
             <div class="section">
+                <!-- Sequent input form - users type Linear Logic sequents here -->
                 <form action="#" id="sequent-form">
                     <label>
                         <input type="text" name="sequentAsString" placeholder="Type sequent to prove..." size="24" />
@@ -46,10 +58,11 @@
             </div>
         </div>
 
+        <!-- Main proof display area where interactive proof trees are rendered -->
         <div class="section-wrapper">
             <div class="section main-proof-section">
                 <div id="main-proof-container" class="proof-container">
-
+                    <!-- Proof trees will be dynamically inserted here by JavaScript -->
                 </div>
             </div>
         </div>

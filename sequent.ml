@@ -1,5 +1,22 @@
-(* DEFINITION *)
+(* DEFINITION OF LINEAR LOGIC FORMULAS AND SEQUENTS *)
 
+(* The core data structure representing Linear Logic formulas.
+   Linear Logic is a resource-sensitive logic where each formula must be used exactly once.
+   
+   The formula constructors represent:
+   - One: multiplicative unit (⊤ in multiplicative context)
+   - Bottom: multiplicative zero (⊥ in multiplicative context) 
+   - Top: additive unit (⊤ in additive context)
+   - Zero: additive zero (0 in additive context)
+   - Litt: atomic proposition (literal like A, B, C)
+   - Dual: orthogonal/negation of a literal (A^, B^, etc.)
+   - Tensor: multiplicative conjunction (A ⊗ B) - "both A and B"
+   - Par: multiplicative disjunction (A ⅋ B) - "A or B, but resources split"
+   - With: additive conjunction (A & B) - "both A and B, choose context"
+   - Plus: additive disjunction (A ⊕ B) - "A or B, choose one"
+   - Ofcourse: exponential "of course" (!A) - "A available infinitely"
+   - Whynot: exponential "why not" (?A) - "A available optionally"
+*)
 type formula =
   | One
   | Bottom
@@ -14,16 +31,33 @@ type formula =
   | Ofcourse of formula
   | Whynot of formula;;
 
+(* A sequent is a list of formulas representing a judgment in sequent calculus.
+   In Linear Logic, a sequent Γ ⊢ Δ represents "from context Γ, we can derive Δ".
+   Here we represent it as a single list where formulas before ⊢ are negated.
+*)
 type sequent = formula list;;
 
 
-(* OPERATIONS *)
+(* CORE OPERATIONS ON FORMULAS AND SEQUENTS *)
 
+(* Convert a sequent (list of formulas) to a single formula using Par.
+   Empty sequent becomes Bottom (false), single formula stays as-is,
+   multiple formulas are combined with Par (multiplicative disjunction).
+   This reflects that a sequent A,B,C is equivalent to A ⅋ B ⅋ C.
+*)
 let rec sequent_to_formula = function
   | [] -> Bottom
   | [f] -> f
   | f1 :: f2 :: context -> sequent_to_formula (Par (f1, f2) :: context)
 
+(* Compute the dual (orthogonal/negation) of a formula.
+   In Linear Logic, every formula has a dual such that A ⊢ B is equivalent to ⊢ A^, B.
+   The duality relationships are:
+   - Constants: 1^ = ⊥, ⊥^ = 1, ⊤^ = 0, 0^ = ⊤
+   - Literals: A^ = A^, (A^)^ = A  
+   - Connectives: (A⊗B)^ = A^ ⅋ B^, (A⅋B)^ = A^ ⊗ B^, etc.
+   - Exponentials: (!A)^ = ?(A^), (?A)^ = !(A^)
+*)
 let rec dual =
     function
     | One -> Bottom
@@ -39,22 +73,40 @@ let rec dual =
     | Ofcourse e -> Whynot (dual e)
     | Whynot e -> Ofcourse (dual e);;
 
+(* Exception raised when trying to remove whynot from non-whynot formula *)
 exception Not_whynot;;
 
+(* Remove the whynot wrapper from all formulas in a list.
+   Used in exponential rules where ?A becomes A.
+   Raises Not_whynot if any formula is not wrapped in whynot.
+*)
 let rec remove_whynot = function
     | [] -> []
     | Whynot e :: l -> e :: remove_whynot l
     | _ -> raise Not_whynot;;
 
+(* Add whynot wrapper to all formulas in a list.
+   Used in exponential rules where A becomes ?A.
+   This is needed for the promotion rule in Linear Logic.
+*)
 let rec add_whynot = function
     | [] -> []
     | e :: l -> Whynot e :: add_whynot l;;
 
+(* Check if all formulas in a list are wrapped with whynot (?).
+   This is required for certain exponential rules in Linear Logic.
+   Empty list returns true (vacuously true).
+*)
 let rec has_whynot_context = function
     | [] -> true
     | Whynot _e :: tail -> has_whynot_context tail
     | _ -> false
 
+(* Extract all variable names (literals) from a formula.
+   Returns a list of all atomic proposition names appearing in the formula.
+   Constants (One, Bottom, etc.) contribute no variable names.
+   Both Litt and Dual contribute their underlying variable name.
+*)
 let rec get_variable_names =
     function
     | One -> []
@@ -70,6 +122,9 @@ let rec get_variable_names =
     | Ofcourse e -> get_variable_names e
     | Whynot e -> get_variable_names e;;
 
+(* Get all unique variable names from a sequent, sorted alphabetically.
+   Useful for analyzing what atomic propositions appear in a sequent.
+*)
 let get_unique_variable_names sequent =
     List.sort_uniq String.compare (List.concat_map get_variable_names sequent);;
 

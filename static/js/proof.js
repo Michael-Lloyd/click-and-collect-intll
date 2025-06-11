@@ -1,67 +1,81 @@
-// /static/js/proof.js
+// INTERACTIVE PROOF DISPLAY AND MANIPULATION
+// Handles rendering of Linear Logic proofs as interactive tree structures
+// Allows users to click on formulas to apply inference rules
 
-// **************
-// DISPLAY CONFIG
-// **************
+/* DISPLAY CONFIGURATION
+   Constants for rendering proof rules and UI elements
+*/
 
+// HTML representations of Linear Logic inference rules for display
 const RULES = {
-    'axiom': '<span class="italic">ax</span>',
-    'tensor': '⊗',
-    'par': '<span class="flip">&</span>',
-    'with': '&',
-    'plus_left': '⊕<sub>1</sub>',
-    'plus_right': '⊕<sub>2</sub>',
-    'one': '1',
-    'bottom': '⊥',
-    'top': '⊤',
-    // rule zero does not exist
-    'promotion': '!',
-    'dereliction': '?<span class="italic">d</span>',
-    'contraction': '?<span class="italic">c</span>',
-    'weakening': '?<span class="italic">w</span>',
-    'exchange': '<span class="italic">ech</span>',
-    'cut': '<span class="italic">cut</span>',
-    'unfold_litt': '<span class="italic">def</span>',
-    'unfold_dual': '<span class="italic">def</span>'
+    'axiom': '<span class="italic">ax</span>',          // Axiom rule: A, A^
+    'tensor': '⊗',                                      // Tensor rule: A⊗B
+    'par': '<span class="flip">&</span>',               // Par rule: A⅋B  
+    'with': '&',                                        // With rule: A&B
+    'plus_left': '⊕<sub>1</sub>',                       // Plus left: A⊕B choose A
+    'plus_right': '⊕<sub>2</sub>',                      // Plus right: A⊕B choose B
+    'one': '1',                                         // One rule: multiplicative unit
+    'bottom': '⊥',                                      // Bottom rule: multiplicative zero
+    'top': '⊤',                                         // Top rule: additive unit
+    // rule zero does not exist (additive zero has no rule)
+    'promotion': '!',                                   // Promotion rule: !A
+    'dereliction': '?<span class="italic">d</span>',    // Dereliction: ?A becomes A
+    'contraction': '?<span class="italic">c</span>',    // Contraction: ?A becomes ?A,?A
+    'weakening': '?<span class="italic">w</span>',      // Weakening: ?A becomes nothing
+    'exchange': '<span class="italic">ech</span>',      // Exchange: swap formulas
+    'cut': '<span class="italic">cut</span>',           // Cut rule: eliminate formula
+    'unfold_litt': '<span class="italic">def</span>',   // Unfold literal notation
+    'unfold_dual': '<span class="italic">def</span>'    // Unfold dual notation
 };
 
+// Symbols for proof transformation operations (cut elimination, etc.)
 const TRANSFORM_OPTIONS = {
-    'expand_axiom': '⇫',
-    'expand_axiom_full': '⇯',
-    'eliminate_cut_left': '←',
-    'eliminate_cut_right': '→',
-    'eliminate_cut_key_case': '↑',
-    'eliminate_cut_full': '✄',
+    'expand_axiom': '⇫',            // Expand axiom by applying reversible rules
+    'expand_axiom_full': '⇯',       // Fully expand axiom (complete proof)
+    'eliminate_cut_left': '←',      // Move cut to left premise
+    'eliminate_cut_right': '→',     // Move cut to right premise  
+    'eliminate_cut_key_case': '↑',  // Eliminate cut at key case
+    'eliminate_cut_full': '✄',      // Eliminate all cuts in proof
 };
 
+// JSON key abbreviations to reduce bandwidth when sending proofs
 const ABBREVIATIONS = {
-    '"sequent":': '"s":',
-    '"appliedRule":': '"ar":',
-    '"ruleRequest":': '"rr":',
-    '"premises":': '"p":',
-    '"rule":': '"r":',
-    '"formulaPosition":': '"fp":',
-    '"type":': '"t":',
-    '"value":': '"v":',
-    '"value1":': '"v1":',
-    '"value2":': '"v2":'
+    '"sequent":': '"s":',           // Sequent data
+    '"appliedRule":': '"ar":',      // Applied rule information
+    '"ruleRequest":': '"rr":',      // Rule application request
+    '"premises":': '"p":',          // Premise sequents
+    '"rule":': '"r":',              // Rule name
+    '"formulaPosition":': '"fp":',  // Position of formula in sequent
+    '"type":': '"t":',              // Formula type
+    '"value":': '"v":',             // Formula value
+    '"value1":': '"v1":',           // Binary formula left value
+    '"value2":': '"v2":'            // Binary formula right value
 }
 
-// *************
-// PROOF DISPLAY
-// *************
+/* PROOF DISPLAY AND INITIALIZATION
+   Functions for rendering interactive proof trees
+*/
 
+/* Initialize a new proof display in the given container
+   @param proofAsJson - JSON representation of the proof tree
+   @param $container - jQuery element to contain the proof
+   @param options - Display options (interactions, export buttons, etc.)
+*/
 function initProof(proofAsJson, $container, options = {}) {
+    // Store options for later access by event handlers
     $container.data('options', options);
 
+    // Create main proof display container
     let $proofDiv = $('<div>', {'class': 'proof'});
     $container.append($proofDiv);
 
+    // If notations are enabled, create notation management UI first
     if (options.notations) {
         createNotationBar($container, function () {
             buildProof(proofAsJson, $container);
         });
     } else {
+        // Build proof directly without notation management
         buildProof(proofAsJson, $container);
     }
 }

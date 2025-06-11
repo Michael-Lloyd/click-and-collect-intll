@@ -1,33 +1,46 @@
-// /static/js/app.js
+// CLICK-AND-COLLECT FRONTEND APPLICATION
+// Main JavaScript file that handles UI initialization, sequent parsing, and proof interaction
+// Uses jQuery for DOM manipulation and jQuery UI for dialogs and drag-and-drop
 
+/* APPLICATION INITIALIZATION
+   Sets up event handlers, processes URL parameters, and initializes the interface
+*/
 $( function() {
+    // Prevent default form submission to handle everything with AJAX
     $('form').each(function (i, item) {
         $(item).on('submit', function(e) {
             e.preventDefault(); // avoid to execute the actual submit of the form.
         });
     });
 
+    // Initialize all dialog boxes (help, export options, etc.) as jQuery UI dialogs
     $('.dialog').each(function (i, item) {
         $(item).dialog({autoOpen: false, width: 500});
     })
 
+    // Check URL parameters for sequent and proof data
+    // 's' parameter contains the sequent to prove
+    // 'p' parameter contains compressed proof data
     let sequentParam = getQueryParamInUrl('s');
     let compressedProofParam = getQueryParamInUrl('p');
 
+    // If URL contains a sequent parameter, auto-populate and submit the form
     if (sequentParam !== null) {
         let $sequentForm = $('#sequent-form');
         $sequentForm.find($('input[name=sequentAsString]')).val(sequentParam);
 
+        // Only auto-submit if no proof is provided (for clean sequent proving)
         if (compressedProofParam === null) {
             submitSequent($sequentForm, true);
         }
     }
 
+    // If URL contains compressed proof data, decompress and display it
     if (compressedProofParam !== null) {
         uncompressProof(compressedProofParam, $('#main-proof-container'));
     }
     
-    // Parse URL hash
+    // Handle URL hash fragments for direct navigation to tutorial/rules sections
     switch (window.location.hash) {
         case '#tutorial':
             showTutorial();
@@ -39,10 +52,14 @@ $( function() {
     }
 } );
 
-// ************
-// SEQUENT FORM
-// ************
+/* SEQUENT FORM HANDLING
+   Functions for processing user input of Linear Logic sequents and initializing proofs
+*/
 
+/* Submit sequent form and start proof construction
+   @param element - Form element or child element  
+   @param autoSubmit - Whether this is automatic (from URL) or user-initiated
+*/
 function submitSequent(element, autoSubmit = false) {
     let form = $(element).closest('form');
     let sequentAsString = form.find($('input[name=sequentAsString]')).val();
@@ -50,14 +67,14 @@ function submitSequent(element, autoSubmit = false) {
     if (!autoSubmit) {
         clearSavedProof();
 
-        // We update current URL by adding sequent in query parameters
+        // Update browser URL with sequent parameter for sharing/bookmarking
         addQueryParamInUrl('s', sequentAsString.toString(), 'Linear logic proof start');
 
-        // We set proof_transformation to false
+        // Reset proof transformation mode when starting new proof
         addQueryParamInUrl('proof_transformation', null, `proof_transformation set to false`);
     }
 
-    // Add GA events
+    // Google Analytics tracking for usage statistics
     gtag('event', 'submit-sequent', {
         'event_category': 'user-action',
         'event_label': autoSubmit ? 'auto-submit' : 'manual-submit',
@@ -67,19 +84,27 @@ function submitSequent(element, autoSubmit = false) {
     parseSequentAsString(sequentAsString, $('#main-proof-container'));
 }
 
+/* Parse sequent string and send to backend for validation
+   @param sequentAsString - Linear Logic sequent in text format (e.g., "A*B |- A,B")  
+   @param $container - jQuery element where proof will be displayed
+*/
 function parseSequentAsString(sequentAsString, $container) {
 
-    // FIXME: Ensure this works correctly 
+    // Check for intuitionistic mode option (experimental feature)
     let options = $container.data('options') || {};
     let intuitionisticMode = options.intuitionisticMode?.value ? '1' : '0';
+    
+    // Send GET request to backend parser
     $.ajax({
         type: 'GET',
         url: `/parse_sequent/${urlEncode(sequentAsString)}?intuitionisticMode=${intuitionisticMode}`,
         success: function(data)
         {
             if (data['is_valid']) {
+                // Sequent parsed successfully, initialize interactive proof
                 initMainProof(data['proof']);
             } else {
+                // Parse error, show user-friendly error message
                 cleanMainProof();
                 displayPedagogicError(data['error_message'], $container);
             }
