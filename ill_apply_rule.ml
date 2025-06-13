@@ -175,7 +175,7 @@ and apply_ill_rule_internal rule_req ill_seq _notations =
     | ILL_Tensor ->
         apply_tensor_rule rule_req ill_seq
     | ILL_Tensor_left ->
-        apply_tensor_left_rule ill_seq
+        apply_tensor_left_rule rule_req ill_seq
     | ILL_Plus_left ->
         apply_plus_left_rule ill_seq
     | ILL_Plus_right ->
@@ -183,7 +183,7 @@ and apply_ill_rule_internal rule_req ill_seq _notations =
     | ILL_Lollipop ->
         apply_lollipop_rule ill_seq
     | ILL_Lollipop_left ->
-        apply_lollipop_left_rule ill_seq
+        apply_lollipop_left_rule rule_req ill_seq
 
 (* INDIVIDUAL RULE IMPLEMENTATIONS *)
 
@@ -256,28 +256,48 @@ and apply_tensor_rule _rule_req ill_seq =
         raise (ILL_Rule_Application_Exception (true, "Tensor rule requires goal A⊗B"))
 
 (* Apply ILL tensor left rule: Γ,A⊗B,Δ ⊢ C becomes Γ,A,B,Δ ⊢ C
+   @param rule_req - Rule request with position information
    @param ill_seq - Sequent with A⊗B in context
    @return ill_proof - Tensor left proof
 *)
-and apply_tensor_left_rule ill_seq =
+and apply_tensor_left_rule rule_req ill_seq =
     (* Validate ILL constraint: exactly one formula on RHS *)
     validate_single_conclusion ill_seq;
     
-    (* Find first tensor in context and expand it *)
-    let rec find_and_expand_tensor acc = function
-        | [] -> raise (ILL_Rule_Application_Exception (true, "Tensor left rule requires A⊗B in context"))
-        | Tensor (a, b) :: rest ->
-            let new_context = acc @ [a; b] @ rest in
-            let premise = { context = new_context; goal = ill_seq.goal } in
-            
-            (* Validate that premise maintains ILL constraints *)
-            validate_ill_sequent_constraints premise;
-            
-            let subproof = ILL_Hypothesis_proof premise in
-            ILL_Tensor_left_proof (ill_seq.context, a, b, subproof)
-        | f :: rest -> find_and_expand_tensor (acc @ [f]) rest
-    in
-    find_and_expand_tensor [] ill_seq.context
+    match rule_req.formula_position with
+    | Some pos when pos >= 0 && pos < List.length ill_seq.context ->
+        (* Use specific position if provided *)
+        let context_as_array = Array.of_list ill_seq.context in
+        (match context_as_array.(pos) with
+         | Tensor (a, b) ->
+             (* Replace the tensor at position pos with its components *)
+             let before = Array.sub context_as_array 0 pos in
+             let after = Array.sub context_as_array (pos + 1) (Array.length context_as_array - pos - 1) in
+             let new_context = Array.to_list before @ [a; b] @ Array.to_list after in
+             let premise = { context = new_context; goal = ill_seq.goal } in
+             
+             validate_ill_sequent_constraints premise;
+             let subproof = ILL_Hypothesis_proof premise in
+             ILL_Tensor_left_proof (ill_seq.context, a, b, subproof)
+         | _ ->
+             raise (ILL_Rule_Application_Exception (true, 
+                 "Position " ^ string_of_int pos ^ " does not contain a tensor formula")))
+    | _ ->
+        (* Fallback to finding first tensor (original behavior) *)
+        let rec find_and_expand_tensor acc = function
+            | [] -> raise (ILL_Rule_Application_Exception (true, "Tensor left rule requires A⊗B in context"))
+            | Tensor (a, b) :: rest ->
+                let new_context = acc @ [a; b] @ rest in
+                let premise = { context = new_context; goal = ill_seq.goal } in
+                
+                (* Validate that premise maintains ILL constraints *)
+                validate_ill_sequent_constraints premise;
+                
+                let subproof = ILL_Hypothesis_proof premise in
+                ILL_Tensor_left_proof (ill_seq.context, a, b, subproof)
+            | f :: rest -> find_and_expand_tensor (acc @ [f]) rest
+        in
+        find_and_expand_tensor [] ill_seq.context
 
 (* Apply ILL plus left rule: Γ ⊢ A⊕B becomes Γ ⊢ A
    @param ill_seq - Sequent with goal A⊕B
@@ -340,33 +360,68 @@ and apply_lollipop_rule ill_seq =
         raise (ILL_Rule_Application_Exception (true, "Lollipop rule requires goal A⊸B"))
 
 (* Apply ILL lollipop left rule: Γ,A⊸B,Δ ⊢ C becomes Γ,Δ ⊢ A and B,Γ,Δ ⊢ C
+   @param rule_req - Rule request with position information
    @param ill_seq - Sequent with A⊸B in context
    @return ill_proof - Lollipop left proof with two premises
 *)
-and apply_lollipop_left_rule ill_seq =
+and apply_lollipop_left_rule rule_req ill_seq =
     (* Validate ILL constraint: exactly one formula on RHS *)
     validate_single_conclusion ill_seq;
     
-    (* Find first lollipop in context and extract it *)
-    let rec find_and_extract_lollipop acc = function
-        | [] -> raise (ILL_Rule_Application_Exception (true, "Lollipop left rule requires A⊸B in context"))
-        | Lollipop (a, b) :: rest ->
-            let remaining_context = acc @ rest in
-            let premise1 = { context = remaining_context; goal = a } in
-            let premise2 = { context = b :: remaining_context; goal = ill_seq.goal } in
-            
-            (* Validate that both premises maintain ILL constraints *)
-            validate_ill_sequent_constraints premise1;
-            validate_ill_sequent_constraints premise2;
-            
-            let subproof1 = ILL_Hypothesis_proof premise1 in
-            let subproof2 = ILL_Hypothesis_proof premise2 in
-            ILL_Lollipop_left_proof (ill_seq.context, a, b, subproof1, subproof2)
-        | f :: rest -> find_and_extract_lollipop (acc @ [f]) rest
-    in
-    find_and_extract_lollipop [] ill_seq.context
+    match rule_req.formula_position with
+    | Some pos when pos >= 0 && pos < List.length ill_seq.context ->
+        (* Use specific position if provided *)
+        let context_list = ill_seq.context in
+        let (before, at_pos, after) = split_list_at_position context_list pos in
+        (match at_pos with
+         | Lollipop (a, b) ->
+             let remaining_context = before @ after in
+             let premise1 = { context = remaining_context; goal = a } in
+             let premise2 = { context = b :: remaining_context; goal = ill_seq.goal } in
+             
+             validate_ill_sequent_constraints premise1;
+             validate_ill_sequent_constraints premise2;
+             
+             let subproof1 = ILL_Hypothesis_proof premise1 in
+             let subproof2 = ILL_Hypothesis_proof premise2 in
+             ILL_Lollipop_left_proof (ill_seq.context, a, b, subproof1, subproof2)
+         | _ ->
+             raise (ILL_Rule_Application_Exception (true, 
+                 "Position " ^ string_of_int pos ^ " does not contain a lollipop formula")))
+    | _ ->
+        (* Fallback to finding first lollipop (original behavior) *)
+        let rec find_and_extract_lollipop acc = function
+            | [] -> raise (ILL_Rule_Application_Exception (true, "Lollipop left rule requires A⊸B in context"))
+            | Lollipop (a, b) :: rest ->
+                let remaining_context = acc @ rest in
+                let premise1 = { context = remaining_context; goal = a } in
+                let premise2 = { context = b :: remaining_context; goal = ill_seq.goal } in
+                
+                (* Validate that both premises maintain ILL constraints *)
+                validate_ill_sequent_constraints premise1;
+                validate_ill_sequent_constraints premise2;
+                
+                let subproof1 = ILL_Hypothesis_proof premise1 in
+                let subproof2 = ILL_Hypothesis_proof premise2 in
+                ILL_Lollipop_left_proof (ill_seq.context, a, b, subproof1, subproof2)
+            | f :: rest -> find_and_extract_lollipop (acc @ [f]) rest
+        in
+        find_and_extract_lollipop [] ill_seq.context
 
 (* CONTEXT MANAGEMENT *)
+
+(* Helper function to split list at specific position.
+   @param list - List to split
+   @param pos - Position to split at (0-indexed)
+   @return (before, at_pos, after) - Elements before position, element at position, elements after
+*)
+and split_list_at_position list pos =
+    let rec split acc n = function
+        | [] -> (List.rev acc, failwith ("Position " ^ string_of_int pos ^ " out of bounds"), [])
+        | h :: t when n = 0 -> (List.rev acc, h, t)
+        | h :: t -> split (h :: acc) (n - 1) t
+    in
+    split [] pos list
 
 (* Split context for tensor rule based on user interaction.
    In ILL, tensor rule requires splitting the context between two premises.
