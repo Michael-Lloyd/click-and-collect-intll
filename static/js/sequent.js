@@ -45,7 +45,17 @@ function createSequent(sequent, $sequentTable, options) {
     if (options.withInteraction) {
         $thesisSpan.addClass('clickable');
         addClickAndDoubleClickEvent($thesisSpan, function () {
-            applyRule({rule: 'axiom'}, $sequentTable);
+            // NEW: For ILL mode, turnstile click should be context-aware
+            let $container = $sequentTable.closest('.proof-container');
+            let containerOptions = $container.data('options');
+            let ruleRequest = { rule: 'axiom' };
+            
+            if (containerOptions && containerOptions.intuitionisticMode?.value) {
+                // In ILL mode, axiom rule application might need additional context
+                ruleRequest.illMode = true;
+            }
+            
+            applyRule(ruleRequest, $sequentTable);
         }, function () {
             autoProveSequent($sequentTable);
         });
@@ -297,6 +307,14 @@ function buildApplyRuleCallBack(ruleConfig, $li, options) {
 
         let $sequentTable = $li.closest('table');
         let ruleRequest = { rule: ruleConfigCopy.rule };
+
+        // NEW: Determine which side of turnstile the formula is on
+        let $formulaList = $li.closest('ul');
+        let isLeftSide = $formulaList.hasClass('hyp');
+        let sequentSide = isLeftSide ? 'left' : 'right';
+        
+        // NEW: Add sequent side information to rule request
+        ruleRequest['sequentSide'] = sequentSide;
 
         if (ruleConfigCopy.needPosition) {
             ruleRequest['formulaPosition'] = $li.parent().children().index($li);

@@ -133,3 +133,28 @@ input:checked + .slider:before { -webkit-transform: translateX(1em); -ms-transfo
 
 @keyframes rotating { to { transform: rotate(360deg); }}
 .loading { display: inline-block; animation: rotating 3s linear infinite; }
+
+/* ILL MODE STYLING - Visual distinction for left/right sides */
+.proof.intuitionistic-mode .hyp {
+    /* Style for left side formulas in ILL mode */
+    border-left: 3px solid #66a3e0;
+    padding-left: 0.5em;
+    background-color: rgba(102, 163, 224, 0.05);
+}
+
+.proof.intuitionistic-mode .cons {
+    /* Style for right side formulas in ILL mode */
+    border-right: 3px solid #90EE90;
+    padding-right: 0.5em;
+    background-color: rgba(144, 238, 144, 0.05);
+}
+
+.proof.intuitionistic-mode .turnstile {
+    /* Enhanced turnstile styling for ILL mode */
+    font-weight: bold;
+    color: #333;
+    margin: 0 0.5em;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 0.2em 0.4em;
+    border-radius: 0.2em;
+}

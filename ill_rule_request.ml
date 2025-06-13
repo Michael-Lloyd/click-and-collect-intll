@@ -43,6 +43,7 @@ type ill_rule_request = {
     formula_position: int option;      (* Position of main formula in sequent *)
     side: string option;              (* For rules with choices (left/right) *)
     context_split: int list option;   (* For tensor rule context splitting *)
+    sequent_side: string option;     (* Which side of turnstile was clicked (left/right) *)
 }
 
 (* Exception for malformed rule requests *)
@@ -240,11 +241,19 @@ let from_json json =
                 | _ -> None
             with _ -> None
         in
+        let sequent_side =
+            try
+                match List.assoc "sequentSide" (match json with `Assoc l -> l | _ -> []) with
+                | `String s -> Some s
+                | _ -> None
+            with _ -> None
+        in
         {
             rule = rule;
             formula_position = formula_position;
             side = side;
             context_split = None;  (* TODO: Parse context split information *)
+            sequent_side = sequent_side;
         }
     with
     | ILL_Rule_Json_Exception msg -> raise (ILL_Rule_Json_Exception msg)
@@ -291,15 +300,52 @@ let to_json rule_req =
    @param formula_pos - Position of clicked formula
    @return ill_rule_request option - Inferred rule or None
 *)
-let infer_rule_from_click _ill_seq formula_pos =
-    (* TODO: Implement rule inference logic *)
-    (* For now, return a simple axiom rule *)
-    Some {
-        rule = ILL_Axiom;
-        formula_position = Some formula_pos;
-        side = None;
-        context_split = None;
-    }
+(* Infer which ILL rule to apply based on clicked formula and sequent side.
+   @param rule_req - Original rule request from frontend
+   @param ill_seq - Current sequent
+   @return ill_rule_request - Updated rule request with correct rule
+*)
+let rec infer_rule_from_side_and_formula rule_req ill_seq =
+    match rule_req.sequent_side with
+    | Some "left" ->
+        (* User clicked on formula in context (left side) *)
+        infer_left_rule rule_req ill_seq
+    | Some "right" ->
+        (* User clicked on goal formula (right side) *)
+        infer_right_rule rule_req ill_seq  
+    | _ ->
+        (* Fallback to original rule *)
+        rule_req
+
+(* Infer which left rule to apply based on the clicked formula in context *)
+and infer_left_rule rule_req ill_seq =
+    match rule_req.formula_position with
+    | Some pos when pos < List.length ill_seq.context ->
+        let clicked_formula = List.nth ill_seq.context pos in
+        (match clicked_formula with
+         | Tensor (_, _) -> 
+             { rule_req with rule = ILL_Tensor_left }
+         | Lollipop (_, _) -> 
+             { rule_req with rule = ILL_Lollipop_left }
+         | Litt _ ->
+             (* Could be axiom if context has single atom matching goal *)
+             { rule_req with rule = ILL_Axiom }
+         | _ ->
+             rule_req)  (* No applicable left rule *)
+    | _ -> rule_req
+
+(* Infer which right rule to apply based on the goal formula *)
+and infer_right_rule rule_req ill_seq =
+    match ill_seq.goal with
+    | One -> { rule_req with rule = ILL_One }
+    | Top -> { rule_req with rule = ILL_Top }
+    | Tensor (_, _) -> { rule_req with rule = ILL_Tensor }
+    | Plus (_, _) ->
+        (* Need additional info to choose plus_left vs plus_right *)
+        (* For now, default to left - frontend should specify *)
+        { rule_req with rule = ILL_Plus_left }
+    | Lollipop (_, _) -> { rule_req with rule = ILL_Lollipop }
+    | Litt _ -> { rule_req with rule = ILL_Axiom }
 
 (* RULE DESCRIPTIONS *)
 

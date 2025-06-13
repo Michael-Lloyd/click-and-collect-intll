@@ -138,8 +138,11 @@ and apply_rule_with_exceptions request_as_json =
         (* Extract notations (if any) *)
         let notations = [] in  (* TODO: Parse notations properly *)
         
-        (* Apply the rule *)
-        apply_ill_rule_internal rule_request ill_sequent notations
+        (* Use intelligent rule selection based on sequentSide and formula *)
+        let inferred_rule_request = Ill_rule_request.infer_rule_from_side_and_formula rule_request ill_sequent in
+        
+        (* Apply the inferred rule *)
+        apply_ill_rule_internal inferred_rule_request ill_sequent notations
         
     with
     | Request_utils.Bad_request_exception msg -> 
