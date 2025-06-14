@@ -220,12 +220,16 @@ function showILLRules() {
 
     let $illRules = $('.ill-rules');
     if ($illRules.data('init') !== true) {
-        // Create ILL rules proof
+        // Create ILL rules proof with ILL symbols (no UI toggle)
         $('.ill-rules .proof-container').each(function (i, container) {
             let $container = $(container);
             let proofAsJson = JSON.parse(uncompressJson($container.html()));
             $container.html('');
-            initProof(proofAsJson, $container);
+            // Force ILL symbols for tutorial display without UI options
+            let options = {
+                forceILLSymbols: true
+            };
+            initProof(proofAsJson, $container, options);
         })
 
         $illRules.data('init', true);
