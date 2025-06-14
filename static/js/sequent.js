@@ -219,6 +219,15 @@ function getRules(formulaAsJson, options, isLeftSide = false) {
                     ];
                 }
 
+            case 'lollipop':
+                if (isLeftSide) {
+                    // Left side: lollipop elimination (modus ponens)
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'lollipop_left', 'needPosition': true}]}];
+                } else {
+                    // Right side: lollipop introduction (implication introduction)
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'lollipop', 'needPosition': true}]}];
+                }
+
             case 'one':
             case 'zero': // click on zero will display a pedagogic error
                 return [{'element': 'main-formula', 'onclick': [{'rule': formulaAsJson.type, 'needPosition': false}]}];

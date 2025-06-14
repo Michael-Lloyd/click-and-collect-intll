@@ -18,6 +18,8 @@ const RULES = {
     'plus_right_1': '⊕R<sub>1</sub>',                  // Plus right 1: A⊕B choose A 
     'plus_right_2': '⊕R<sub>2</sub>',                  // Plus right 2: A⊕B choose B
     'plus_right': '⊕R<sub>1</sub>',                    // Backward compatibility
+    'lollipop': '⊸R',                                  // Lollipop right: A⊸B introduction
+    'lollipop_left': '⊸L',                             // Lollipop left: A⊸B elimination
     'one': '1',                                         // One rule: multiplicative unit
     'bottom': '⊥',                                      // Bottom rule: multiplicative zero
     'top': '⊤',                                         // Top rule: additive unit

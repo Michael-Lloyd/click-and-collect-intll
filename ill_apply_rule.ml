@@ -400,7 +400,7 @@ and apply_lollipop_rule ill_seq =
     
     match ill_seq.goal with
     | Lollipop (a, b) ->
-        let premise = { context = a :: ill_seq.context; goal = b } in
+        let premise = { context = ill_seq.context @ [a]; goal = b } in
         
         (* Validate that premise maintains ILL constraints *)
         validate_ill_sequent_constraints premise;
@@ -426,9 +426,8 @@ and apply_lollipop_left_rule rule_req ill_seq =
         let (before, at_pos, after) = split_list_at_position context_list pos in
         (match at_pos with
          | Lollipop (a, b) ->
-             let remaining_context = before @ after in
-             let premise1 = { context = remaining_context; goal = a } in
-             let premise2 = { context = b :: remaining_context; goal = ill_seq.goal } in
+             let premise1 = { context = before; goal = a } in
+             let premise2 = { context = after @ [b]; goal = ill_seq.goal } in
              
              validate_ill_sequent_constraints premise1;
              validate_ill_sequent_constraints premise2;
@@ -444,9 +443,8 @@ and apply_lollipop_left_rule rule_req ill_seq =
         let rec find_and_extract_lollipop acc = function
             | [] -> raise (ILL_Rule_Application_Exception (true, "Lollipop left rule requires A⊸B in context"))
             | Lollipop (a, b) :: rest ->
-                let remaining_context = acc @ rest in
-                let premise1 = { context = remaining_context; goal = a } in
-                let premise2 = { context = b :: remaining_context; goal = ill_seq.goal } in
+                let premise1 = { context = acc; goal = a } in
+                let premise2 = { context = rest @ [b]; goal = ill_seq.goal } in
                 
                 (* Validate that both premises maintain ILL constraints *)
                 validate_ill_sequent_constraints premise1;
