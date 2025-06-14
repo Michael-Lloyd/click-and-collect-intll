@@ -242,13 +242,13 @@ and try_plus_rules ill_seq a b config depth start_time =
     let left_premise = { context = ill_seq.context; goal = a } in
     match search_proof left_premise config (depth + 1) start_time with
     | ILL_Proof_Found left_proof ->
-        ILL_Proof_Found (ILL_Plus_left_proof (ill_seq.context, a, b, left_proof))
+        ILL_Proof_Found (ILL_Plus_right_1_proof (ill_seq.context, a, b, left_proof))
     | _ ->
         (* Try right branch *)
         let right_premise = { context = ill_seq.context; goal = b } in
         match search_proof right_premise config (depth + 1) start_time with
         | ILL_Proof_Found right_proof ->
-            ILL_Proof_Found (ILL_Plus_right_proof (ill_seq.context, a, b, right_proof))
+            ILL_Proof_Found (ILL_Plus_right_2_proof (ill_seq.context, a, b, right_proof))
         | result -> result
 
 (* Try lollipop rule: Γ ⊢ A⊸B becomes Γ,A ⊢ B

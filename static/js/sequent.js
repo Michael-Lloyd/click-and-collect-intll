@@ -187,7 +187,7 @@ function createLittHTML(littName) {
 // RULES
 // *****
 
-function getRules(formulaAsJson, options) {
+function getRules(formulaAsJson, options, isLeftSide = false) {
     if (options.withInteraction) {
         switch (formulaAsJson.type) {
             case 'litt':
@@ -200,10 +200,16 @@ function getRules(formulaAsJson, options) {
                 return [{'element': 'main-formula', 'onclick': [{'rule': formulaAsJson.type, 'needPosition': true}]}];
 
             case 'plus':
-                return [
-                    {'element': 'left-formula', 'onclick': [{'rule': 'plus_left', 'needPosition': true}]},
-                    {'element': 'right-formula', 'onclick': [{'rule': 'plus_right', 'needPosition': true}]}
-                ];
+                if (isLeftSide) {
+                    // Left side: one rule for plus elimination
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'plus_left', 'needPosition': true}]}];
+                } else {
+                    // Right side: two rules for plus introduction (choose left or right sub-formula)
+                    return [
+                        {'element': 'left-formula', 'onclick': [{'rule': 'plus_right_1', 'needPosition': true}]},
+                        {'element': 'right-formula', 'onclick': [{'rule': 'plus_right_2', 'needPosition': true}]}
+                    ];
+                }
 
             case 'one':
             case 'zero': // click on zero will display a pedagogic error
@@ -257,7 +263,10 @@ function getRules(formulaAsJson, options) {
 }
 
 function addEventsAndStyle($li, formulaAsJson, options) {
-    let rules = getRules(formulaAsJson, options);
+    // Determine which side of the turnstile we're on
+    let $formulaList = $li.closest('ul');
+    let isLeftSide = $formulaList.hasClass('hyp');
+    let rules = getRules(formulaAsJson, options, isLeftSide);
 
     if (rules.length === 0) {
         return;

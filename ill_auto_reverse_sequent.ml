@@ -196,19 +196,33 @@ and try_auto_reverse_subproofs proof config =
                   Some (new_proof, rule_name)
               | None -> None))
     
-    | ILL_Plus_left_proof (ctx, a, b, p) ->
+    | ILL_Plus_left_proof (ctx, a, b, p1, p2) ->
+        (* Try auto-reverse on first subproof *)
+        (match try_auto_reverse_step p1 config with
+         | Some (new_p1, rule_name) ->
+             let new_proof = ILL_Plus_left_proof (ctx, a, b, new_p1, p2) in
+             Some (new_proof, rule_name)
+         | None ->
+             (* Try auto-reverse on second subproof *)
+             (match try_auto_reverse_step p2 config with
+              | Some (new_p2, rule_name) ->
+                  let new_proof = ILL_Plus_left_proof (ctx, a, b, p1, new_p2) in
+                  Some (new_proof, rule_name)
+              | None -> None))
+    
+    | ILL_Plus_right_1_proof (ctx, a, b, p) ->
         (* Try auto-reverse on subproof *)
         (match try_auto_reverse_step p config with
          | Some (new_p, rule_name) ->
-             let new_proof = ILL_Plus_left_proof (ctx, a, b, new_p) in
+             let new_proof = ILL_Plus_right_1_proof (ctx, a, b, new_p) in
              Some (new_proof, rule_name)
          | None -> None)
     
-    | ILL_Plus_right_proof (ctx, a, b, p) ->
+    | ILL_Plus_right_2_proof (ctx, a, b, p) ->
         (* Try auto-reverse on subproof *)
         (match try_auto_reverse_step p config with
          | Some (new_p, rule_name) ->
-             let new_proof = ILL_Plus_right_proof (ctx, a, b, new_p) in
+             let new_proof = ILL_Plus_right_2_proof (ctx, a, b, new_p) in
              Some (new_proof, rule_name)
          | None -> None)
     
@@ -238,8 +252,9 @@ let is_reversible_rule = function
     | ILL_Axiom -> false        (* Axiom requires specific conditions *)
     | ILL_One -> false          (* One requires empty context *)
     | ILL_Tensor -> false       (* Tensor requires context split choice *)
-    | ILL_Plus_left -> false    (* Plus requires left/right choice *)
-    | ILL_Plus_right -> false   (* Plus requires left/right choice *)
+    | ILL_Plus_left -> true     (* Plus left is reversible - unique rule for context elimination *)
+    | ILL_Plus_right_1 -> false (* Plus right 1 requires choice *)
+    | ILL_Plus_right_2 -> false (* Plus right 2 requires choice *)
 
 (* Check if a sequent has a unique reversible rule that applies.
    @param ill_seq - ILL sequent

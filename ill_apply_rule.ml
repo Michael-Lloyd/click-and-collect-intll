@@ -177,9 +177,11 @@ and apply_ill_rule_internal rule_req ill_seq _notations =
     | ILL_Tensor_left ->
         apply_tensor_left_rule rule_req ill_seq
     | ILL_Plus_left ->
-        apply_plus_left_rule ill_seq
-    | ILL_Plus_right ->
-        apply_plus_right_rule ill_seq
+        apply_plus_left_rule rule_req ill_seq
+    | ILL_Plus_right_1 ->
+        apply_plus_right_1_rule ill_seq
+    | ILL_Plus_right_2 ->
+        apply_plus_right_2_rule ill_seq
     | ILL_Lollipop ->
         apply_lollipop_rule ill_seq
     | ILL_Lollipop_left ->
@@ -299,11 +301,60 @@ and apply_tensor_left_rule rule_req ill_seq =
         in
         find_and_expand_tensor [] ill_seq.context
 
-(* Apply ILL plus left rule: Γ ⊢ A⊕B becomes Γ ⊢ A
-   @param ill_seq - Sequent with goal A⊕B
-   @return ill_proof - Plus left proof
+(* Apply ILL plus left rule: Γ,A⊕B,Δ ⊢ C becomes Γ,A,Δ ⊢ C and Γ,B,Δ ⊢ C
+   @param rule_req - Rule request with position information
+   @param ill_seq - Sequent with A⊕B in context
+   @return ill_proof - Plus left proof with two premises
 *)
-and apply_plus_left_rule ill_seq =
+and apply_plus_left_rule rule_req ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
+    match rule_req.formula_position with
+    | Some pos when pos >= 0 && pos < List.length ill_seq.context ->
+        (* Use specific position if provided *)
+        let context_list = ill_seq.context in
+        let (before, at_pos, after) = split_list_at_position context_list pos in
+        (match at_pos with
+         | Plus (a, b) ->
+             let remaining_context = before @ after in
+             let premise1 = { context = a :: remaining_context; goal = ill_seq.goal } in
+             let premise2 = { context = b :: remaining_context; goal = ill_seq.goal } in
+             
+             validate_ill_sequent_constraints premise1;
+             validate_ill_sequent_constraints premise2;
+             
+             let subproof1 = ILL_Hypothesis_proof premise1 in
+             let subproof2 = ILL_Hypothesis_proof premise2 in
+             ILL_Plus_left_proof (ill_seq.context, a, b, subproof1, subproof2)
+         | _ ->
+             raise (ILL_Rule_Application_Exception (true, 
+                 "Position " ^ string_of_int pos ^ " does not contain a plus formula")))
+    | _ ->
+        (* Fallback to finding first plus (original behavior) *)
+        let rec find_and_extract_plus acc = function
+            | [] -> raise (ILL_Rule_Application_Exception (true, "Plus left rule requires A⊕B in context"))
+            | Plus (a, b) :: rest ->
+                let remaining_context = acc @ rest in
+                let premise1 = { context = a :: remaining_context; goal = ill_seq.goal } in
+                let premise2 = { context = b :: remaining_context; goal = ill_seq.goal } in
+                
+                (* Validate that both premises maintain ILL constraints *)
+                validate_ill_sequent_constraints premise1;
+                validate_ill_sequent_constraints premise2;
+                
+                let subproof1 = ILL_Hypothesis_proof premise1 in
+                let subproof2 = ILL_Hypothesis_proof premise2 in
+                ILL_Plus_left_proof (ill_seq.context, a, b, subproof1, subproof2)
+            | f :: rest -> find_and_extract_plus (acc @ [f]) rest
+        in
+        find_and_extract_plus [] ill_seq.context
+
+(* Apply ILL plus right 1 rule: Γ ⊢ A⊕B becomes Γ ⊢ A
+   @param ill_seq - Sequent with goal A⊕B
+   @return ill_proof - Plus right 1 proof
+*)
+and apply_plus_right_1_rule ill_seq =
     (* Validate ILL constraint: exactly one formula on RHS *)
     validate_single_conclusion ill_seq;
     
@@ -315,15 +366,15 @@ and apply_plus_left_rule ill_seq =
         validate_ill_sequent_constraints premise;
         
         let subproof = ILL_Hypothesis_proof premise in
-        ILL_Plus_left_proof (ill_seq.context, a, b, subproof)
+        ILL_Plus_right_1_proof (ill_seq.context, a, b, subproof)
     | _ ->
-        raise (ILL_Rule_Application_Exception (true, "Plus left rule requires goal A⊕B"))
+        raise (ILL_Rule_Application_Exception (true, "Plus right 1 rule requires goal A⊕B"))
 
-(* Apply ILL plus right rule: Γ ⊢ A⊕B becomes Γ ⊢ B
+(* Apply ILL plus right 2 rule: Γ ⊢ A⊕B becomes Γ ⊢ B
    @param ill_seq - Sequent with goal A⊕B
-   @return ill_proof - Plus right proof
+   @return ill_proof - Plus right 2 proof
 *)
-and apply_plus_right_rule ill_seq =
+and apply_plus_right_2_rule ill_seq =
     (* Validate ILL constraint: exactly one formula on RHS *)
     validate_single_conclusion ill_seq;
     
@@ -335,9 +386,9 @@ and apply_plus_right_rule ill_seq =
         validate_ill_sequent_constraints premise;
         
         let subproof = ILL_Hypothesis_proof premise in
-        ILL_Plus_right_proof (ill_seq.context, a, b, subproof)
+        ILL_Plus_right_2_proof (ill_seq.context, a, b, subproof)
     | _ ->
-        raise (ILL_Rule_Application_Exception (true, "Plus right rule requires goal A⊕B"))
+        raise (ILL_Rule_Application_Exception (true, "Plus right 2 rule requires goal A⊕B"))
 
 (* Apply ILL lollipop rule: Γ ⊢ A⊸B becomes Γ,A ⊢ B
    @param ill_seq - Sequent with goal A⊸B

@@ -30,8 +30,9 @@ type ill_rule =
     | ILL_Top
     | ILL_Tensor
     | ILL_Tensor_left
-    | ILL_Plus_left
-    | ILL_Plus_right
+    | ILL_Plus_left      (* +L: left rule *)
+    | ILL_Plus_right_1   (* +R₁: right rule for left sub-formula *)
+    | ILL_Plus_right_2   (* +R₂: right rule for right sub-formula *)
     | ILL_Lollipop
     | ILL_Lollipop_left
 
@@ -88,11 +89,17 @@ let can_apply_rule rule ill_seq =
         if has_tensor then (true, "")
         else (false, "Tensor left rule requires A⊗B in context")
     
-    | ILL_Plus_left | ILL_Plus_right ->
-        (* Plus rules require goal A⊕B *)
+    | ILL_Plus_left ->
+        (* Plus left rule requires A⊕B in context *)
+        let has_plus = List.exists is_plus ill_seq.context in
+        if has_plus then (true, "")
+        else (false, "Plus left rule requires A⊕B in context")
+    
+    | ILL_Plus_right_1 | ILL_Plus_right_2 ->
+        (* Plus right rules require goal A⊕B *)
         (match ill_seq.goal with
          | Plus (_, _) -> (true, "")
-         | _ -> (false, "Plus rule requires goal A⊕B"))
+         | _ -> (false, "Plus right rule requires goal A⊕B"))
     
     | ILL_Lollipop ->
         (* Lollipop rule requires goal A⊸B *)
@@ -169,14 +176,28 @@ let apply_rule_to_sequent rule_req ill_seq =
         [{ context = updated_context; goal = ill_seq.goal }]
     
     | ILL_Plus_left ->
-        (* Plus left: Γ ⊢ A⊕B becomes Γ ⊢ A *)
+        (* Plus left: Γ,A⊕B,Δ ⊢ C becomes Γ,A,Δ ⊢ C and Γ,B,Δ ⊢ C *)
+        let rec extract_plus acc = function
+            | [] -> (acc, None)
+            | Plus (a, b) :: rest -> (acc @ rest, Some (Plus (a, b)))
+            | f :: rest -> extract_plus (acc @ [f]) rest
+        in
+        let (ctx_without_plus, plus_formula) = extract_plus [] ill_seq.context in
+        (match plus_formula with
+         | Some (Plus (a, b)) ->
+             [{ context = a :: ctx_without_plus; goal = ill_seq.goal };
+              { context = b :: ctx_without_plus; goal = ill_seq.goal }]
+         | _ -> [])
+    
+    | ILL_Plus_right_1 ->
+        (* Plus right 1: Γ ⊢ A⊕B becomes Γ ⊢ A *)
         (match ill_seq.goal with
          | Plus (a, _) ->
              [{ context = ill_seq.context; goal = a }]
          | _ -> [])
     
-    | ILL_Plus_right ->
-        (* Plus right: Γ ⊢ A⊕B becomes Γ ⊢ B *)
+    | ILL_Plus_right_2 ->
+        (* Plus right 2: Γ ⊢ A⊕B becomes Γ ⊢ B *)
         (match ill_seq.goal with
          | Plus (_, b) ->
              [{ context = ill_seq.context; goal = b }]
@@ -214,7 +235,9 @@ let rule_from_json json =
          | Some (`String "tensor") -> ILL_Tensor
          | Some (`String "tensor_left") -> ILL_Tensor_left
          | Some (`String "plus_left") -> ILL_Plus_left
-         | Some (`String "plus_right") -> ILL_Plus_right
+         | Some (`String "plus_right_1") -> ILL_Plus_right_1
+         | Some (`String "plus_right_2") -> ILL_Plus_right_2
+         | Some (`String "plus_right") -> ILL_Plus_right_1  (* Backward compatibility *)
          | Some (`String "lollipop") -> ILL_Lollipop
          | Some (`String "lollipop_left") -> ILL_Lollipop_left
          | _ -> raise (ILL_Rule_Json_Exception "Unknown ILL rule"))
@@ -272,7 +295,8 @@ let rule_to_json = function
     | ILL_Tensor -> `String "tensor"
     | ILL_Tensor_left -> `String "tensor_left"
     | ILL_Plus_left -> `String "plus_left"
-    | ILL_Plus_right -> `String "plus_right"
+    | ILL_Plus_right_1 -> `String "plus_right_1"
+    | ILL_Plus_right_2 -> `String "plus_right_2"
     | ILL_Lollipop -> `String "lollipop"
     | ILL_Lollipop_left -> `String "lollipop_left"
 
@@ -325,6 +349,8 @@ and infer_left_rule rule_req ill_seq =
         (match clicked_formula with
          | Tensor (_, _) -> 
              { rule_req with rule = ILL_Tensor_left }
+         | Plus (_, _) -> 
+             { rule_req with rule = ILL_Plus_left }
          | Lollipop (_, _) -> 
              { rule_req with rule = ILL_Lollipop_left }
          | Litt _ ->
@@ -341,9 +367,10 @@ and infer_right_rule rule_req ill_seq =
     | Top -> { rule_req with rule = ILL_Top }
     | Tensor (_, _) -> { rule_req with rule = ILL_Tensor }
     | Plus (_, _) ->
-        (* Need additional info to choose plus_left vs plus_right *)
-        (* For now, default to left - frontend should specify *)
-        { rule_req with rule = ILL_Plus_left }
+        (* If frontend already chose a specific plus rule, keep it *)
+        (match rule_req.rule with
+         | ILL_Plus_right_1 | ILL_Plus_right_2 -> rule_req
+         | _ -> { rule_req with rule = ILL_Plus_right_1 }) (* Default for backward compatibility *)
     | Lollipop (_, _) -> { rule_req with rule = ILL_Lollipop }
     | Litt _ -> { rule_req with rule = ILL_Axiom }
 
@@ -359,8 +386,9 @@ let rule_description = function
     | ILL_Top -> "Top introduction: Γ ⊢ ⊤"
     | ILL_Tensor -> "Tensor introduction: Γ,Δ ⊢ A⊗B / Γ ⊢ A & Δ ⊢ B"
     | ILL_Tensor_left -> "Tensor elimination: Γ,A⊗B,Δ ⊢ C / Γ,A,B,Δ ⊢ C"
-    | ILL_Plus_left -> "Plus left: Γ ⊢ A⊕B / Γ ⊢ A"
-    | ILL_Plus_right -> "Plus right: Γ ⊢ A⊕B / Γ ⊢ B"
+    | ILL_Plus_left -> "Plus left: Γ,A⊕B,Δ ⊢ C / Γ,A,Δ ⊢ C & Γ,B,Δ ⊢ C"
+    | ILL_Plus_right_1 -> "Plus right 1: Γ ⊢ A⊕B / Γ ⊢ A"
+    | ILL_Plus_right_2 -> "Plus right 2: Γ ⊢ A⊕B / Γ ⊢ B"
     | ILL_Lollipop -> "Lollipop introduction: Γ ⊢ A⊸B / Γ,A ⊢ B"
     | ILL_Lollipop_left -> "Lollipop elimination: Γ,A⊸B,Δ ⊢ C / Γ,Δ ⊢ A & B,Γ,Δ ⊢ C"
 
@@ -374,7 +402,8 @@ let rule_name = function
     | ILL_Top -> "⊤"
     | ILL_Tensor -> "⊗"
     | ILL_Tensor_left -> "⊗L"
-    | ILL_Plus_left -> "⊕₁"
-    | ILL_Plus_right -> "⊕₂"
+    | ILL_Plus_left -> "+L"
+    | ILL_Plus_right_1 -> "⊕₁"
+    | ILL_Plus_right_2 -> "⊕₂"
     | ILL_Lollipop -> "⊸"
     | ILL_Lollipop_left -> "⊸L"
