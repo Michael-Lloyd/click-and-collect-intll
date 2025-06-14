@@ -49,6 +49,10 @@ $( function() {
         case '#rules':
             showRules();
             break;
+
+        case '#ill-rules':
+            showILLRules();
+            break;
     }
 } );
 
@@ -205,6 +209,33 @@ function showRules() {
 function hideRules() {
     $('.rules').addClass('hidden');
     cleanUrlHash('Hide rules');
+}
+
+// *********
+// ILL RULES
+// *********
+
+function showILLRules() {
+    cleanUrlParams('Show ILL rules');
+
+    let $illRules = $('.ill-rules');
+    if ($illRules.data('init') !== true) {
+        // Create ILL rules proof
+        $('.ill-rules .proof-container').each(function (i, container) {
+            let $container = $(container);
+            let proofAsJson = JSON.parse(uncompressJson($container.html()));
+            $container.html('');
+            initProof(proofAsJson, $container);
+        })
+
+        $illRules.data('init', true);
+    }
+    $illRules.removeClass('hidden');
+}
+
+function hideILLRules() {
+    $('.ill-rules').addClass('hidden');
+    cleanUrlHash('Hide ILL rules');
 }
 
 // *******
