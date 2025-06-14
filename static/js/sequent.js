@@ -195,6 +195,14 @@ function getRules(formulaAsJson, options, isLeftSide = false) {
                 return [{'element': 'main-formula', 'onclick': [{'rule': 'axiom', 'needPosition': false}]}];
 
             case 'tensor':
+                if (isLeftSide) {
+                    // Left side: tensor elimination
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'tensor_left', 'needPosition': true}]}];
+                } else {
+                    // Right side: tensor introduction
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'tensor_right', 'needPosition': true}]}];
+                }
+
             case 'par':
             case 'with':
                 return [{'element': 'main-formula', 'onclick': [{'rule': formulaAsJson.type, 'needPosition': true}]}];

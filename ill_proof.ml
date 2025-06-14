@@ -204,7 +204,7 @@ let rec to_json proof =
             | ILL_Axiom_proof _ -> "axiom"
             | ILL_One_proof -> "one"
             | ILL_Top_proof _ -> "top"
-            | ILL_Tensor_proof _ -> "tensor"
+            | ILL_Tensor_proof _ -> "tensor_right"
             | ILL_Tensor_left_proof _ -> "tensor_left"
             | ILL_Plus_left_proof _ -> "plus_left"
             | ILL_Plus_right_1_proof _ -> "plus_right_1"

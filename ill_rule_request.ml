@@ -232,7 +232,8 @@ let rule_from_json json =
          | Some (`String "axiom") -> ILL_Axiom
          | Some (`String "one") -> ILL_One
          | Some (`String "top") -> ILL_Top
-         | Some (`String "tensor") -> ILL_Tensor
+         | Some (`String "tensor_right") -> ILL_Tensor
+         | Some (`String "tensor") -> ILL_Tensor  (* Backward compatibility *)
          | Some (`String "tensor_left") -> ILL_Tensor_left
          | Some (`String "plus_left") -> ILL_Plus_left
          | Some (`String "plus_right_1") -> ILL_Plus_right_1
@@ -292,7 +293,7 @@ let rule_to_json = function
     | ILL_Axiom -> `String "axiom"
     | ILL_One -> `String "one"
     | ILL_Top -> `String "top"
-    | ILL_Tensor -> `String "tensor"
+    | ILL_Tensor -> `String "tensor_right"
     | ILL_Tensor_left -> `String "tensor_left"
     | ILL_Plus_left -> `String "plus_left"
     | ILL_Plus_right_1 -> `String "plus_right_1"

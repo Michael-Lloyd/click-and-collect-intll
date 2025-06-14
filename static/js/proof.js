@@ -9,11 +9,15 @@
 // HTML representations of Linear Logic inference rules for display
 const RULES = {
     'axiom': '<span class="italic">ax</span>',          // Axiom rule: A, A^
-    'tensor': '⊗',                                      // Tensor rule: A⊗B
+    'tensor_right': '⊗R',                              // Tensor right rule: A⊗B introduction
+    'tensor_left': '⊗L',                               // Tensor left rule: A⊗B elimination
+    'tensor': '⊗R',                                    // Backward compatibility
     'par': '<span class="flip">&</span>',               // Par rule: A⅋B  
     'with': '&',                                        // With rule: A&B
-    'plus_left': '⊕<sub>1</sub>',                       // Plus left: A⊕B choose A
-    'plus_right': '⊕<sub>2</sub>',                      // Plus right: A⊕B choose B
+    'plus_left': '⊕L',                                  // Plus left: A⊕B elimination from context
+    'plus_right_1': '⊕R<sub>1</sub>',                  // Plus right 1: A⊕B choose A 
+    'plus_right_2': '⊕R<sub>2</sub>',                  // Plus right 2: A⊕B choose B
+    'plus_right': '⊕R<sub>1</sub>',                    // Backward compatibility
     'one': '1',                                         // One rule: multiplicative unit
     'bottom': '⊥',                                      // Bottom rule: multiplicative zero
     'top': '⊤',                                         // Top rule: additive unit
