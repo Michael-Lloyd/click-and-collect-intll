@@ -911,13 +911,41 @@ function toggleIntuitionisticMode($container, intuitionisticMode) {
         $divProof.removeClass('intuitionistic-mode');
     }
 
-    // Re-initialize the proof with the updated mode
-    // This causes the proof to be re-rendered with the new mode
-    let proof = getProofAsJson($container);
-    let $mainSequentTable = $container.find('table').last();
-    let $sequentContainer = removeSequentTable($mainSequentTable);
+    // Get the original sequent string from URL parameters to re-parse it
+    let sequentParam = getQueryParamInUrl('s');
+    if (sequentParam !== null) {
+        // Re-parse the sequent with the new intuitionistic mode setting
+        // This will generate a new proof that conforms to the selected logic mode
+        
+        // Send GET request to backend parser with the new intuitionistic mode
+        $.ajax({
+            type: 'GET',
+            url: `/parse_sequent/${urlEncode(sequentParam)}?intuitionisticMode=${intuitionisticMode ? '1' : '0'}`,
+            success: function(data)
+            {
+                if (data['is_valid']) {
+                    // Clear only the proof div, not the entire container
+                    $divProof.html('');
+                    
+                    // Rebuild just the proof part, preserving options
+                    createSubProof(data['proof'], $divProof, options);
+                } else {
+                    // Parse error, show user-friendly error message
+                    $divProof.html('');
+                    displayPedagogicError(data['error_message'], $container);
+                }
+            },
+            error: onAjaxError
+        });
+    } else {
+        // Fallback: Re-initialize the proof with the updated mode if no sequent in URL
+        // This causes the proof to be re-rendered with the new mode
+        let proof = getProofAsJson($container);
+        let $mainSequentTable = $container.find('table').last();
+        let $sequentContainer = removeSequentTable($mainSequentTable);
 
-    createSubProof(proof, $sequentContainer, options);
+        createSubProof(proof, $sequentContainer, options);
+    }
 }
 
 // ********
