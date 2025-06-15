@@ -1,0 +1,1 @@
+{"intuitionisticMode":1,"sequent":{"context":[{"type":"with","left":{"type":"litt","value":"A"},"right":{"type":"litt","value":"B"}}],"goal":{"type":"litt","value":"C"}},"rule":"ill_with_left_2","focusedFormula":0}

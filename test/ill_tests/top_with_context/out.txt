@@ -1,0 +1,1 @@
+{"is_valid":true,"proof":{"sequent":{"hyp":[{"type":"litt","value":"A"}],"cons":[{"type":"top"}]},"appliedRule":null},"sequent":{"context":[{"t":"litt","v":"A"}],"goal":{"t":"top"}}}

@@ -1,0 +1,1 @@
+{"intuitionisticMode":1,"notations":[],"ruleRequest":{"rule":"ill_lollipop_left","formulaPosition":0},"sequent":{"hyp":[{"t":"lollipop","v1":{"t":"litt","v":"A"},"v2":{"t":"litt","v":"B"}},{"t":"lollipop","v1":{"t":"litt","v":"B"},"v2":{"t":"litt","v":"C"}}],"cons":[{"t":"lollipop","v1":{"t":"litt","v":"A"},"v2":{"t":"litt","v":"C"}}]}}

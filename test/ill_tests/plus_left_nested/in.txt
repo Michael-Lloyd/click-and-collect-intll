@@ -1,0 +1,1 @@
+{"intuitionisticMode":1,"notations":[],"ruleRequest":{"rule":"ill_plus_left","formulaPosition":0},"sequent":{"hyp":[{"t":"plus","v1":{"t":"plus","v1":{"t":"litt","v":"A"},"v2":{"t":"litt","v":"B"}},"v2":{"t":"litt","v":"C"}}],"cons":[{"t":"litt","v":"D"}]}}
