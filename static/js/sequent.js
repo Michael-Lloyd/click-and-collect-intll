@@ -204,8 +204,19 @@ function getRules(formulaAsJson, options, isLeftSide = false) {
                 }
 
             case 'par':
-            case 'with':
                 return [{'element': 'main-formula', 'onclick': [{'rule': formulaAsJson.type, 'needPosition': true}]}];
+                
+            case 'with':
+                if (isLeftSide) {
+                    // Left side: two rules for with elimination (choose left or right sub-formula)
+                    return [
+                        {'element': 'left-formula', 'onclick': [{'rule': 'with_left_1', 'needPosition': true}]},
+                        {'element': 'right-formula', 'onclick': [{'rule': 'with_left_2', 'needPosition': true}]}
+                    ];
+                } else {
+                    // Right side: with introduction
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'with_right', 'needPosition': true}]}];
+                }
 
             case 'plus':
                 if (isLeftSide) {

@@ -72,8 +72,8 @@ and convert_raw_formula_to_ill = function
         raise (ILL_Rule_Application_Exception (true, "^ (dual) is not allowed in ILL"))
     | Raw_sequent.Par (_, _) -> 
         raise (ILL_Rule_Application_Exception (true, "⅋ (par) is not allowed in ILL"))
-    | Raw_sequent.With (_, _) -> 
-        raise (ILL_Rule_Application_Exception (true, "& (with) is not allowed in ILL"))
+    | Raw_sequent.With (f1, f2) ->
+        With (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
     | Raw_sequent.Ofcourse _ -> 
         raise (ILL_Rule_Application_Exception (true, "! (of course) is not allowed in ILL"))
     | Raw_sequent.Whynot _ -> 
@@ -106,7 +106,7 @@ and validate_single_conclusion _ill_seq =
 and validate_ill_formulas_only ill_seq =
     let rec validate_formula = function
         | One | Top | Litt _ -> ()
-        | Tensor (f1, f2) | Plus (f1, f2) | Lollipop (f1, f2) ->
+        | Tensor (f1, f2) | With (f1, f2) | Plus (f1, f2) | Lollipop (f1, f2) ->
             validate_formula f1;
             validate_formula f2
     in
@@ -176,6 +176,12 @@ and apply_ill_rule_internal rule_req ill_seq _notations =
         apply_tensor_rule rule_req ill_seq
     | ILL_Tensor_left ->
         apply_tensor_left_rule rule_req ill_seq
+    | ILL_With_left_1 ->
+        apply_with_left_1_rule rule_req ill_seq
+    | ILL_With_left_2 ->
+        apply_with_left_2_rule rule_req ill_seq
+    | ILL_With_right ->
+        apply_with_right_rule ill_seq
     | ILL_Plus_left ->
         apply_plus_left_rule rule_req ill_seq
     | ILL_Plus_right_1 ->
@@ -301,6 +307,113 @@ and apply_tensor_left_rule rule_req ill_seq =
         in
         find_and_expand_tensor [] ill_seq.context
 
+(* Apply ILL with left 1 rule: Γ,A&B,Δ ⊢ C becomes Γ,A,Δ ⊢ C
+   @param rule_req - Rule request with position information
+   @param ill_seq - Sequent with A&B in context
+   @return ill_proof - With left 1 proof
+*)
+and apply_with_left_1_rule rule_req ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
+    match rule_req.formula_position with
+    | Some pos when pos >= 0 && pos < List.length ill_seq.context ->
+        (* Use specific position if provided *)
+        let context_list = ill_seq.context in
+        let (before, at_pos, after) = split_list_at_position context_list pos in
+        (match at_pos with
+         | With (a, _) ->
+             let new_context = before @ [a] @ after in
+             let premise = { context = new_context; goal = ill_seq.goal } in
+             
+             validate_ill_sequent_constraints premise;
+             let subproof = ILL_Hypothesis_proof premise in
+             ILL_With_left_1_proof (ill_seq.context, a, subproof)
+         | _ ->
+             raise (ILL_Rule_Application_Exception (true, 
+                 "Position " ^ string_of_int pos ^ " does not contain a with formula")))
+    | _ ->
+        (* Fallback to finding first with (original behavior) *)
+        let rec find_and_extract_with acc = function
+            | [] -> raise (ILL_Rule_Application_Exception (true, "With left 1 rule requires A&B in context"))
+            | With (a, _) :: rest ->
+                let new_context = acc @ [a] @ rest in
+                let premise = { context = new_context; goal = ill_seq.goal } in
+                
+                (* Validate that premise maintains ILL constraints *)
+                validate_ill_sequent_constraints premise;
+                
+                let subproof = ILL_Hypothesis_proof premise in
+                ILL_With_left_1_proof (ill_seq.context, a, subproof)
+            | f :: rest -> find_and_extract_with (acc @ [f]) rest
+        in
+        find_and_extract_with [] ill_seq.context
+
+(* Apply ILL with left 2 rule: Γ,A&B,Δ ⊢ C becomes Γ,B,Δ ⊢ C
+   @param rule_req - Rule request with position information
+   @param ill_seq - Sequent with A&B in context
+   @return ill_proof - With left 2 proof
+*)
+and apply_with_left_2_rule rule_req ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
+    match rule_req.formula_position with
+    | Some pos when pos >= 0 && pos < List.length ill_seq.context ->
+        (* Use specific position if provided *)
+        let context_list = ill_seq.context in
+        let (before, at_pos, after) = split_list_at_position context_list pos in
+        (match at_pos with
+         | With (_, b) ->
+             let new_context = before @ [b] @ after in
+             let premise = { context = new_context; goal = ill_seq.goal } in
+             
+             validate_ill_sequent_constraints premise;
+             let subproof = ILL_Hypothesis_proof premise in
+             ILL_With_left_2_proof (ill_seq.context, b, subproof)
+         | _ ->
+             raise (ILL_Rule_Application_Exception (true, 
+                 "Position " ^ string_of_int pos ^ " does not contain a with formula")))
+    | _ ->
+        (* Fallback to finding first with (original behavior) *)
+        let rec find_and_extract_with acc = function
+            | [] -> raise (ILL_Rule_Application_Exception (true, "With left 2 rule requires A&B in context"))
+            | With (_, b) :: rest ->
+                let new_context = acc @ [b] @ rest in
+                let premise = { context = new_context; goal = ill_seq.goal } in
+                
+                (* Validate that premise maintains ILL constraints *)
+                validate_ill_sequent_constraints premise;
+                
+                let subproof = ILL_Hypothesis_proof premise in
+                ILL_With_left_2_proof (ill_seq.context, b, subproof)
+            | f :: rest -> find_and_extract_with (acc @ [f]) rest
+        in
+        find_and_extract_with [] ill_seq.context
+
+(* Apply ILL with right rule: Γ ⊢ A&B becomes Γ ⊢ A and Γ ⊢ B
+   @param ill_seq - Sequent with goal A&B
+   @return ill_proof - With right proof with two premises
+*)
+and apply_with_right_rule ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
+    match ill_seq.goal with
+    | With (a, b) ->
+        let premise1 = { context = ill_seq.context; goal = a } in
+        let premise2 = { context = ill_seq.context; goal = b } in
+        
+        (* Validate that both premises maintain ILL constraints *)
+        validate_ill_sequent_constraints premise1;
+        validate_ill_sequent_constraints premise2;
+        
+        let subproof1 = ILL_Hypothesis_proof premise1 in
+        let subproof2 = ILL_Hypothesis_proof premise2 in
+        ILL_With_right_proof (ill_seq.context, a, b, subproof1, subproof2)
+    | _ ->
+        raise (ILL_Rule_Application_Exception (true, "With right rule requires goal A&B"))
+
 (* Apply ILL plus left rule: Γ,A⊕B,Δ ⊢ C becomes Γ,A,Δ ⊢ C and Γ,B,Δ ⊢ C
    @param rule_req - Rule request with position information
    @param ill_seq - Sequent with A⊕B in context
@@ -410,7 +523,7 @@ and apply_lollipop_rule ill_seq =
     | _ ->
         raise (ILL_Rule_Application_Exception (true, "Lollipop rule requires goal A⊸B"))
 
-(* Apply ILL lollipop left rule: Γ,A⊸B,Δ ⊢ C becomes Γ,Δ ⊢ A and B,Γ,Δ ⊢ C
+(* Apply ILL lollipop left rule: Γ,A⊸B,Δ ⊢ C becomes Γ ⊢ A and Δ,B ⊢ C
    @param rule_req - Rule request with position information
    @param ill_seq - Sequent with A⊸B in context
    @return ill_proof - Lollipop left proof with two premises
@@ -426,6 +539,7 @@ and apply_lollipop_left_rule rule_req ill_seq =
         let (before, at_pos, after) = split_list_at_position context_list pos in
         (match at_pos with
          | Lollipop (a, b) ->
+             (* According to CLAUDE.md: Gamma |- A <gap> Delta, B |- C / Gamma, A -o B, Delta |- C *)
              let premise1 = { context = before; goal = a } in
              let premise2 = { context = after @ [b]; goal = ill_seq.goal } in
              
@@ -439,10 +553,11 @@ and apply_lollipop_left_rule rule_req ill_seq =
              raise (ILL_Rule_Application_Exception (true, 
                  "Position " ^ string_of_int pos ^ " does not contain a lollipop formula")))
     | _ ->
-        (* Fallback to finding first lollipop (original behavior) *)
+        (* Fallback to finding first lollipop - split context appropriately *)
         let rec find_and_extract_lollipop acc = function
             | [] -> raise (ILL_Rule_Application_Exception (true, "Lollipop left rule requires A⊸B in context"))
             | Lollipop (a, b) :: rest ->
+                (* Use acc as Gamma, rest as Delta *)
                 let premise1 = { context = acc; goal = a } in
                 let premise2 = { context = rest @ [b]; goal = ill_seq.goal } in
                 
@@ -466,7 +581,7 @@ and apply_lollipop_left_rule rule_req ill_seq =
 *)
 and split_list_at_position list pos =
     let rec split acc n = function
-        | [] -> (List.rev acc, failwith ("Position " ^ string_of_int pos ^ " out of bounds"), [])
+        | [] -> raise (ILL_Rule_Application_Exception (true, "Position " ^ string_of_int pos ^ " out of bounds"))
         | h :: t when n = 0 -> (List.rev acc, h, t)
         | h :: t -> split (h :: acc) (n - 1) t
     in
@@ -517,9 +632,12 @@ let apply_rule request_as_json =
         else
             (* System error - return as HTTP error *)
             (false, `String ("ILL rule application error: " ^ msg))
-    | _ ->
-        (* Unexpected error *)
-        (false, `String "Unexpected error in ILL rule application")
+    | Failure msg ->
+        (* Catch failwith calls *)
+        (false, `String ("ILL rule application failure: " ^ msg))
+    | exn ->
+        (* Catch all other exceptions *)
+        (false, `String ("Unexpected error in ILL rule application: " ^ (Printexc.to_string exn)))
 
 (* PROOF VALIDATION HELPERS *)
 

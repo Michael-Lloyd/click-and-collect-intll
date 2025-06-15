@@ -183,6 +183,9 @@ and try_introduction_rules ill_seq _config _depth _start_time =
         ILL_Timeout
     | Tensor (_a, _b) ->
         ILL_Timeout
+    | With (_a, _b) ->
+        (* TODO: Implement try_with_rule *)
+        ILL_Timeout
     | Plus (_a, _b) ->
         ILL_Timeout
     | Lollipop (_a, _b) ->

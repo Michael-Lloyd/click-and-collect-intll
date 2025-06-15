@@ -7,14 +7,14 @@
    Key differences from Linear Logic:
    - No exponentials (!A, ?A) - removed
    - No multiplicative disjunction (⅋) - removed  
-   - No additive conjunction (&) - removed
-   - Only has: 1, ⊗, ⊤, ⊕, ⊸ (lollipop)
+   - Only has: 1, ⊗, ⊤, &, ⊕, ⊸ (lollipop)
    
    The formula constructors represent:
    - One: multiplicative unit (1)
    - Top: additive unit (⊤) 
    - Litt: atomic proposition (literal like A, B, C)
    - Tensor: multiplicative conjunction (A ⊗ B) - "both A and B"
+   - With: additive conjunction (A & B) - "both A and B, but choose one to use"
    - Plus: additive disjunction (A ⊕ B) - "A or B, choose one"
    - Lollipop: linear implication (A ⊸ B) - "A implies B linearly"
 *)
@@ -23,6 +23,7 @@ type formula =
   | Top
   | Litt of string
   | Tensor of formula * formula
+  | With of formula * formula
   | Plus of formula * formula
   | Lollipop of formula * formula;;
 
@@ -73,6 +74,7 @@ let rec get_variable_names =
     | Top -> []
     | Litt x -> [x]
     | Tensor (e1, e2) -> get_variable_names e1 @ get_variable_names e2
+    | With (e1, e2) -> get_variable_names e1 @ get_variable_names e2
     | Plus (e1, e2) -> get_variable_names e1 @ get_variable_names e2
     | Lollipop (e1, e2) -> get_variable_names e1 @ get_variable_names e2;;
 
@@ -85,6 +87,7 @@ let get_unique_variable_names ill_seq =
 
 let is_top = function | Top -> true | _ -> false;;
 let is_tensor = function | Tensor _ -> true | _ -> false;;
+let is_with = function | With _ -> true | _ -> false;;
 let is_plus = function | Plus _ -> true | _ -> false;;
 let is_lollipop = function | Lollipop _ -> true | _ -> false;;
 
@@ -96,6 +99,7 @@ let rec formula_to_ascii = function
   | Top -> "T" 
   | Litt x -> x
   | Tensor (e1, e2) -> "(" ^ formula_to_ascii e1 ^ " * " ^ formula_to_ascii e2 ^ ")"
+  | With (e1, e2) -> "(" ^ formula_to_ascii e1 ^ " & " ^ formula_to_ascii e2 ^ ")"
   | Plus (e1, e2) -> "(" ^ formula_to_ascii e1 ^ " + " ^ formula_to_ascii e2 ^ ")"
   | Lollipop (e1, e2) -> "(" ^ formula_to_ascii e1 ^ " -o " ^ formula_to_ascii e2 ^ ")"
 
@@ -114,6 +118,7 @@ let rec formula_to_latex = function
   | Top -> "\\top"
   | Litt x -> x
   | Tensor (e1, e2) -> formula_to_latex e1 ^ " \\otimes " ^ formula_to_latex e2
+  | With (e1, e2) -> formula_to_latex e1 ^ " \\& " ^ formula_to_latex e2
   | Plus (e1, e2) -> formula_to_latex e1 ^ " \\oplus " ^ formula_to_latex e2
   | Lollipop (e1, e2) -> formula_to_latex e1 ^ " \\multimap " ^ formula_to_latex e2
 

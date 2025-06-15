@@ -6,7 +6,7 @@
    1. Asymmetric sequents: Γ ⊢ A (single conclusion)
    2. No exponentials: No !A or ?A connectives
    3. No multiplicative disjunction: No ⅋ connective  
-   4. No additive conjunction: No & connective
+   4. Has additive conjunction: & connective
    5. Has linear implication: A ⊸ B connective
    
    Each proof tree node represents an inference rule application with its premises.
@@ -18,7 +18,7 @@ open Ill_sequent
    Each constructor corresponds to an ILL inference rule.
    
    Key differences from classical LL proofs:
-   - No Par_proof, With_proof (removed connectives)
+   - No Par_proof (removed connective)
    - No exponential proofs (Promotion_proof, Dereliction_proof, etc.)
    - Added Lollipop_proof for linear implication
    - All sequents have single conclusions
@@ -29,11 +29,14 @@ type ill_proof =
     | ILL_Top_proof of formula list                                       (* ⊤: Γ ⊢ ⊤ *)
     | ILL_Tensor_proof of formula list * formula * formula * ill_proof * ill_proof  (* ⊗: Γ,Δ ⊢ A⊗B / Γ ⊢ A & Δ ⊢ B *)
     | ILL_Tensor_left_proof of formula list * formula * formula * ill_proof         (* ⊗L: Γ,A⊗B,Δ ⊢ C / Γ,A,B,Δ ⊢ C *)
+    | ILL_With_left_1_proof of formula list * formula * ill_proof          (* &L₁: Γ,A&B ⊢ C / Γ,A ⊢ C *)
+    | ILL_With_left_2_proof of formula list * formula * ill_proof          (* &L₂: Γ,A&B ⊢ C / Γ,B ⊢ C *)
+    | ILL_With_right_proof of formula list * formula * formula * ill_proof * ill_proof  (* &R: Γ ⊢ A&B / Γ ⊢ A & Γ ⊢ B *)
     | ILL_Plus_left_proof of formula list * formula * formula * ill_proof * ill_proof  (* +L: Γ,A⊕B,Δ ⊢ C / Γ,A,Δ ⊢ C & Γ,B,Δ ⊢ C *)
     | ILL_Plus_right_1_proof of formula list * formula * formula * ill_proof      (* ⊕₁: Γ ⊢ A⊕B / Γ ⊢ A *)
     | ILL_Plus_right_2_proof of formula list * formula * formula * ill_proof      (* ⊕₂: Γ ⊢ A⊕B / Γ ⊢ B *)
     | ILL_Lollipop_proof of formula list * formula * formula * ill_proof           (* ⊸: Γ ⊢ A⊸B / Γ,A ⊢ B *)
-    | ILL_Lollipop_left_proof of formula list * formula * formula * ill_proof * ill_proof  (* ⊸L: Γ,A⊸B,Δ ⊢ C / Γ,Δ ⊢ A & B,Γ,Δ ⊢ C *)
+    | ILL_Lollipop_left_proof of formula list * formula * formula * ill_proof * ill_proof  (* ⊸L: Γ,A⊸B,Δ ⊢ C / Γ ⊢ A & Δ,B ⊢ C *)
     | ILL_Hypothesis_proof of ill_sequent;;                              (* open goal (leaf) *)
 
 (* Exception for invalid proof operations *)
@@ -57,6 +60,12 @@ let get_conclusion_sequent = function
         { context = context; goal = Tensor (f1, f2) }
     | ILL_Tensor_left_proof (context, _, _, _) -> 
         { context = context; goal = Top }  (* Goal extracted from premise *)
+    | ILL_With_left_1_proof (context, _, _) -> 
+        { context = context; goal = Top }  (* Goal extracted from premise *)
+    | ILL_With_left_2_proof (context, _, _) -> 
+        { context = context; goal = Top }  (* Goal extracted from premise *)
+    | ILL_With_right_proof (context, f1, f2, _, _) -> 
+        { context = context; goal = With (f1, f2) }
     | ILL_Plus_left_proof (context, _, _, _, _) -> 
         { context = context; goal = Top }  (* Goal extracted from premise *)
     | ILL_Plus_right_1_proof (context, f1, f2, _) -> 
@@ -80,6 +89,9 @@ let get_premises = function
     | ILL_Top_proof _ -> []
     | ILL_Tensor_proof (_, _, _, p1, p2) -> [p1; p2]
     | ILL_Tensor_left_proof (_, _, _, p) -> [p]
+    | ILL_With_left_1_proof (_, _, p) -> [p]
+    | ILL_With_left_2_proof (_, _, p) -> [p]
+    | ILL_With_right_proof (_, _, _, p1, p2) -> [p1; p2]
     | ILL_Plus_left_proof (_, _, _, p1, p2) -> [p1; p2]
     | ILL_Plus_right_1_proof (_, _, _, p) -> [p]
     | ILL_Plus_right_2_proof (_, _, _, p) -> [p]
@@ -99,6 +111,9 @@ let set_premises proof new_premises = match proof, new_premises with
     | ILL_Top_proof _, [] -> proof
     | ILL_Tensor_proof (ctx, f1, f2, _, _), [p1; p2] -> ILL_Tensor_proof (ctx, f1, f2, p1, p2)
     | ILL_Tensor_left_proof (ctx, f1, f2, _), [p] -> ILL_Tensor_left_proof (ctx, f1, f2, p)
+    | ILL_With_left_1_proof (ctx, f, _), [p] -> ILL_With_left_1_proof (ctx, f, p)
+    | ILL_With_left_2_proof (ctx, f, _), [p] -> ILL_With_left_2_proof (ctx, f, p)
+    | ILL_With_right_proof (ctx, f1, f2, _, _), [p1; p2] -> ILL_With_right_proof (ctx, f1, f2, p1, p2)
     | ILL_Plus_left_proof (ctx, f1, f2, _, _), [p1; p2] -> ILL_Plus_left_proof (ctx, f1, f2, p1, p2)
     | ILL_Plus_right_1_proof (ctx, f1, f2, _), [p] -> ILL_Plus_right_1_proof (ctx, f1, f2, p)
     | ILL_Plus_right_2_proof (ctx, f1, f2, _), [p] -> ILL_Plus_right_2_proof (ctx, f1, f2, p)
@@ -135,6 +150,9 @@ let rec is_complete_proof = function
     | ILL_Top_proof _ -> true
     | ILL_Tensor_proof (_, _, _, p1, p2) -> is_complete_proof p1 && is_complete_proof p2
     | ILL_Tensor_left_proof (_, _, _, p) -> is_complete_proof p
+    | ILL_With_left_1_proof (_, _, p) -> is_complete_proof p
+    | ILL_With_left_2_proof (_, _, p) -> is_complete_proof p
+    | ILL_With_right_proof (_, _, _, p1, p2) -> is_complete_proof p1 && is_complete_proof p2
     | ILL_Plus_left_proof (_, _, _, p1, p2) -> is_complete_proof p1 && is_complete_proof p2
     | ILL_Plus_right_1_proof (_, _, _, p) -> is_complete_proof p
     | ILL_Plus_right_2_proof (_, _, _, p) -> is_complete_proof p
@@ -155,6 +173,9 @@ let rec is_valid_proof proof =
     | ILL_Top_proof _ -> true
     | ILL_Tensor_proof (_, _, _, p1, p2) -> is_valid_proof p1 && is_valid_proof p2
     | ILL_Tensor_left_proof (_, _, _, p) -> is_valid_proof p
+    | ILL_With_left_1_proof (_, _, p) -> is_valid_proof p
+    | ILL_With_left_2_proof (_, _, p) -> is_valid_proof p
+    | ILL_With_right_proof (_, _, _, p1, p2) -> is_valid_proof p1 && is_valid_proof p2
     | ILL_Plus_left_proof (_, _, _, p1, p2) -> is_valid_proof p1 && is_valid_proof p2
     | ILL_Plus_right_1_proof (_, _, _, p) -> is_valid_proof p
     | ILL_Plus_right_2_proof (_, _, _, p) -> is_valid_proof p
@@ -173,6 +194,7 @@ let ill_sequent_to_raw_sequent ill_seq =
         | Top -> Raw_sequent.Top
         | Litt s -> Raw_sequent.Litt s
         | Tensor (f1, f2) -> Raw_sequent.Tensor (ill_formula_to_raw f1, ill_formula_to_raw f2)
+        | With (f1, f2) -> Raw_sequent.With (ill_formula_to_raw f1, ill_formula_to_raw f2)
         | Plus (f1, f2) -> Raw_sequent.Plus (ill_formula_to_raw f1, ill_formula_to_raw f2)
         | Lollipop (f1, f2) -> Raw_sequent.Lollipop (ill_formula_to_raw f1, ill_formula_to_raw f2)
     in
@@ -201,16 +223,19 @@ let rec to_json proof =
         (* For non-hypothesis proofs, we need to include rule information *)
         let premises_json = List.map to_json (get_premises proof) in
         let rule_name = match proof with
-            | ILL_Axiom_proof _ -> "axiom"
-            | ILL_One_proof -> "one"
-            | ILL_Top_proof _ -> "top"
-            | ILL_Tensor_proof _ -> "tensor_right"
-            | ILL_Tensor_left_proof _ -> "tensor_left"
-            | ILL_Plus_left_proof _ -> "plus_left"
-            | ILL_Plus_right_1_proof _ -> "plus_right_1"
-            | ILL_Plus_right_2_proof _ -> "plus_right_2"
-            | ILL_Lollipop_proof _ -> "lollipop"
-            | ILL_Lollipop_left_proof _ -> "lollipop_left"
+            | ILL_Axiom_proof _ -> "ill_axiom"
+            | ILL_One_proof -> "ill_one"
+            | ILL_Top_proof _ -> "ill_top"
+            | ILL_Tensor_proof _ -> "ill_tensor_right"
+            | ILL_Tensor_left_proof _ -> "ill_tensor_left"
+            | ILL_With_left_1_proof _ -> "ill_with_left_1"
+            | ILL_With_left_2_proof _ -> "ill_with_left_2"
+            | ILL_With_right_proof _ -> "ill_with_right"
+            | ILL_Plus_left_proof _ -> "ill_plus_left"
+            | ILL_Plus_right_1_proof _ -> "ill_plus_right_1"
+            | ILL_Plus_right_2_proof _ -> "ill_plus_right_2"
+            | ILL_Lollipop_proof _ -> "ill_lollipop"
+            | ILL_Lollipop_left_proof _ -> "ill_lollipop_left"
             | _ -> "unknown"
         in
         let rule_request_json = `Assoc [("rule", `String rule_name)] in
@@ -238,6 +263,7 @@ let from_json json =
         | Raw_sequent.Top -> Top
         | Raw_sequent.Litt s -> Litt s
         | Raw_sequent.Tensor (f1, f2) -> Tensor (raw_to_ill_formula f1, raw_to_ill_formula f2)
+        | Raw_sequent.With (f1, f2) -> With (raw_to_ill_formula f1, raw_to_ill_formula f2)
         | Raw_sequent.Plus (f1, f2) -> Plus (raw_to_ill_formula f1, raw_to_ill_formula f2)
         | Raw_sequent.Lollipop (f1, f2) -> Lollipop (raw_to_ill_formula f1, raw_to_ill_formula f2)
         | _ -> raise (ILL_Proof_Exception (false, "Invalid formula type for ILL"))
@@ -272,6 +298,9 @@ let rec count_inference_rules = function
     | ILL_Top_proof _ -> 1
     | ILL_Tensor_proof (_, _, _, p1, p2) -> 1 + count_inference_rules p1 + count_inference_rules p2
     | ILL_Tensor_left_proof (_, _, _, p) -> 1 + count_inference_rules p
+    | ILL_With_left_1_proof (_, _, p) -> 1 + count_inference_rules p
+    | ILL_With_left_2_proof (_, _, p) -> 1 + count_inference_rules p
+    | ILL_With_right_proof (_, _, _, p1, p2) -> 1 + count_inference_rules p1 + count_inference_rules p2
     | ILL_Plus_left_proof (_, _, _, p1, p2) -> 1 + count_inference_rules p1 + count_inference_rules p2
     | ILL_Plus_right_1_proof (_, _, _, p) -> 1 + count_inference_rules p
     | ILL_Plus_right_2_proof (_, _, _, p) -> 1 + count_inference_rules p
@@ -289,6 +318,9 @@ let rec count_open_hypotheses = function
     | ILL_Top_proof _ -> 0
     | ILL_Tensor_proof (_, _, _, p1, p2) -> count_open_hypotheses p1 + count_open_hypotheses p2
     | ILL_Tensor_left_proof (_, _, _, p) -> count_open_hypotheses p
+    | ILL_With_left_1_proof (_, _, p) -> count_open_hypotheses p
+    | ILL_With_left_2_proof (_, _, p) -> count_open_hypotheses p
+    | ILL_With_right_proof (_, _, _, p1, p2) -> count_open_hypotheses p1 + count_open_hypotheses p2
     | ILL_Plus_left_proof (_, _, _, p1, p2) -> count_open_hypotheses p1 + count_open_hypotheses p2
     | ILL_Plus_right_1_proof (_, _, _, p) -> count_open_hypotheses p
     | ILL_Plus_right_2_proof (_, _, _, p) -> count_open_hypotheses p

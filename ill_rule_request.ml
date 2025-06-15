@@ -8,13 +8,16 @@
    - One: ⊢ 1 (multiplicative unit introduction)
    - Top: Γ ⊢ ⊤ (additive unit introduction)  
    - Tensor: Γ,Δ ⊢ A⊗B / Γ ⊢ A & Δ ⊢ B (multiplicative conjunction)
+   - With_left_1: Γ,A&B ⊢ C / Γ,A ⊢ C (additive conjunction left 1)
+   - With_left_2: Γ,A&B ⊢ C / Γ,B ⊢ C (additive conjunction left 2)
+   - With_right: Γ ⊢ A&B / Γ ⊢ A & Γ ⊢ B (additive conjunction right)
    - Plus_left: Γ ⊢ A⊕B / Γ ⊢ A (additive disjunction left)
    - Plus_right: Γ ⊢ A⊕B / Γ ⊢ B (additive disjunction right)
    - Lollipop: Γ ⊢ A⊸B / Γ,A ⊢ B (linear implication introduction)
    
    Removed from classical LL:
    - Par rule (no ⅋ connective)
-   - With rule (no & connective)
+   - With rule has left and right rules
    - All exponential rules (!, ?)
 *)
 
@@ -30,6 +33,9 @@ type ill_rule =
     | ILL_Top
     | ILL_Tensor
     | ILL_Tensor_left
+    | ILL_With_left_1    (* &L₁: left rule for first sub-formula *)
+    | ILL_With_left_2    (* &L₂: left rule for second sub-formula *)
+    | ILL_With_right     (* &R: right rule *)
     | ILL_Plus_left      (* +L: left rule *)
     | ILL_Plus_right_1   (* +R₁: right rule for left sub-formula *)
     | ILL_Plus_right_2   (* +R₂: right rule for right sub-formula *)
@@ -89,6 +95,18 @@ let can_apply_rule rule ill_seq =
         if has_tensor then (true, "")
         else (false, "Tensor left rule requires A⊗B in context")
     
+    | ILL_With_left_1 | ILL_With_left_2 ->
+        (* With left rules require A&B in context *)
+        let has_with = List.exists is_with ill_seq.context in
+        if has_with then (true, "")
+        else (false, "With left rule requires A&B in context")
+    
+    | ILL_With_right ->
+        (* With right rule requires goal A&B *)
+        (match ill_seq.goal with
+         | With (_, _) -> (true, "")
+         | _ -> (false, "With right rule requires goal A&B"))
+    
     | ILL_Plus_left ->
         (* Plus left rule requires A⊕B in context *)
         let has_plus = List.exists is_plus ill_seq.context in
@@ -140,6 +158,15 @@ let extract_lollipop_from_context ctx =
     in
     extract [] ctx
 
+(* Extract first with formula from context *)
+let extract_with_from_context ctx =
+    let rec extract acc = function
+        | [] -> (acc, None)
+        | With (a, b) :: rest -> (acc @ rest, Some (With (a, b)))
+        | f :: rest -> extract (acc @ [f]) rest
+    in
+    extract [] ctx
+
 (* RULE APPLICATION *)
 
 (* Apply an ILL rule to a sequent and generate premise sequents.
@@ -174,6 +201,30 @@ let apply_rule_to_sequent rule_req ill_seq =
         (* Tensor left: Γ,A⊗B,Δ ⊢ C becomes Γ,A,B,Δ ⊢ C *)
         let updated_context = expand_tensor_in_context ill_seq.context in
         [{ context = updated_context; goal = ill_seq.goal }]
+    
+    | ILL_With_left_1 ->
+        (* With left 1: Γ,A&B ⊢ C becomes Γ,A ⊢ C *)
+        let (ctx_without_with, with_formula) = extract_with_from_context ill_seq.context in
+        (match with_formula with
+         | Some (With (a, _)) ->
+             [{ context = a :: ctx_without_with; goal = ill_seq.goal }]
+         | _ -> [])
+    
+    | ILL_With_left_2 ->
+        (* With left 2: Γ,A&B ⊢ C becomes Γ,B ⊢ C *)
+        let (ctx_without_with, with_formula) = extract_with_from_context ill_seq.context in
+        (match with_formula with
+         | Some (With (_, b)) ->
+             [{ context = b :: ctx_without_with; goal = ill_seq.goal }]
+         | _ -> [])
+    
+    | ILL_With_right ->
+        (* With right: Γ ⊢ A&B becomes Γ ⊢ A and Γ ⊢ B *)
+        (match ill_seq.goal with
+         | With (a, b) ->
+             [{ context = ill_seq.context; goal = a };
+              { context = ill_seq.context; goal = b }]
+         | _ -> [])
     
     | ILL_Plus_left ->
         (* Plus left: Γ,A⊕B,Δ ⊢ C becomes Γ,A,Δ ⊢ C and Γ,B,Δ ⊢ C *)
@@ -211,12 +262,14 @@ let apply_rule_to_sequent rule_req ill_seq =
          | _ -> [])
     
     | ILL_Lollipop_left ->
-        (* Lollipop left: Γ,A⊸B,Δ ⊢ C becomes Γ,Δ ⊢ A and B,Γ,Δ ⊢ C *)
+        (* Lollipop left: Γ,A⊸B,Δ ⊢ C becomes Γ ⊢ A and Δ,B ⊢ C *)
         let (ctx_without_lollipop, lollipop_formula) = extract_lollipop_from_context ill_seq.context in
         (match lollipop_formula with
          | Some (Lollipop (a, b)) ->
-             [{ context = ctx_without_lollipop; goal = a };
-              { context = b :: ctx_without_lollipop; goal = ill_seq.goal }]
+             (* Need to properly split context into Gamma and Delta *)
+             let gamma, delta = split_context_simple ctx_without_lollipop in
+             [{ context = gamma; goal = a };
+              { context = delta @ [b]; goal = ill_seq.goal }]
          | _ -> [])
 
 (* JSON PARSING *)
@@ -229,18 +282,36 @@ let rule_from_json json =
     match json with
     | `Assoc assoc_list ->
         (match List.assoc_opt "rule" assoc_list with
-         | Some (`String "axiom") -> ILL_Axiom
-         | Some (`String "one") -> ILL_One
-         | Some (`String "top") -> ILL_Top
-         | Some (`String "tensor_right") -> ILL_Tensor
+         | Some (`String "ill_axiom") -> ILL_Axiom
+         | Some (`String "axiom") -> ILL_Axiom  (* Backward compatibility *)
+         | Some (`String "ill_one") -> ILL_One
+         | Some (`String "one") -> ILL_One  (* Backward compatibility *)
+         | Some (`String "ill_top") -> ILL_Top
+         | Some (`String "top") -> ILL_Top  (* Backward compatibility *)
+         | Some (`String "ill_tensor_right") -> ILL_Tensor
+         | Some (`String "ill_tensor") -> ILL_Tensor  (* Backward compatibility *)
+         | Some (`String "tensor_right") -> ILL_Tensor  (* Backward compatibility *)
          | Some (`String "tensor") -> ILL_Tensor  (* Backward compatibility *)
-         | Some (`String "tensor_left") -> ILL_Tensor_left
-         | Some (`String "plus_left") -> ILL_Plus_left
-         | Some (`String "plus_right_1") -> ILL_Plus_right_1
-         | Some (`String "plus_right_2") -> ILL_Plus_right_2
+         | Some (`String "ill_tensor_left") -> ILL_Tensor_left
+         | Some (`String "tensor_left") -> ILL_Tensor_left  (* Backward compatibility *)
+         | Some (`String "ill_with_left_1") -> ILL_With_left_1
+         | Some (`String "with_left_1") -> ILL_With_left_1  (* Backward compatibility *)
+         | Some (`String "ill_with_left_2") -> ILL_With_left_2
+         | Some (`String "with_left_2") -> ILL_With_left_2  (* Backward compatibility *)
+         | Some (`String "ill_with_right") -> ILL_With_right
+         | Some (`String "with_right") -> ILL_With_right  (* Backward compatibility *)
+         | Some (`String "ill_plus_left") -> ILL_Plus_left
+         | Some (`String "plus_left") -> ILL_Plus_left  (* Backward compatibility *)
+         | Some (`String "ill_plus_right_1") -> ILL_Plus_right_1
+         | Some (`String "plus_right_1") -> ILL_Plus_right_1  (* Backward compatibility *)
+         | Some (`String "ill_plus_right_2") -> ILL_Plus_right_2
+         | Some (`String "plus_right_2") -> ILL_Plus_right_2  (* Backward compatibility *)
          | Some (`String "plus_right") -> ILL_Plus_right_1  (* Backward compatibility *)
-         | Some (`String "lollipop") -> ILL_Lollipop
-         | Some (`String "lollipop_left") -> ILL_Lollipop_left
+         | Some (`String "ill_lollipop") -> ILL_Lollipop
+         | Some (`String "lollipop") -> ILL_Lollipop  (* Backward compatibility *)
+         | Some (`String "ill_lollipop_left") -> ILL_Lollipop_left
+         | Some (`String "lollipop_left") -> ILL_Lollipop_left  (* Backward compatibility *)
+         | Some (`String "with") -> ILL_With_left_1  (* Generic "with" for rule inference *)
          | _ -> raise (ILL_Rule_Json_Exception "Unknown ILL rule"))
     | _ -> raise (ILL_Rule_Json_Exception "Invalid rule JSON format")
 
@@ -290,16 +361,19 @@ let from_json json =
    @return Yojson.Basic.t - JSON representation
 *)
 let rule_to_json = function
-    | ILL_Axiom -> `String "axiom"
-    | ILL_One -> `String "one"
-    | ILL_Top -> `String "top"
-    | ILL_Tensor -> `String "tensor_right"
-    | ILL_Tensor_left -> `String "tensor_left"
-    | ILL_Plus_left -> `String "plus_left"
-    | ILL_Plus_right_1 -> `String "plus_right_1"
-    | ILL_Plus_right_2 -> `String "plus_right_2"
-    | ILL_Lollipop -> `String "lollipop"
-    | ILL_Lollipop_left -> `String "lollipop_left"
+    | ILL_Axiom -> `String "ill_axiom"
+    | ILL_One -> `String "ill_one"
+    | ILL_Top -> `String "ill_top"
+    | ILL_Tensor -> `String "ill_tensor_right"
+    | ILL_Tensor_left -> `String "ill_tensor_left"
+    | ILL_With_left_1 -> `String "ill_with_left_1"
+    | ILL_With_left_2 -> `String "ill_with_left_2"
+    | ILL_With_right -> `String "ill_with_right"
+    | ILL_Plus_left -> `String "ill_plus_left"
+    | ILL_Plus_right_1 -> `String "ill_plus_right_1"
+    | ILL_Plus_right_2 -> `String "ill_plus_right_2"
+    | ILL_Lollipop -> `String "ill_lollipop"
+    | ILL_Lollipop_left -> `String "ill_lollipop_left"
 
 (* Convert ILL rule request to JSON representation.
    @param rule_req - ILL rule request
@@ -350,6 +424,9 @@ and infer_left_rule rule_req ill_seq =
         (match clicked_formula with
          | Tensor (_, _) -> 
              { rule_req with rule = ILL_Tensor_left }
+         | With (_, _) -> 
+             (* Default to with_left_1, frontend can specify specific rule *)
+             { rule_req with rule = ILL_With_left_1 }
          | Plus (_, _) -> 
              { rule_req with rule = ILL_Plus_left }
          | Lollipop (_, _) -> 
@@ -367,6 +444,7 @@ and infer_right_rule rule_req ill_seq =
     | One -> { rule_req with rule = ILL_One }
     | Top -> { rule_req with rule = ILL_Top }
     | Tensor (_, _) -> { rule_req with rule = ILL_Tensor }
+    | With (_, _) -> { rule_req with rule = ILL_With_right }
     | Plus (_, _) ->
         (* If frontend already chose a specific plus rule, keep it *)
         (match rule_req.rule with
@@ -387,11 +465,14 @@ let rule_description = function
     | ILL_Top -> "Top introduction: Γ ⊢ ⊤"
     | ILL_Tensor -> "Tensor introduction: Γ,Δ ⊢ A⊗B / Γ ⊢ A & Δ ⊢ B"
     | ILL_Tensor_left -> "Tensor elimination: Γ,A⊗B,Δ ⊢ C / Γ,A,B,Δ ⊢ C"
+    | ILL_With_left_1 -> "With left 1: Γ,A&B ⊢ C / Γ,A ⊢ C"
+    | ILL_With_left_2 -> "With left 2: Γ,A&B ⊢ C / Γ,B ⊢ C"
+    | ILL_With_right -> "With right: Γ ⊢ A&B / Γ ⊢ A & Γ ⊢ B"
     | ILL_Plus_left -> "Plus left: Γ,A⊕B,Δ ⊢ C / Γ,A,Δ ⊢ C & Γ,B,Δ ⊢ C"
     | ILL_Plus_right_1 -> "Plus right 1: Γ ⊢ A⊕B / Γ ⊢ A"
     | ILL_Plus_right_2 -> "Plus right 2: Γ ⊢ A⊕B / Γ ⊢ B"
     | ILL_Lollipop -> "Lollipop introduction: Γ ⊢ A⊸B / Γ,A ⊢ B"
-    | ILL_Lollipop_left -> "Lollipop elimination: Γ,A⊸B,Δ ⊢ C / Γ,Δ ⊢ A & B,Γ,Δ ⊢ C"
+    | ILL_Lollipop_left -> "Lollipop elimination: Γ ⊢ A & Δ,B ⊢ C / Γ,A⊸B,Δ ⊢ C"
 
 (* Get rule name for display in proof trees.
    @param rule - ILL rule
@@ -403,6 +484,9 @@ let rule_name = function
     | ILL_Top -> "⊤"
     | ILL_Tensor -> "⊗"
     | ILL_Tensor_left -> "⊗L"
+    | ILL_With_left_1 -> "&L₁"
+    | ILL_With_left_2 -> "&L₂"
+    | ILL_With_right -> "&R"
     | ILL_Plus_left -> "+L"
     | ILL_Plus_right_1 -> "⊕₁"
     | ILL_Plus_right_2 -> "⊕₂"

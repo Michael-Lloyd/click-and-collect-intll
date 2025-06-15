@@ -5,7 +5,7 @@
    
    Key differences from classical LL parsing:
    - ILL sequents have the form Γ ⊢ A (single conclusion)
-   - Different connective set (no ⅋, &, !, ?)
+   - Different connective set (no ⅋, !, ?)
    - Added linear implication A ⊸ B
    - Error messages tailored for ILL syntax
    
@@ -68,8 +68,8 @@ and convert_raw_formula_to_ill = function
         raise (Invalid_ILL_Connective "^ (dual)")
     | Raw_sequent.Par (_, _) -> 
         raise (Invalid_ILL_Connective "⅋ (par)")
-    | Raw_sequent.With (_, _) -> 
-        raise (Invalid_ILL_Connective "& (with)")
+    | Raw_sequent.With (f1, f2) ->
+        With (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
     | Raw_sequent.Ofcourse _ -> 
         raise (Invalid_ILL_Connective "! (of course)")
     | Raw_sequent.Whynot _ -> 
@@ -83,7 +83,7 @@ and convert_raw_formula_to_ill = function
 *)
 let rec validate_ill_formula = function
     | One | Top | Litt _ -> ()
-    | Tensor (f1, f2) | Plus (f1, f2) | Lollipop (f1, f2) ->
+    | Tensor (f1, f2) | With (f1, f2) | Plus (f1, f2) | Lollipop (f1, f2) ->
         validate_ill_formula f1;
         validate_ill_formula f2
 
@@ -107,6 +107,11 @@ let rec ill_formula_to_json = function
     | Litt s -> `Assoc [("t", `String "litt"); ("v", `String s)]
     | Tensor (f1, f2) -> `Assoc [
         ("t", `String "tensor");
+        ("v1", ill_formula_to_json f1);
+        ("v2", ill_formula_to_json f2)
+    ]
+    | With (f1, f2) -> `Assoc [
+        ("t", `String "with");
         ("v1", ill_formula_to_json f1);
         ("v2", ill_formula_to_json f2)
     ]
@@ -172,7 +177,7 @@ let safe_parse sequent_string =
     | Invalid_ILL_Connective conn ->
         `Assoc [
             ("is_valid", `Bool false);
-            ("error_message", `String ("Invalid ILL connective: " ^ conn ^ ". ILL supports: *, +, -o, 1, T"))
+            ("error_message", `String ("Invalid ILL connective: " ^ conn ^ ". ILL supports: *, &, +, -o, 1, T"))
         ]
     | Invalid_ILL_Sequent_Structure msg ->
         `Assoc [
@@ -251,6 +256,7 @@ let get_ill_syntax_help () =
     "ILL Syntax:\n" ^
     "  Literals: A, B, C, ...\n" ^
     "  Tensor: A * B (multiplicative conjunction)\n" ^
+    "  With: A & B (additive conjunction)\n" ^
     "  Plus: A + B (additive disjunction)\n" ^
     "  Lollipop: A -o B (linear implication)\n" ^
     "  One: 1 (multiplicative unit)\n" ^
@@ -262,7 +268,7 @@ let get_ill_syntax_help () =
    @return bool - True if valid ILL syntax characters
 *)
 let contains_only_ill_chars s =
-    let valid_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789*+1T|-() ,o-" in
+    let valid_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789*&+1T|-() ,o-" in
     let rec check i =
         if i >= String.length s then true
         else if String.contains valid_chars s.[i] then check (i + 1)
