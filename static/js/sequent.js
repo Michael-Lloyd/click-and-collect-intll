@@ -45,16 +45,7 @@ function createSequent(sequent, $sequentTable, options) {
     if (options.withInteraction) {
         $thesisSpan.addClass('clickable');
         addClickAndDoubleClickEvent($thesisSpan, function () {
-            // NEW: For ILL mode, turnstile click should be context-aware
-            let $container = $sequentTable.closest('.proof-container');
-            let containerOptions = $container.data('options');
             let ruleRequest = { rule: 'axiom' };
-            
-            if (containerOptions && containerOptions.intuitionisticMode?.value) {
-                // In ILL mode, axiom rule application might need additional context
-                ruleRequest.illMode = true;
-            }
-            
             applyRule(ruleRequest, $sequentTable);
         }, function () {
             autoProveSequent($sequentTable);
@@ -189,53 +180,80 @@ function createLittHTML(littName) {
 
 function getRules(formulaAsJson, options, isLeftSide = false) {
     if (options.withInteraction) {
+        // Check if we're in ILL mode to determine rule naming
+        let isIntuitionisticMode = options.intuitionisticMode?.value || options.forceILLSymbols || false;
+        
         switch (formulaAsJson.type) {
             case 'litt':
             case 'dual':
                 return [{'element': 'main-formula', 'onclick': [{'rule': 'axiom', 'needPosition': false}]}];
 
             case 'tensor':
-                if (isLeftSide) {
-                    // Left side: tensor elimination
-                    return [{'element': 'main-formula', 'onclick': [{'rule': 'tensor_left', 'needPosition': true}]}];
+                if (isIntuitionisticMode) {
+                    if (isLeftSide) {
+                        // ILL: Left side tensor elimination
+                        return [{'element': 'main-formula', 'onclick': [{'rule': 'tensor_left', 'needPosition': true}]}];
+                    } else {
+                        // ILL: Right side tensor introduction
+                        return [{'element': 'main-formula', 'onclick': [{'rule': 'tensor_right', 'needPosition': true}]}];
+                    }
                 } else {
-                    // Right side: tensor introduction
-                    return [{'element': 'main-formula', 'onclick': [{'rule': 'tensor_right', 'needPosition': true}]}];
+                    // Standard LL: Simple tensor rule
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'tensor', 'needPosition': true}]}];
                 }
 
             case 'par':
                 return [{'element': 'main-formula', 'onclick': [{'rule': formulaAsJson.type, 'needPosition': true}]}];
                 
             case 'with':
-                if (isLeftSide) {
-                    // Left side: two rules for with elimination (choose left or right sub-formula)
-                    return [
-                        {'element': 'left-formula', 'onclick': [{'rule': 'with_left_1', 'needPosition': true}]},
-                        {'element': 'right-formula', 'onclick': [{'rule': 'with_left_2', 'needPosition': true}]}
-                    ];
+                if (isIntuitionisticMode) {
+                    if (isLeftSide) {
+                        // ILL: Left side with elimination (choose left or right sub-formula)
+                        return [
+                            {'element': 'left-formula', 'onclick': [{'rule': 'with_left_1', 'needPosition': true}]},
+                            {'element': 'right-formula', 'onclick': [{'rule': 'with_left_2', 'needPosition': true}]}
+                        ];
+                    } else {
+                        // ILL: Right side with introduction
+                        return [{'element': 'main-formula', 'onclick': [{'rule': 'with_right', 'needPosition': true}]}];
+                    }
                 } else {
-                    // Right side: with introduction
-                    return [{'element': 'main-formula', 'onclick': [{'rule': 'with_right', 'needPosition': true}]}];
+                    // Standard LL: Simple with rule
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'with', 'needPosition': true}]}];
                 }
 
             case 'plus':
-                if (isLeftSide) {
-                    // Left side: one rule for plus elimination
-                    return [{'element': 'main-formula', 'onclick': [{'rule': 'plus_left', 'needPosition': true}]}];
+                if (isIntuitionisticMode) {
+                    if (isLeftSide) {
+                        // ILL: Left side plus elimination
+                        return [{'element': 'main-formula', 'onclick': [{'rule': 'plus_left', 'needPosition': true}]}];
+                    } else {
+                        // ILL: Right side plus introduction (choose left or right sub-formula)
+                        return [
+                            {'element': 'left-formula', 'onclick': [{'rule': 'plus_right_1', 'needPosition': true}]},
+                            {'element': 'right-formula', 'onclick': [{'rule': 'plus_right_2', 'needPosition': true}]}
+                        ];
+                    }
                 } else {
-                    // Right side: two rules for plus introduction (choose left or right sub-formula)
-                    return [
-                        {'element': 'left-formula', 'onclick': [{'rule': 'plus_right_1', 'needPosition': true}]},
-                        {'element': 'right-formula', 'onclick': [{'rule': 'plus_right_2', 'needPosition': true}]}
-                    ];
+                    // Standard LL: Simple plus rules
+                    if (isLeftSide) {
+                        return [{'element': 'main-formula', 'onclick': [{'rule': 'plus_left', 'needPosition': true}]}];
+                    } else {
+                        return [{'element': 'main-formula', 'onclick': [{'rule': 'plus_right', 'needPosition': true}]}];
+                    }
                 }
 
             case 'lollipop':
-                if (isLeftSide) {
-                    // Left side: lollipop elimination (modus ponens)
-                    return [{'element': 'main-formula', 'onclick': [{'rule': 'lollipop_left', 'needPosition': true}]}];
+                if (isIntuitionisticMode) {
+                    if (isLeftSide) {
+                        // ILL: Left side lollipop elimination (modus ponens)
+                        return [{'element': 'main-formula', 'onclick': [{'rule': 'lollipop_left', 'needPosition': true}]}];
+                    } else {
+                        // ILL: Right side lollipop introduction (implication introduction)
+                        return [{'element': 'main-formula', 'onclick': [{'rule': 'lollipop', 'needPosition': true}]}];
+                    }
                 } else {
-                    // Right side: lollipop introduction (implication introduction)
+                    // Standard LL: Simple lollipop rule
                     return [{'element': 'main-formula', 'onclick': [{'rule': 'lollipop', 'needPosition': true}]}];
                 }
 
@@ -345,13 +363,18 @@ function buildApplyRuleCallBack(ruleConfig, $li, options) {
         let $sequentTable = $li.closest('table');
         let ruleRequest = { rule: ruleConfigCopy.rule };
 
-        // NEW: Determine which side of turnstile the formula is on
-        let $formulaList = $li.closest('ul');
-        let isLeftSide = $formulaList.hasClass('hyp');
-        let sequentSide = isLeftSide ? 'left' : 'right';
+        // Check if we're in ILL mode to determine if side information is needed
+        let $container = $li.closest('.proof-container');
+        let containerOptions = $container.data('options');
+        let isIntuitionisticMode = containerOptions && containerOptions.intuitionisticMode?.value;
         
-        // NEW: Add sequent side information to rule request
-        ruleRequest['sequentSide'] = sequentSide;
+        // Only add sequent side information for ILL mode
+        if (isIntuitionisticMode) {
+            let $formulaList = $li.closest('ul');
+            let isLeftSide = $formulaList.hasClass('hyp');
+            let sequentSide = isLeftSide ? 'left' : 'right';
+            ruleRequest['sequentSide'] = sequentSide;
+        }
 
         if (ruleConfigCopy.needPosition) {
             ruleRequest['formulaPosition'] = $li.parent().children().index($li);
