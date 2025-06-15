@@ -10,19 +10,12 @@
 // Standard Linear Logic rule symbols
 const LL_RULES = {
     'axiom': '<span class="italic">ax</span>',          // Axiom rule: A, A^
-    'tensor_right': '⊗R',                              // Tensor right rule: A⊗B introduction
-    'tensor_left': '⊗L',                               // Tensor left rule: A⊗B elimination
-    'tensor': '⊗R',                                    // Backward compatibility
+    'tensor': '⊗',                                    // Backward compatibility
     'par': '<span class="flip">&</span>',               // Par rule: A⅋B  
     'with': '&',                                        // With rule: A&B
-    'with_left_1': '&L<sub>1</sub>',                    // Left With 1 (LL compatibility)
-    'with_left_2': '&L<sub>2</sub>',                    // Left With 2 (LL compatibility)
-    'plus_left': '⊕L',                                  // Plus left: A⊕B elimination from context
-    'plus_right_1': '⊕R<sub>1</sub>',                  // Plus right 1: A⊕B choose A 
-    'plus_right_2': '⊕R<sub>2</sub>',                  // Plus right 2: A⊕B choose B
-    'plus_right': '⊕R<sub>1</sub>',                    // Backward compatibility
-    'lollipop': '⊸R',                                  // Lollipop right: A⊸B introduction
-    'lollipop_left': '⊸L',                             // Lollipop left: A⊸B elimination
+    'plus_left': '⊕<sub>1</sub>',                                  // Plus left: A⊕B elimination from context
+    'plus_right': '⊕<sub>2</sub>',                    // Backward compatibility
+    'lollipop': '⊸',                                  // Lollipop right: A⊸B introduction
     'one': '1',                                         // One rule: multiplicative unit
     'bottom': '⊥',                                      // Bottom rule: multiplicative zero
     'top': '⊤',                                         // Top rule: additive unit
@@ -39,34 +32,6 @@ const LL_RULES = {
 
 // Intuitionistic Linear Logic rule symbols (based on specification)
 const ILL_RULES = {
-    'axiom': '<span class="italic">ax</span>',          // Axiom rule: A |- A
-    'tensor_right': '⊗<sub>R</sub>',                    // Right Tensor: Gamma |- A  Delta |- B / Gamma, Delta |- A ⊗ B
-    'tensor_left': '⊗<sub>L</sub>',                     // Left Tensor: Gamma, A, B |- C / Gamma, A⊗B |- C
-    'tensor': '⊗<sub>R</sub>',                          // Backward compatibility
-    'par': '<span class="flip">&</span>',               // Par rule: A⅋B (not used in ILL)
-    'with_right': '&<sub>R</sub>',                      // Right With: Gamma |- A  Gamma |- B / Gamma |- A&B
-    'with': '&<sub>R</sub>',                            // Backward compatibility for with
-    'with_left_1': '&<sub>L₁</sub>',                    // Left With 1: Gamma, A |- C / Gamma, A&B |- C  
-    'with_left_2': '&<sub>L₂</sub>',                    // Left With 2: Gamma, B |- C / Gamma, A&B |- C
-    'plus_left': '⊕<sub>L</sub>',                       // Left Additive Disjunction: Gamma, A |- C  Gamma, B |- C / Gamma, A⊕B |- C
-    'plus_right_1': '⊕<sub>R₁</sub>',                   // Right Additive Disjunction 1: Gamma |- A / Gamma |- A⊕B
-    'plus_right_2': '⊕<sub>R₂</sub>',                   // Right Additive Disjunction 2: Gamma |- B / Gamma |- A⊕B
-    'plus_right': '⊕<sub>R₁</sub>',                     // Backward compatibility
-    'lollipop_right': '⊸<sub>R</sub>',                  // Right Lollipop: Gamma, A |- B / Gamma |- A ⊸ B
-    'lollipop': '⊸<sub>R</sub>',                        // Backward compatibility for lollipop
-    'lollipop_left': '⊸<sub>L</sub>',                   // Left Lollipop: Gamma |- A  Delta, B |- C / Gamma, A ⊸ B, Delta |- C
-    'one': '1',                                         // One rule: multiplicative unit
-    'bottom': '⊥',                                      // Bottom rule: multiplicative zero
-    'top': '⊤',                                         // Top rule: additive unit
-    // rule zero does not exist (additive zero has no rule)
-    'promotion': '!',                                   // Promotion rule: !A
-    'dereliction': '?<span class="italic">d</span>',    // Dereliction: ?A becomes A
-    'contraction': '?<span class="italic">c</span>',    // Contraction: ?A becomes ?A,?A
-    'weakening': '?<span class="italic">w</span>',      // Weakening: ?A becomes nothing
-    'exchange': '<span class="italic">ech</span>',      // Exchange: swap formulas
-    'cut': '<span class="italic">cut</span>',           // Cut rule: eliminate formula
-    'unfold_litt': '<span class="italic">def</span>',   // Unfold literal notation
-    'unfold_dual': '<span class="italic">def</span>',   // Unfold dual notation
     // Handle potential ill_ prefixed rule names from backend
     'ill_axiom': '<span class="italic">ax</span>',
     'ill_tensor_right': '⊗<sub>R</sub>',
@@ -93,8 +58,13 @@ function getRuleSymbol(rule, isIntuitionisticMode) {
         return ILL_RULES[rule] || rule;
     }
     
-    const ruleSet = isIntuitionisticMode ? ILL_RULES : LL_RULES;
-    return ruleSet[rule] || rule;
+    if (isIntuitionisticMode) {
+        // In intuitionistic mode, try ILL_RULES first, then fallback to LL_RULES
+        return ILL_RULES[rule] || LL_RULES[rule] || rule;
+    } else {
+        // In classical mode, use LL_RULES
+        return LL_RULES[rule] || rule;
+    }
 }
 
 // Backward compatibility - RULES points to LL_RULES by default
