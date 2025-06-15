@@ -138,11 +138,23 @@ and apply_rule_with_exceptions request_as_json =
         (* Extract notations (if any) *)
         let notations = [] in  (* TODO: Parse notations properly *)
         
-        (* Use intelligent rule selection based on sequentSide and formula *)
-        let inferred_rule_request = Ill_rule_request.infer_rule_from_side_and_formula rule_request ill_sequent in
+        (* Use intelligent rule selection only when rule is generic or ambiguous *)
+        let () = Printf.printf "DEBUG: Original rule: %s\n" (Ill_rule_request.rule_name rule_request.rule) in
+        let final_rule_request = 
+            match rule_request.rule with
+            | ILL_With_left_1 | ILL_With_left_2 | ILL_Plus_right_1 | ILL_Plus_right_2 ->
+                (* Frontend has already specified a specific rule, don't override it *)
+                let () = Printf.printf "DEBUG: Preserving specific rule: %s\n" (Ill_rule_request.rule_name rule_request.rule) in
+                rule_request
+            | _ ->
+                (* Use intelligent rule selection for generic or ambiguous rules *)
+                let () = Printf.printf "DEBUG: Using rule inference for: %s\n" (Ill_rule_request.rule_name rule_request.rule) in
+                Ill_rule_request.infer_rule_from_side_and_formula rule_request ill_sequent
+        in
+        let () = Printf.printf "DEBUG: Final rule: %s\n" (Ill_rule_request.rule_name final_rule_request.rule) in
         
-        (* Apply the inferred rule *)
-        apply_ill_rule_internal inferred_rule_request ill_sequent notations
+        (* Apply the final rule *)
+        apply_ill_rule_internal final_rule_request ill_sequent notations
         
     with
     | Request_utils.Bad_request_exception msg -> 

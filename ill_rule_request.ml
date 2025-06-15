@@ -425,8 +425,15 @@ and infer_left_rule rule_req ill_seq =
          | Tensor (_, _) -> 
              { rule_req with rule = ILL_Tensor_left }
          | With (_, _) -> 
-             (* Default to with_left_1, frontend can specify specific rule *)
-             { rule_req with rule = ILL_With_left_1 }
+             (* Only infer rule if frontend hasn't already specified a specific with rule *)
+             (match rule_req.rule with
+              | ILL_With_left_1 | ILL_With_left_2 -> 
+                  (* Frontend already specified specific rule, preserve it *)
+                  rule_req
+              | _ -> 
+                  (* For generic or unknown rules, try to infer from position/side info *)
+                  (* For now, default to with_left_1 but this could be improved *)
+                  { rule_req with rule = ILL_With_left_1 })
          | Plus (_, _) -> 
              { rule_req with rule = ILL_Plus_left }
          | Lollipop (_, _) -> 
