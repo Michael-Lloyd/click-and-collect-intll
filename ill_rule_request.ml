@@ -140,6 +140,32 @@ let split_context_simple ctx =
     | [f] -> ([f], [])
     | f1 :: rest -> ([f1], rest)
 
+(* Split context based on provided comma position for tensor rule.
+   @param ctx - Context formulas list
+   @param comma_position - Position where Gamma ends (0-based)
+   @return (gamma, delta) - Split context
+*)
+let split_context_at_position ctx comma_position =
+    if comma_position < 0 || comma_position > List.length ctx then
+        raise (ILL_Rule_Json_Exception "Invalid comma position for context split")
+    else
+        let ctx_array = Array.of_list ctx in
+        let gamma = Array.sub ctx_array 0 comma_position |> Array.to_list in
+        let delta = Array.sub ctx_array comma_position (Array.length ctx_array - comma_position) |> Array.to_list in
+        (gamma, delta)
+
+(* Split context for tensor rule with context split information.
+   @param ctx - Context formulas list
+   @param context_split_opt - Optional context split position list
+   @return (gamma, delta) - Split context
+*)
+let split_context_for_tensor ctx context_split_opt =
+    match context_split_opt with
+    | Some [comma_pos] -> split_context_at_position ctx comma_pos
+    | Some [] -> ([], ctx)  (* Empty Gamma case *)
+    | Some _ -> raise (ILL_Rule_Json_Exception "Invalid context split format for tensor rule")
+    | None -> split_context_simple ctx  (* Fallback to simple split *)
+
 (* Expand tensor formula in context: A⊗B becomes A,B *)
 let expand_tensor_in_context ctx =
     let rec expand_first_tensor acc = function
@@ -192,8 +218,8 @@ let apply_rule_to_sequent rule_req ill_seq =
         (* Tensor rule: Γ,Δ ⊢ A⊗B becomes Γ ⊢ A and Δ ⊢ B *)
         (match ill_seq.goal with
          | Tensor (a, b) ->
-             (* Split context between the two premises *)
-             let ctx1, ctx2 = split_context_simple ill_seq.context in
+             (* Split context between the two premises using comma selection if available *)
+             let ctx1, ctx2 = split_context_for_tensor ill_seq.context rule_req.context_split in
              [{ context = ctx1; goal = a }; { context = ctx2; goal = b }]
          | _ -> [])
     
@@ -347,7 +373,17 @@ let from_json json =
             rule = rule;
             formula_position = formula_position;
             side = side;
-            context_split = None;  (* TODO: Parse context split information *)
+            context_split =
+                (try
+                    match List.assoc "contextSplit" (match json with `Assoc l -> l | _ -> []) with
+                    | `List int_list ->
+                        let positions = List.map (function
+                            | `Int i -> i
+                            | _ -> raise (ILL_Rule_Json_Exception "Invalid context split position"))
+                            int_list in
+                        Some positions
+                    | _ -> None
+                with _ -> None);
             sequent_side = sequent_side;
         }
     with
@@ -389,7 +425,15 @@ let to_json rule_req =
         | Some s -> ("side", `String s) :: with_pos
         | None -> with_pos
     in
-    `Assoc with_side
+    let with_context_split = match rule_req.context_split with
+        | Some split_list -> ("contextSplit", `List (List.map (fun i -> `Int i) split_list)) :: with_side
+        | None -> with_side
+    in
+    let with_sequent_side = match rule_req.sequent_side with
+        | Some s -> ("sequentSide", `String s) :: with_context_split
+        | None -> with_context_split
+    in
+    `Assoc with_sequent_side
 
 (* RULE INFERENCE *)
 

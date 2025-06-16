@@ -163,6 +163,9 @@ function createSubProof(proofAsJson, $subProofDivContainer, options) {
     let $sequentTable = createSequentTable(proofAsJson.sequent, options);
     $subProofDivContainer.prepend($sequentTable);
 
+    // Update comma visibility for ILL tensor rules
+    updateAllCommaVisibility($subProofDivContainer.closest('.proof-container'));
+
     if (proofAsJson.appliedRule) {
         let permutationBeforeRule = getSequentIdentityPermutation(proofAsJson.sequent);
 
@@ -314,6 +317,9 @@ function addPremises($sequentTable, proofAsJson, permutationBeforeRule, options)
         .data('sequentWithPermutation', proofAsJson.sequent)
         .data('permutationBeforeRule', permutationBeforeRule)
         .data('ruleRequest', ruleRequest);
+    
+    // Update comma visibility for ILL tensor rules
+    updateAllCommaVisibility($sequentTable.closest('.proof-container'));
 
     // Add line
     let $td = $sequentTable.find('div.sequent').closest('td');

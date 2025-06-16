@@ -101,6 +101,9 @@ function createFormulaList(sequent, sequentPart, $sequentDiv, options) {
         addEventsAndStyle($li, formulaAsJson, options);
         if (options.withInteraction) {
             addCutOnClick($commaSpan, false);
+            
+            // Add comma click for ILL tensor rule context splitting
+            addCommaClickForTensorSplit($commaSpan, $li, options);
         }
     }
 }
@@ -178,10 +181,20 @@ function createLittHTML(littName) {
 // RULES
 // *****
 
-function getRules(formulaAsJson, options, isLeftSide = false) {
+function getRules(formulaAsJson, options, isLeftSide = false, $li = null) {
     if (options.withInteraction) {
         // Check if we're in ILL mode to determine rule naming
         let isIntuitionisticMode = options.intuitionisticMode?.value || options.forceILLSymbols || false;
+        
+        // In ILL mode, disable ALL context formula clicks - only commas should be clickable for context splitting
+        if (isIntuitionisticMode && isLeftSide && $li) {
+            console.log('In ILL mode on left side - DISABLING all formula clicks for formula type:', formulaAsJson.type);
+            // In ILL mode, context formulas should never be directly clickable
+            // Users should click commas for context splitting, or click goal formulas for rule application
+            return [];
+        }
+        
+        console.log('Formula click disabling check passed, proceeding with normal rules for:', formulaAsJson.type);
         
         switch (formulaAsJson.type) {
             case 'litt':
@@ -312,11 +325,16 @@ function addEventsAndStyle($li, formulaAsJson, options) {
     // Determine which side of the turnstile we're on
     let $formulaList = $li.closest('ul');
     let isLeftSide = $formulaList.hasClass('hyp');
-    let rules = getRules(formulaAsJson, options, isLeftSide);
+    let rules = getRules(formulaAsJson, options, isLeftSide, $li);
+
+    console.log('addEventsAndStyle called for formula:', formulaAsJson.type, 'isLeftSide:', isLeftSide, 'rules:', rules);
 
     if (rules.length === 0) {
+        console.log('No rules returned, not adding click events');
         return;
     }
+    
+    console.log('Adding click events for rules:', rules);
 
     $li.find('span.' + 'main-formula').first().addClass('hoverable');
     for (let ruleEvent of rules) {
@@ -374,6 +392,11 @@ function buildApplyRuleCallBack(ruleConfig, $li, options) {
             let isLeftSide = $formulaList.hasClass('hyp');
             let sequentSide = isLeftSide ? 'left' : 'right';
             ruleRequest['sequentSide'] = sequentSide;
+            
+            // Special handling for ILL tensor_right rule: assume empty Gamma
+            if (ruleConfigCopy.rule === 'tensor_right' && sequentSide === 'right') {
+                ruleRequest['contextSplit'] = [0]; // Empty Gamma, all context goes to Delta
+            }
         }
 
         if (ruleConfigCopy.needPosition) {
@@ -550,4 +573,236 @@ function markAsNotAutoProvable($sequentTable) {
     $turnstile.removeClass('not-provable');
     $turnstile.addClass('not-auto-provable');
     $turnstile.attr('title', 'The automatic prover did not make it on this sequent');
+}
+
+// **************************
+// COMMA SELECTION FOR TENSOR
+// **************************
+
+/* Add comma click functionality for ILL tensor rule context splitting.
+   Only active when in ILL mode and tensor rule is applicable on the right side.
+   @param $commaSpan - The comma span element
+   @param $li - The list item containing the formula
+   @param options - Display options including intuitionisticMode
+*/
+function addCommaClickForTensorSplit($commaSpan, $li, options) {
+    console.log('Adding comma click handler to comma span');
+    console.log('Options passed to function:', options);
+    
+    // Check if we're in ILL mode using the options passed to the function
+    let isIntuitionisticMode = options.intuitionisticMode?.value || options.forceILLSymbols || false;
+    
+    console.log('Is intuitionistic mode from options:', isIntuitionisticMode);
+    
+    if (!isIntuitionisticMode) {
+        console.log('Not in ILL mode, skipping comma click handler');
+        return; // Only available in ILL mode
+    }
+    
+    // Check if this comma is in the context (left side)
+    let $formulaList = $li.closest('ul');
+    let isLeftSide = $formulaList.hasClass('hyp');
+    
+    console.log('Is left side (context):', isLeftSide);
+    
+    if (!isLeftSide) {
+        console.log('Not on left side, skipping comma click handler');
+        return; // Comma selection only applies to context formulas
+    }
+    
+    // Set up dynamic comma visibility based on tensor rule applicability
+    let $sequentTable = $li.closest('table');
+    updateCommaVisibility($commaSpan, $sequentTable);
+    
+    console.log('About to add click handler to comma span');
+    
+    // Add click handler that checks if tensor rule is applicable
+    $commaSpan.on('click', function(e) {
+        e.stopPropagation(); // Prevent event bubbling
+        
+        console.log('Comma clicked!');
+        
+        // Re-find the sequent table in case DOM has changed
+        let $currentSequentTable = $li.closest('table');
+        
+        // Check if tensor rule is applicable (goal must be A⊗B)
+        if (!isTensorRuleApplicable($currentSequentTable)) {
+            console.log('Tensor rule not applicable');
+            return; // Only available when tensor rule can be applied
+        }
+        
+        console.log('Tensor rule is applicable');
+        
+        // Get comma position in context
+        let $allFormulas = $formulaList.children('li');
+        let commaPosition = $allFormulas.index($li) + 1; // Position after this formula
+        
+        console.log('Comma position:', commaPosition);
+        
+        // Enter comma selection mode
+        enterCommaSelectionMode($currentSequentTable, commaPosition);
+    });
+}
+
+/* Update comma visibility based on tensor rule applicability.
+   @param $commaSpan - The comma span element
+   @param $sequentTable - The sequent table element
+*/
+function updateCommaVisibility($commaSpan, $sequentTable) {
+    // Always check for tensor rule applicability dynamically
+    setTimeout(function() {
+        if (isTensorRuleApplicable($sequentTable)) {
+            $commaSpan.addClass('tensor-applicable');
+            $commaSpan.attr('title', 'Click to select context split for tensor rule');
+        } else {
+            $commaSpan.removeClass('tensor-applicable');
+            $commaSpan.removeAttr('title');
+        }
+    }, 100); // Small delay to ensure sequent data is available
+}
+
+/* Check if tensor rule is applicable to the current sequent.
+   @param $sequentTable - The sequent table element
+   @return boolean - True if tensor rule can be applied
+*/
+function isTensorRuleApplicable($sequentTable) {
+    let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
+    console.log('Checking tensor rule applicability, sequent:', sequent);
+    
+    if (!sequent || !sequent.cons || sequent.cons.length !== 1) {
+        console.log('Sequent invalid or not single conclusion');
+        return false;
+    }
+    
+    let goalFormula = sequent.cons[0];
+    console.log('Goal formula:', goalFormula);
+    let isTensor = goalFormula.type === 'tensor';
+    console.log('Is tensor:', isTensor);
+    return isTensor;
+}
+
+/* Enter comma selection mode for tensor rule context splitting.
+   @param $sequentTable - The sequent table element
+   @param commaPosition - Position where Gamma ends (0-based)
+*/
+function enterCommaSelectionMode($sequentTable, commaPosition) {
+    let $container = $sequentTable.closest('.proof-container');
+    
+    // Clear any existing selection state
+    clearCommaSelectionMode($sequentTable);
+    
+    // Mark the sequent table as in comma selection mode
+    $sequentTable.addClass('comma-selection-mode');
+    $sequentTable.data('selectedCommaPosition', commaPosition);
+    
+    // Highlight the selected range (Gamma)
+    highlightGammaRange($sequentTable, commaPosition);
+    
+    // Add visual feedback message
+    displayCommaSelectionMessage($container, commaPosition);
+    
+    // Apply tensor rule automatically with the selected split
+    applyTensorRuleWithSplit($sequentTable, commaPosition);
+}
+
+/* Clear comma selection mode and remove all visual indicators.
+   @param $sequentTable - The sequent table element
+*/
+function clearCommaSelectionMode($sequentTable) {
+    let $container = $sequentTable.closest('.proof-container');
+    
+    // Remove mode class and data
+    $sequentTable.removeClass('comma-selection-mode');
+    $sequentTable.removeData('selectedCommaPosition');
+    
+    // Clear highlighting
+    $sequentTable.find('.formula-gamma, .formula-delta').removeClass('formula-gamma formula-delta');
+    
+    // Clear any comma selection messages
+    $container.find('.comma-selection-message').remove();
+}
+
+/* Highlight formulas in Gamma and Delta ranges.
+   @param $sequentTable - The sequent table element
+   @param commaPosition - Position where Gamma ends
+*/
+function highlightGammaRange($sequentTable, commaPosition) {
+    let $contextFormulas = $sequentTable.find('ul.hyp li');
+    
+    $contextFormulas.each(function(index) {
+        let $formula = $(this);
+        if (index < commaPosition) {
+            $formula.addClass('formula-gamma');
+        } else {
+            $formula.addClass('formula-delta');
+        }
+    });
+}
+
+/* Display message about comma selection.
+   @param $container - The proof container element
+   @param commaPosition - Position where Gamma ends
+*/
+function displayCommaSelectionMessage($container, commaPosition) {
+    let message = `Context split selected: Γ contains ${commaPosition} formula(s), Δ contains the rest.`;
+    
+    let $message = $('<div>', {'class': 'comma-selection-message pedagogic-message info'});
+    $message.append($('<div>', {'class': 'message'}).text(message));
+    
+    let $proofDiv = $container.children('div.proof');
+    if ($proofDiv.length) {
+        $message.insertAfter($proofDiv);
+    } else {
+        $container.append($message);
+    }
+    
+    // Auto-hide message after 3 seconds
+    setTimeout(function() {
+        $message.fadeOut();
+    }, 3000);
+}
+
+/* Apply tensor rule with the specified context split.
+   @param $sequentTable - The sequent table element
+   @param commaPosition - Position where Gamma ends
+*/
+function applyTensorRuleWithSplit($sequentTable, commaPosition) {
+    let ruleRequest = {
+        rule: 'tensor_right',
+        sequentSide: 'right',
+        contextSplit: [commaPosition]
+    };
+    
+    // Apply the rule
+    applyRule(ruleRequest, $sequentTable);
+    
+    // Clear selection mode after rule application
+    clearCommaSelectionMode($sequentTable);
+}
+
+/* Update comma visibility for all sequents in a container.
+   @param $container - The proof container element
+*/
+function updateAllCommaVisibility($container) {
+    console.log('Updating all comma visibility');
+    $container.find('.proof table').each(function() {
+        let $sequentTable = $(this);
+        
+        // Try to get options from container or use default check
+        let containerOptions = $container.data('options');
+        let isIntuitionisticMode = containerOptions && containerOptions.intuitionisticMode?.value;
+        
+        // If container options not available, check if proof has intuitionistic class
+        if (!isIntuitionisticMode) {
+            isIntuitionisticMode = $container.find('.proof').hasClass('intuitionistic-mode');
+        }
+        
+        console.log('Container has ILL mode:', isIntuitionisticMode);
+        
+        if (isIntuitionisticMode) {
+            $sequentTable.find('.hyp li span.comma').each(function() {
+                updateCommaVisibility($(this), $sequentTable);
+            });
+        }
+    });
 }

@@ -80,6 +80,12 @@ input[type=text], .code { background-color: #FFF; font-family: "Courier New", sa
 .tagBox.cut .transform-button.enabled { border-color: #b300b3; }
 .tagBox.cut .transform-button.enabled:hover { background-color: #b300b3; }
 .proof .commaList li span.comma:after { content: ','; margin-left: 0.2em; }
+.proof.intuitionistic-mode .hyp li span.comma:after { 
+    content: ','; 
+    margin-left: 0.2em; 
+    font-size: 1.2em;
+    font-weight: bold;
+}
 .proof .commaList li:last-child span.comma:after { content: ''; }
 .proof.cut-mode span.first-point:after, .proof.cut-mode .commaList li:last-child span.comma:after { content: '.'; }
 .proof.cut-mode span.first-point, .proof.cut-mode .commaList li span.comma { cursor: pointer; margin-left: 0.3em; margin-right: 0.3em; }
@@ -147,6 +153,68 @@ input:checked + .slider:before { -webkit-transform: translateX(1em); -ms-transfo
     border-right: 3px solid #90EE90;
     padding-right: 0.5em;
     background-color: rgba(144, 238, 144, 0.05);
+}
+
+/* COMMA SELECTION FOR ILL TENSOR RULE */
+.proof.intuitionistic-mode .hyp li span.comma {
+    /* Base comma styling in ILL mode */
+    padding: 0.2em 0.3em;
+    border-radius: 0.2em;
+    transition: all 0.2s ease;
+}
+
+.proof.intuitionistic-mode .hyp li span.comma.tensor-applicable {
+    /* Make commas clickable when tensor rule is applicable */
+    cursor: pointer;
+    /* Subtle indication that comma is clickable */
+    border-radius: 0.2em;
+    /* Very subtle background hint */
+    background-color: rgba(255, 235, 59, 0.05);
+}
+
+.proof.intuitionistic-mode .hyp li span.comma.tensor-applicable:hover {
+    /* Enhanced hover effect for clickable commas */
+    background-color: #ffeb3b;
+    color: #333;
+    border: 2px solid #ffeb3b;
+    border-radius: 0.3em;
+    box-shadow: 0 0 8px rgba(255, 235, 59, 0.8);
+    transform: scale(1.2);
+    font-weight: bold;
+    padding: 0.3em 0.4em;
+}
+
+/* Gamma range highlighting (formulas before selected comma) */
+.proof .formula-gamma {
+    background-color: rgba(102, 163, 224, 0.2) !important;
+    border: 2px solid #66a3e0;
+    border-radius: 0.3em;
+    padding: 0.1em 0.3em;
+    margin: 0.1em;
+}
+
+/* Delta range highlighting (formulas after selected comma) */
+.proof .formula-delta {
+    background-color: rgba(144, 238, 144, 0.2) !important;
+    border: 2px solid #90EE90;
+    border-radius: 0.3em;
+    padding: 0.1em 0.3em;
+    margin: 0.1em;
+}
+
+/* Comma selection mode indicator */
+.proof.comma-selection-mode {
+    border: 2px dashed #ffeb3b;
+    border-radius: 0.5em;
+    background-color: rgba(255, 235, 59, 0.05);
+}
+
+/* Comma selection message styling */
+.comma-selection-message {
+    border-left: 4px solid #ffeb3b;
+    background-color: rgba(255, 235, 59, 0.1);
+    color: #333;
+    margin: 0.5em 0;
 }
 
 .proof.intuitionistic-mode .turnstile {

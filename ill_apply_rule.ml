@@ -254,14 +254,14 @@ and apply_top_rule ill_seq =
    @param ill_seq - Sequent with goal A⊗B
    @return ill_proof - Tensor proof with two premises
 *)
-and apply_tensor_rule _rule_req ill_seq =
+and apply_tensor_rule rule_req ill_seq =
     (* Validate ILL constraint: exactly one formula on RHS *)
     validate_single_conclusion ill_seq;
     
     match ill_seq.goal with
     | Tensor (a, b) ->
-        (* Split context between the two premises *)
-        let ctx1, ctx2 = Ill_rule_request.split_context_simple ill_seq.context in
+        (* Split context between the two premises using comma selection if available *)
+        let ctx1, ctx2 = Ill_rule_request.split_context_for_tensor ill_seq.context rule_req.context_split in
         let premise1 = { context = ctx1; goal = a } in
         let premise2 = { context = ctx2; goal = b } in
         
