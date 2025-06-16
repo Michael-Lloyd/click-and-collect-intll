@@ -1,9 +1,0 @@
-XHRPOST
-http://localhost:3000/apply_rule
-[HTTP/1.1 400 Bad Request 1ms]
-
-Object { readyState: 4, getResponseHeader: getResponseHeader(e), getAllResponseHeaders: getAllResponseHeaders(), setRequestHeader: setRequestHeader(e, t), overrideMimeType: overrideMimeType(e), statusCode: statusCode(e), abort: abort(e), state: state(), always: always(), catch: catch(e), … }
-proof.js:1635:13
-"ILL rule application error: Unknown error in rule application" proof.js:1636:13
-error proof.js:1637:13
-Bad Request proof.js:1638:13

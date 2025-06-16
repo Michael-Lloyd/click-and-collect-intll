@@ -186,19 +186,19 @@ function getRules(formulaAsJson, options, isLeftSide = false, $li = null) {
         // Check if we're in ILL mode to determine rule naming
         let isIntuitionisticMode = options.intuitionisticMode?.value || options.forceILLSymbols || false;
         
-        // In ILL mode, disable ALL context formula clicks - only commas should be clickable for context splitting
-        if (isIntuitionisticMode && isLeftSide && $li) {
-            console.log('In ILL mode on left side - DISABLING all formula clicks for formula type:', formulaAsJson.type);
-            // In ILL mode, context formulas should never be directly clickable
-            // Users should click commas for context splitting, or click goal formulas for rule application
-            return [];
-        }
+        // Note: In ILL mode, context formulas with applicable left rules should still be clickable
+        // Only disable context formulas that don't have valid left elimination rules
         
         console.log('Formula click disabling check passed, proceeding with normal rules for:', formulaAsJson.type);
         
         switch (formulaAsJson.type) {
             case 'litt':
             case 'dual':
+                // In ILL mode, set up click handler but check applicability when clicked
+                if (isIntuitionisticMode && $li) {
+                    console.log('*** AXIOM SETUP: In ILL mode - setting up axiom rule for:', formulaAsJson, 'on side:', isLeftSide ? 'left' : 'right');
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'axiom_ill', 'needPosition': false}]}];
+                }
                 return [{'element': 'main-formula', 'onclick': [{'rule': 'axiom', 'needPosition': false}]}];
 
             case 'tensor':
@@ -207,7 +207,7 @@ function getRules(formulaAsJson, options, isLeftSide = false, $li = null) {
                         // ILL: Left side tensor elimination
                         return [{'element': 'main-formula', 'onclick': [{'rule': 'tensor_left', 'needPosition': true}]}];
                     } else {
-                        // ILL: Right side tensor introduction
+                        // ILL: Right side tensor introduction - always allow since tensor rule should be applicable
                         return [{'element': 'main-formula', 'onclick': [{'rule': 'tensor_right', 'needPosition': true}]}];
                     }
                 } else {
@@ -227,7 +227,7 @@ function getRules(formulaAsJson, options, isLeftSide = false, $li = null) {
                             {'element': 'right-formula', 'onclick': [{'rule': 'with_left_2', 'needPosition': true}]}
                         ];
                     } else {
-                        // ILL: Right side with introduction
+                        // ILL: Right side with introduction - always allow for goal with formulas
                         return [{'element': 'main-formula', 'onclick': [{'rule': 'with_right', 'needPosition': true}]}];
                     }
                 } else {
@@ -241,7 +241,7 @@ function getRules(formulaAsJson, options, isLeftSide = false, $li = null) {
                         // ILL: Left side plus elimination
                         return [{'element': 'main-formula', 'onclick': [{'rule': 'plus_left', 'needPosition': true}]}];
                     } else {
-                        // ILL: Right side plus introduction (choose left or right sub-formula)
+                        // ILL: Right side plus introduction (choose left or right sub-formula) - always allow
                         return [
                             {'element': 'left-formula', 'onclick': [{'rule': 'plus_right_1', 'needPosition': true}]},
                             {'element': 'right-formula', 'onclick': [{'rule': 'plus_right_2', 'needPosition': true}]}
@@ -262,7 +262,7 @@ function getRules(formulaAsJson, options, isLeftSide = false, $li = null) {
                         // ILL: Left side lollipop elimination (modus ponens)
                         return [{'element': 'main-formula', 'onclick': [{'rule': 'lollipop_left', 'needPosition': true}]}];
                     } else {
-                        // ILL: Right side lollipop introduction (implication introduction)
+                        // ILL: Right side lollipop introduction (implication introduction) - always allow
                         return [{'element': 'main-formula', 'onclick': [{'rule': 'lollipop', 'needPosition': true}]}];
                     }
                 } else {
@@ -272,10 +272,23 @@ function getRules(formulaAsJson, options, isLeftSide = false, $li = null) {
 
             case 'one':
             case 'zero': // click on zero will display a pedagogic error
+                // In ILL mode, only allow one rule on right side if context is empty
+                if (isIntuitionisticMode && !isLeftSide && formulaAsJson.type === 'one') {
+                    let $sequentTable = $li.closest('table');
+                    if (isOneRuleApplicable($sequentTable)) {
+                        return [{'element': 'main-formula', 'onclick': [{'rule': formulaAsJson.type, 'needPosition': false}]}];
+                    } else {
+                        return [];
+                    }
+                }
                 return [{'element': 'main-formula', 'onclick': [{'rule': formulaAsJson.type, 'needPosition': false}]}];
 
             case 'top':
             case 'bottom':
+                // In ILL mode, top rule is always applicable on right side
+                if (isIntuitionisticMode && !isLeftSide && formulaAsJson.type === 'top') {
+                    return [{'element': 'main-formula', 'onclick': [{'rule': formulaAsJson.type, 'needPosition': true}]}];
+                }
                 return [{'element': 'main-formula', 'onclick': [{'rule': formulaAsJson.type, 'needPosition': true}]}];
 
             case 'ofcourse':
@@ -363,6 +376,25 @@ function addEventsAndStyle($li, formulaAsJson, options) {
 function buildApplyRuleCallBack(ruleConfig, $li, options) {
     return function() {
         let ruleConfigCopy = JSON.parse(JSON.stringify(ruleConfig)); // deep copy element
+        
+        // Handle ILL axiom rule with applicability check
+        if (ruleConfigCopy.rule === 'axiom_ill') {
+            console.log('*** AXIOM CLICK: ILL axiom rule clicked');
+            let formula = $li.data('formula');
+            let $sequentTable = $li.closest('table');
+            let $formulaList = $li.closest('ul');
+            let isLeftSide = $formulaList.hasClass('hyp');
+            
+            // Check if axiom rule is actually applicable now
+            if (isAxiomRuleApplicable($sequentTable, formula, isLeftSide)) {
+                console.log('*** AXIOM CLICK: Axiom rule is applicable, proceeding');
+                ruleConfigCopy.rule = 'axiom'; // Convert to regular axiom rule
+            } else {
+                console.log('*** AXIOM CLICK: Axiom rule not applicable, aborting');
+                return; // Don't apply the rule
+            }
+        }
+        
         if (ruleConfigCopy.rule === 'axiom') {
             let formula = $li.data('formula');
 
@@ -679,6 +711,90 @@ function isTensorRuleApplicable($sequentTable) {
     let isTensor = goalFormula.type === 'tensor';
     console.log('Is tensor:', isTensor);
     return isTensor;
+}
+
+/* Check if axiom rule is applicable to the current sequent.
+   @param $sequentTable - The sequent table element
+   @param clickedFormula - The formula being clicked (could be context or goal)
+   @param isLeftSide - Whether the clicked formula is on the left side (context)
+   @return boolean - True if axiom rule can be applied
+*/
+function isAxiomRuleApplicable($sequentTable, clickedFormula, isLeftSide) {
+    let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
+    console.log('Checking axiom rule applicability, sequent:', sequent, 'clicked:', clickedFormula, 'isLeft:', isLeftSide);
+    
+    if (!sequent || !sequent.hyp || !sequent.cons || sequent.cons.length !== 1) {
+        console.log('Sequent invalid for axiom rule');
+        return false;
+    }
+    
+    // Axiom rule requires exactly one context formula
+    if (sequent.hyp.length !== 1) {
+        console.log('Axiom rule requires exactly one context formula, found:', sequent.hyp.length);
+        return false;
+    }
+    
+    let contextFormula = sequent.hyp[0];
+    let goalFormula = sequent.cons[0];
+    
+    // Check if context formula matches goal formula
+    let matches = formulasMatch(contextFormula, goalFormula);
+    console.log('Context formula:', contextFormula, 'Goal formula:', goalFormula, 'Match:', matches);
+    
+    // If they match, axiom rule is applicable regardless of which side was clicked
+    return matches;
+}
+
+/* Check if two formulas match for axiom rule.
+   @param formula1 - First formula
+   @param formula2 - Second formula  
+   @return boolean - True if formulas match
+*/
+function formulasMatch(formula1, formula2) {
+    console.log('Comparing formulas:', formula1, 'vs', formula2);
+    
+    // For literals, check if the values match
+    if (formula1.type === 'litt' && formula2.type === 'litt') {
+        let match = formula1.value === formula2.value;
+        console.log('Literal comparison:', formula1.value, '===', formula2.value, '→', match);
+        return match;
+    }
+    
+    // For dual formulas, check if the inner values match
+    if (formula1.type === 'dual' && formula2.type === 'dual') {
+        return formulasMatch(formula1.value, formula2.value);
+    }
+    
+    // Check if types don't match
+    if (formula1.type !== formula2.type) {
+        console.log('Types do not match:', formula1.type, '!==', formula2.type);
+        return false;
+    }
+    
+    // Add more complex formula matching as needed
+    // For now, only handle simple cases
+    console.log('Formula types not handled in matching:', formula1.type);
+    return false;
+}
+
+/* Check if one rule is applicable to the current sequent.
+   @param $sequentTable - The sequent table element
+   @return boolean - True if one rule can be applied
+*/
+function isOneRuleApplicable($sequentTable) {
+    let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
+    console.log('Checking one rule applicability, sequent:', sequent);
+    
+    if (!sequent || !sequent.hyp || !sequent.cons || sequent.cons.length !== 1) {
+        console.log('Sequent invalid for one rule');
+        return false;
+    }
+    
+    // One rule requires empty context
+    let isEmpty = sequent.hyp.length === 0;
+    console.log('Context is empty:', isEmpty);
+    
+    return isEmpty;
 }
 
 /* Enter comma selection mode for tensor rule context splitting.
