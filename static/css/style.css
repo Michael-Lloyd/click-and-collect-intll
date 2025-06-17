@@ -163,8 +163,16 @@ input:checked + .slider:before { -webkit-transform: translateX(1em); -ms-transfo
     transition: all 0.2s ease;
 }
 
-.proof.intuitionistic-mode .hyp li span.comma.tensor-applicable {
-    /* Make commas clickable when tensor rule is applicable */
+.proof.intuitionistic-mode .hyp li span.pre-space-clickable {
+    /* Base pre-space styling in ILL mode */
+    padding: 0.2em 0.3em;
+    border-radius: 0.2em;
+    transition: all 0.2s ease;
+}
+
+.proof.intuitionistic-mode .hyp li span.comma.tensor-applicable,
+.proof.intuitionistic-mode .hyp li span.pre-space-clickable.tensor-applicable {
+    /* Make commas and pre-spaces clickable when tensor rule is applicable */
     cursor: pointer;
     /* Subtle indication that comma is clickable */
     border-radius: 0.2em;
@@ -172,8 +180,9 @@ input:checked + .slider:before { -webkit-transform: translateX(1em); -ms-transfo
     background-color: rgba(255, 235, 59, 0.05);
 }
 
-.proof.intuitionistic-mode .hyp li span.comma.tensor-applicable:hover {
-    /* Enhanced hover effect for clickable commas */
+.proof.intuitionistic-mode .hyp li span.comma.tensor-applicable:hover,
+.proof.intuitionistic-mode .hyp li span.pre-space-clickable.tensor-applicable:hover {
+    /* Enhanced hover effect for clickable commas and pre-spaces */
     background-color: #ffeb3b;
     color: #333;
     border: 2px solid #ffeb3b;

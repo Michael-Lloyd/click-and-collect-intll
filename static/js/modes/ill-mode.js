@@ -318,6 +318,14 @@ class ILLRuleEngine extends RuleEngine {
     }
 
     /**
+     * Get the mode name for this rule engine
+     * @return {string} Mode name
+     */
+    getModeName() {
+        return 'intuitionistic';
+    }
+
+    /**
      * Set up formula interaction for ILL mode with comma handling
      * @param {jQuery} $li - List item element containing the formula
      * @param {Object} formulaAsJson - Formula data structure
@@ -333,7 +341,52 @@ class ILLRuleEngine extends RuleEngine {
             if ($commaSpan.length > 0) {
                 this.setupCommaInteraction($commaSpan, $li, options);
             }
+            
+            // Add clickable space before first formula for empty Gamma (only when tensor rule applicable)
+            let $formulaList = $li.closest('ul');
+            let isLeftSide = $formulaList.hasClass('hyp');
+            if (isLeftSide && $li.index() === 0) {
+                let $sequentTable = $li.closest('table');
+                // Only add the space if tensor rule is applicable
+                setTimeout(() => {
+                    if (this.isTensorRuleApplicable($sequentTable)) {
+                        this.setupPreFirstFormulaSpace($li, options);
+                    }
+                }, 100); // Small delay to ensure sequent data is available
+            }
         }
+    }
+
+    /**
+     * Set up clickable space before the first formula for empty Gamma
+     * @param {jQuery} $li - The first list item element
+     * @param {Object} options - Display options
+     */
+    setupPreFirstFormulaSpace($li, options) {
+        // Create and prepend a clickable space span
+        let $preSpaceSpan = $('<span>', {
+            'class': 'pre-space-clickable',
+            'html': '&nbsp;'
+        });
+        $li.prepend($preSpaceSpan);
+        
+        // Set up dynamic visibility based on tensor rule applicability
+        let $sequentTable = $li.closest('table');
+        this.updateCommaVisibility($preSpaceSpan, $sequentTable);
+        
+        // Add click handler
+        $preSpaceSpan.on('click', (e) => {
+            e.stopPropagation();
+            
+            let $currentSequentTable = $li.closest('table');
+            
+            if (!this.isTensorRuleApplicable($currentSequentTable)) {
+                return;
+            }
+            
+            // Enter comma selection mode with empty Gamma (position 0)
+            this.enterCommaSelectionMode($currentSequentTable, 0);
+        });
     }
 
     /**
@@ -552,5 +605,24 @@ function updateAllCommaVisibility($container) {
         $sequentTable.find('.hyp li span.comma').each(function() {
             ruleEngine.updateCommaVisibility($(this), $sequentTable);
         });
+        
+        $sequentTable.find('.hyp li span.pre-space-clickable').each(function() {
+            ruleEngine.updateCommaVisibility($(this), $sequentTable);
+        });
+        
+        // Handle adding/removing pre-space for first formula based on tensor rule applicability
+        let $firstFormulaLi = $sequentTable.find('.hyp li').first();
+        if ($firstFormulaLi.length > 0) {
+            let $existingPreSpace = $firstFormulaLi.find('span.pre-space-clickable');
+            let isTensorApplicable = ruleEngine.isTensorRuleApplicable($sequentTable);
+            
+            if (isTensorApplicable && $existingPreSpace.length === 0) {
+                // Add pre-space if tensor rule is applicable and doesn't exist
+                ruleEngine.setupPreFirstFormulaSpace($firstFormulaLi, {withInteraction: true});
+            } else if (!isTensorApplicable && $existingPreSpace.length > 0) {
+                // Remove pre-space if tensor rule is not applicable but exists
+                $existingPreSpace.remove();
+            }
+        }
     });
 }
