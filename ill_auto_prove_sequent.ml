@@ -18,6 +18,21 @@ open Ill_sequent
 open Ill_proof
 (* open Ill_rule_request *)
 
+(* Convert raw formula to ILL formula *)
+let rec convert_raw_formula_to_ill = function
+    | Raw_sequent.One -> One
+    | Raw_sequent.Top -> Top
+    | Raw_sequent.Litt s -> Litt s
+    | Raw_sequent.Tensor (f1, f2) -> 
+        Tensor (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
+    | Raw_sequent.Plus (f1, f2) -> 
+        Plus (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
+    | Raw_sequent.Lollipop (f1, f2) ->
+        Lollipop (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
+    | Raw_sequent.With (f1, f2) ->
+        With (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
+    | _ -> failwith "Non-ILL connective not allowed in auto-prove"
+
 (* Configuration for proof search *)
 type ill_prover_config = {
     max_depth: int;           (* Maximum proof search depth *)
@@ -58,83 +73,13 @@ let is_axiom ill_seq =
    @param config - Prover configuration
    @return ill_proof_result - Result of proof search
 *)
-let prove_ill_sequent_internal _ill_seq _config =
-    (* TODO: Implement proof search *)
-    ILL_Timeout
-
-(* Recursive proof search with depth and timeout checking.
-   @param ill_seq - Current sequent to prove
-   @param config - Prover configuration
-   @param depth - Current search depth
-   @param start_time - Search start time for timeout
-   @return ill_proof_result - Search result
-*)
-and search_proof _ill_seq _config _depth _start_time =
-    (* TODO: Implement full search logic *)
-    (* For now, just return timeout *)
-    ILL_Timeout
-
-(* MAIN API ENTRY POINT *)
-
-(* Attempt to automatically prove an ILL sequent.
-   @param request_as_json - JSON request from frontend
-   @return (bool * Yojson.Basic.t) - (success, response_json)
-*)
-let auto_prove_sequent request_as_json =
+let rec prove_ill_sequent_internal ill_seq config =
+    let start_time = Sys.time () in
     try
-        (* Extract sequent from request *)
-        let _sequent_json = Request_utils.get_key request_as_json "sequent" in
-        (* TODO: Parse sequent from JSON properly *)
-        let stub_sequent = { context = [Litt "A"]; goal = Litt "A" } in
-        
-        (* Extract configuration if provided *)
-        let config = default_config in  (* TODO: Parse config from JSON *)
-        
-        (* Attempt proof search *)
-        let result = prove_ill_sequent_internal stub_sequent config in
-        
-        (* Convert result to JSON response *)
-        match result with
-        | ILL_Proof_Found proof ->
-            (true, `Assoc [
-                ("success", `Bool true);
-                ("proof", Ill_proof.to_json proof);
-                ("provable", `Bool true)
-            ])
-        | ILL_Not_Provable ->
-            (true, `Assoc [
-                ("success", `Bool true);
-                ("provable", `Bool false);
-                ("reason", `String "Sequent is not provable in ILL")
-            ])
-        | ILL_Timeout ->
-            (true, `Assoc [
-                ("success", `Bool true);
-                ("provable", `Bool false);
-                ("reason", `String "Proof search timeout")
-            ])
-        | ILL_Depth_Exceeded ->
-            (true, `Assoc [
-                ("success", `Bool true);
-                ("provable", `Bool false);
-                ("reason", `String "Maximum search depth exceeded")
-            ])
-        | ILL_Search_Error msg ->
-            (false, `String ("ILL proof search error: " ^ msg))
+        search_proof ill_seq config 0 start_time
     with
-    | _ ->
-        (false, `String "Error in ILL automated proving")
-
-(* CORE PROOF SEARCH *)
-
-(* Main proof search function for ILL sequents.
-   @param ill_seq - ILL sequent to prove
-   @param config - Prover configuration
-   @return ill_proof_result - Result of proof search
-*)
-let prove_ill_sequent_internal _ill_seq _config =
-    (* TODO: Implement proof search *)
-    ILL_Timeout
+    | Stack_overflow -> ILL_Depth_Exceeded
+    | _ -> ILL_Search_Error "Unknown error in proof search"
 
 (* Recursive proof search with depth and timeout checking.
    @param ill_seq - Current sequent to prove
@@ -143,10 +88,14 @@ let prove_ill_sequent_internal _ill_seq _config =
    @param start_time - Search start time for timeout
    @return ill_proof_result - Search result
 *)
-and search_proof _ill_seq _config _depth _start_time =
-    (* TODO: Implement full search logic *)
-    (* For now, just return timeout *)
-    ILL_Timeout
+and search_proof ill_seq config depth start_time =
+    (* Check termination conditions *)
+    if depth > config.max_depth then
+        ILL_Depth_Exceeded
+    else if (Sys.time () -. start_time) *. 1000.0 > float_of_int config.timeout_ms then
+        ILL_Timeout
+    else
+        try_prove_sequent ill_seq config depth start_time
 
 (* Attempt to prove a sequent by trying applicable rules.
    @param ill_seq - Sequent to prove
@@ -155,7 +104,7 @@ and search_proof _ill_seq _config _depth _start_time =
    @param start_time - Start time
    @return ill_proof_result - Proof result
 *)
-and try_prove_sequent ill_seq _config _depth _start_time =
+and try_prove_sequent ill_seq config depth start_time =
     (* Check for axiom first *)
     if is_axiom ill_seq then
         match ill_seq.context, ill_seq.goal with
@@ -164,8 +113,7 @@ and try_prove_sequent ill_seq _config _depth _start_time =
         | _ -> ILL_Not_Provable
     else
         (* Try introduction rules based on goal formula *)
-        (* TODO: Implement try_introduction_rules *)
-        ILL_Timeout
+        try_introduction_rules ill_seq config depth start_time
 
 (* Try introduction rules based on the goal formula type.
    @param ill_seq - Sequent to prove
@@ -174,25 +122,23 @@ and try_prove_sequent ill_seq _config _depth _start_time =
    @param start_time - Start time
    @return ill_proof_result - Proof result
 *)
-and try_introduction_rules ill_seq _config _depth _start_time =
+and try_introduction_rules ill_seq config depth start_time =
     match ill_seq.goal with
     | One ->
-        (* TODO: Implement try_one_rule *)
-        ILL_Timeout
+        try_one_rule ill_seq config depth start_time
     | Top ->
-        ILL_Timeout
-    | Tensor (_a, _b) ->
-        ILL_Timeout
-    | With (_a, _b) ->
-        (* TODO: Implement try_with_rule *)
-        ILL_Timeout
-    | Plus (_a, _b) ->
-        ILL_Timeout
-    | Lollipop (_a, _b) ->
-        ILL_Timeout
+        try_top_rule ill_seq config depth start_time
+    | Tensor (a, b) ->
+        try_tensor_rule ill_seq a b config depth start_time
+    | With (a, b) ->
+        try_with_rule ill_seq a b config depth start_time
+    | Plus (a, b) ->
+        try_plus_rules ill_seq a b config depth start_time
+    | Lollipop (a, b) ->
+        try_lollipop_rule ill_seq a b config depth start_time
     | Litt _ ->
-        (* Atomic goal - check if provable from context *)
-        ILL_Timeout
+        (* Atomic goal - try left rules for decomposing context *)
+        try_atomic_goal ill_seq config depth start_time
 
 (* INDIVIDUAL RULE IMPLEMENTATIONS *)
 
@@ -227,9 +173,32 @@ and try_top_rule ill_seq _config _depth _start_time =
    @param start_time - Start time
    @return ill_proof_result - Proof result
 *)
-and try_tensor_rule _ill_seq _a _b _config _depth _start_time =
-    (* TODO: Implement tensor rule logic *)
-    ILL_Timeout
+and try_tensor_rule ill_seq a b config depth start_time =
+    (* Generate all possible context splits *)
+    let splits = generate_context_splits ill_seq.context in
+    try_context_splits splits a b config depth start_time
+
+(* Try with rule: Γ ⊢ A&B becomes Γ ⊢ A and Γ ⊢ B
+   @param ill_seq - Sequent to prove
+   @param a - Left with component
+   @param b - Right with component
+   @param config - Prover configuration
+   @param depth - Current depth
+   @param start_time - Start time
+   @return ill_proof_result - Proof result
+*)
+and try_with_rule ill_seq a b config depth start_time =
+    let left_premise = { context = ill_seq.context; goal = a } in
+    let right_premise = { context = ill_seq.context; goal = b } in
+    
+    (* Both premises must be provable *)
+    match search_proof left_premise config (depth + 1) start_time with
+    | ILL_Proof_Found left_proof ->
+        (match search_proof right_premise config (depth + 1) start_time with
+         | ILL_Proof_Found right_proof ->
+             ILL_Proof_Found (ILL_With_right_proof (ill_seq.context, a, b, left_proof, right_proof))
+         | result -> result)
+    | result -> result
 
 (* Try plus rules: Γ ⊢ A⊕B becomes Γ ⊢ A or Γ ⊢ B
    @param ill_seq - Sequent to prove
@@ -277,16 +246,120 @@ and try_lollipop_rule ill_seq a b config depth start_time =
    @param start_time - Start time
    @return ill_proof_result - Proof result
 *)
-and try_atomic_goal ill_seq _config _depth _start_time =
-    (* TODO: Implement left rules for decomposing context *)
-    (* For now, just check for direct axiom *)
-    if is_axiom ill_seq then
-        match ill_seq.context, ill_seq.goal with
-        | [Litt a], Litt b when a = b ->
-            ILL_Proof_Found (ILL_Axiom_proof a)
-        | _ -> ILL_Not_Provable
-    else
-        ILL_Not_Provable
+and try_atomic_goal ill_seq config depth start_time =
+    (* Try left rules for decomposing context *)
+    try_left_rules ill_seq config depth start_time
+
+(* Try left rules to decompose context formulas
+   @param ill_seq - Sequent with atomic goal
+   @param config - Prover configuration
+   @param depth - Current depth
+   @param start_time - Start time
+   @return ill_proof_result - Proof result
+*)
+and try_left_rules ill_seq config depth start_time =
+    let rec try_rules_at_positions context_list pos =
+        if pos >= List.length context_list then
+            ILL_Not_Provable
+        else
+            let formula_at_pos = List.nth context_list pos in
+            match try_left_rule_at_position ill_seq formula_at_pos pos config depth start_time with
+            | ILL_Proof_Found proof -> ILL_Proof_Found proof
+            | _ -> try_rules_at_positions context_list (pos + 1)
+    in
+    try_rules_at_positions ill_seq.context 0
+
+(* Try left rule at specific position
+   @param ill_seq - Original sequent
+   @param formula - Formula at position
+   @param pos - Position in context
+   @param config - Prover configuration
+   @param depth - Current depth
+   @param start_time - Start time
+   @return ill_proof_result - Proof result
+*)
+and try_left_rule_at_position ill_seq formula pos config depth start_time =
+    match formula with
+    | Tensor (a, b) ->
+        (* Tensor left: Γ,A⊗B,Δ ⊢ C becomes Γ,A,B,Δ ⊢ C *)
+        let (before, _, after) = split_context_at_position ill_seq.context pos in
+        let new_context = before @ [a; b] @ after in
+        let premise = { context = new_context; goal = ill_seq.goal } in
+        (match search_proof premise config (depth + 1) start_time with
+         | ILL_Proof_Found premise_proof ->
+             ILL_Proof_Found (ILL_Tensor_left_proof (ill_seq.context, a, b, premise_proof))
+         | result -> result)
+    
+    | With (a, b) ->
+        (* Try with left 1 and with left 2 *)
+        try_with_left_at_position ill_seq a b pos config depth start_time
+    
+    | Plus (a, b) ->
+        (* Plus left: Γ,A⊕B,Δ ⊢ C becomes Γ,A,Δ ⊢ C and Γ,B,Δ ⊢ C *)
+        let (before, _, after) = split_context_at_position ill_seq.context pos in
+        let premise1 = { context = before @ [a] @ after; goal = ill_seq.goal } in
+        let premise2 = { context = before @ [b] @ after; goal = ill_seq.goal } in
+        (match search_proof premise1 config (depth + 1) start_time with
+         | ILL_Proof_Found proof1 ->
+             (match search_proof premise2 config (depth + 1) start_time with
+              | ILL_Proof_Found proof2 ->
+                  ILL_Proof_Found (ILL_Plus_left_proof (ill_seq.context, a, b, proof1, proof2))
+              | result -> result)
+         | result -> result)
+    
+    | Lollipop (a, b) ->
+        (* Lollipop left: Γ,A⊸B,Δ ⊢ C becomes Γ ⊢ A and Δ,B ⊢ C *)
+        let (before, _, after) = split_context_at_position ill_seq.context pos in
+        let premise1 = { context = before; goal = a } in
+        let premise2 = { context = after @ [b]; goal = ill_seq.goal } in
+        (match search_proof premise1 config (depth + 1) start_time with
+         | ILL_Proof_Found proof1 ->
+             (match search_proof premise2 config (depth + 1) start_time with
+              | ILL_Proof_Found proof2 ->
+                  ILL_Proof_Found (ILL_Lollipop_left_proof (ill_seq.context, a, b, proof1, proof2))
+              | result -> result)
+         | result -> result)
+    
+    | _ -> ILL_Not_Provable
+
+(* Try with left rules at position
+   @param ill_seq - Original sequent
+   @param a - Left component of with
+   @param b - Right component of with
+   @param pos - Position in context
+   @param config - Prover configuration
+   @param depth - Current depth
+   @param start_time - Start time
+   @return ill_proof_result - Proof result
+*)
+and try_with_left_at_position ill_seq a b pos config depth start_time =
+    let (before, _, after) = split_context_at_position ill_seq.context pos in
+    
+    (* Try with left 1: replace A&B with A *)
+    let premise1 = { context = before @ [a] @ after; goal = ill_seq.goal } in
+    match search_proof premise1 config (depth + 1) start_time with
+    | ILL_Proof_Found proof1 ->
+        ILL_Proof_Found (ILL_With_left_1_proof (ill_seq.context, a, proof1))
+    | _ ->
+        (* Try with left 2: replace A&B with B *)
+        let premise2 = { context = before @ [b] @ after; goal = ill_seq.goal } in
+        (match search_proof premise2 config (depth + 1) start_time with
+         | ILL_Proof_Found proof2 ->
+             ILL_Proof_Found (ILL_With_left_2_proof (ill_seq.context, b, proof2))
+         | result -> result)
+
+(* Split context at specific position
+   @param context - Context list
+   @param pos - Position to split at
+   @return (before, at_pos, after) - Split context
+*)
+and split_context_at_position context pos =
+    let rec split acc n = function
+        | [] -> failwith "Position out of bounds"
+        | h :: t when n = 0 -> (List.rev acc, h, t)
+        | h :: t -> split (h :: acc) (n - 1) t
+    in
+    split [] pos context
 
 (* CONTEXT SPLITTING FOR TENSOR RULE *)
 
@@ -295,12 +368,34 @@ and try_atomic_goal ill_seq _config _depth _start_time =
    @return (formula list * formula list) list - All possible splits
 *)
 and generate_context_splits context =
-    (* TODO: Implement all possible context splits *)
-    (* For now, return simple splits *)
-    match context with
-    | [] -> [([], [])]
-    | [f] -> [([f], []); ([], [f])]
-    | f :: rest -> [(f :: rest, []); ([], f :: rest)]
+    (* Generate all possible ways to split context into two parts *)
+    let n = List.length context in
+    let rec generate_splits acc i =
+        if i > n then acc
+        else
+            let left_ctx = take i context in
+            let right_ctx = drop i context in
+            (left_ctx, right_ctx) :: generate_splits acc (i + 1)
+    in
+    generate_splits [] 0
+
+(* Take first n elements from list *)
+and take n lst =
+    let rec take_acc acc n = function
+        | [] -> List.rev acc
+        | h :: t when n > 0 -> take_acc (h :: acc) (n - 1) t
+        | _ -> List.rev acc
+    in
+    take_acc [] n lst
+
+(* Drop first n elements from list *)
+and drop n lst =
+    let rec drop_acc n = function
+        | [] -> []
+        | _ :: t when n > 0 -> drop_acc (n - 1) t
+        | lst -> lst
+    in
+    drop_acc n lst
 
 (* Try all context splits for tensor rule.
    @param splits - List of context splits to try
@@ -312,23 +407,83 @@ and generate_context_splits context =
    @return ill_proof_result - Proof result
 *)
 and try_context_splits splits a b config depth start_time =
-    match splits with
-    | [] -> ILL_Not_Provable
-    | (left_ctx, right_ctx) :: _remaining_splits ->
-        let left_premise = { context = left_ctx; goal = a } in
-        let right_premise = { context = right_ctx; goal = b } in
-        
-        (* Try to prove both premises *)
-        match search_proof left_premise config (depth + 1) start_time with
-        | ILL_Proof_Found left_proof ->
-            (match search_proof right_premise config (depth + 1) start_time with
-             | ILL_Proof_Found right_proof ->
-                 let combined_context = left_ctx @ right_ctx in
-                 ILL_Proof_Found (ILL_Tensor_proof (combined_context, a, b, left_proof, right_proof))
-             | _ -> ILL_Timeout)
-        | _ -> ILL_Timeout
+    let rec try_splits = function
+        | [] -> ILL_Not_Provable
+        | (left_ctx, right_ctx) :: remaining_splits ->
+            let left_premise = { context = left_ctx; goal = a } in
+            let right_premise = { context = right_ctx; goal = b } in
+            
+            (* Try to prove both premises *)
+            match search_proof left_premise config (depth + 1) start_time with
+            | ILL_Proof_Found left_proof ->
+                (match search_proof right_premise config (depth + 1) start_time with
+                 | ILL_Proof_Found right_proof ->
+                     let combined_context = left_ctx @ right_ctx in
+                     ILL_Proof_Found (ILL_Tensor_proof (combined_context, a, b, left_proof, right_proof))
+                 | _ -> try_splits remaining_splits)
+            | _ -> try_splits remaining_splits
+    in
+    try_splits splits
 
-(* HELPER FUNCTIONS *)
+(* MAIN API ENTRY POINT *)
+
+(* Attempt to automatically prove an ILL sequent.
+   @param request_as_json - JSON request from frontend
+   @return (bool * Yojson.Basic.t) - (success, response_json)
+*)
+let auto_prove_sequent request_as_json =
+    try
+        (* Extract sequent from request *)
+        let sequent_json = Request_utils.get_key request_as_json "sequent" in
+        let raw_sequent = Raw_sequent.from_json sequent_json in
+        
+        (* Convert raw sequent to ILL sequent *)
+        let context_formulas = List.map convert_raw_formula_to_ill raw_sequent.Raw_sequent.hyp in
+        let conclusion_formulas = List.map convert_raw_formula_to_ill raw_sequent.Raw_sequent.cons in
+        
+        let ill_sequent = match conclusion_formulas with
+            | [goal] -> { context = context_formulas; goal = goal }
+            | [] -> failwith "ILL sequent must have exactly one conclusion"
+            | _ -> failwith "ILL sequent can have only one conclusion formula"
+        in
+        
+        (* Extract configuration if provided *)
+        let config = default_config in  (* TODO: Parse config from JSON *)
+        
+        (* Attempt proof search *)
+        let result = prove_ill_sequent_internal ill_sequent config in
+        
+        (* Convert result to JSON response *)
+        match result with
+        | ILL_Proof_Found proof ->
+            (true, `Assoc [
+                ("success", `Bool true);
+                ("proof", Ill_proof.to_json proof);
+                ("provable", `Bool true)
+            ])
+        | ILL_Not_Provable ->
+            (true, `Assoc [
+                ("success", `Bool true);
+                ("provable", `Bool false);
+                ("reason", `String "Sequent is not provable in ILL")
+            ])
+        | ILL_Timeout ->
+            (true, `Assoc [
+                ("success", `Bool true);
+                ("provable", `Bool false);
+                ("reason", `String "Proof search timeout")
+            ])
+        | ILL_Depth_Exceeded ->
+            (true, `Assoc [
+                ("success", `Bool true);
+                ("provable", `Bool false);
+                ("reason", `String "Maximum search depth exceeded")
+            ])
+        | ILL_Search_Error msg ->
+            (false, `String ("ILL proof search error: " ^ msg))
+    with
+    | _ ->
+        (false, `String "Error in ILL automated proving")
 
 (* PROOF SEARCH HEURISTICS *)
 
@@ -340,7 +495,6 @@ and try_context_splits splits a b config depth start_time =
 let compute_heuristic_score ill_seq config =
     if not config.enable_heuristics then 0
     else
-        (* TODO: Implement sophisticated heuristics *)
         (* For now, prefer shorter contexts *)
         List.length ill_seq.context
 

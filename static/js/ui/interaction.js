@@ -118,20 +118,6 @@ function autoProveSequent($sequentTable) {
 
     // Include mode information for the backend
     let intuitionisticMode = options.intuitionisticMode?.value || false;
-    
-    // ILL auto-prover is not implemented yet, so timeout gracefully
-    if (intuitionisticMode) {
-        let $turnstile = $sequentTable.find('.turnstile');
-        $turnstile.addClass('loading');
-        
-        // Simulate timeout by marking as not auto-provable after a brief delay
-        setTimeout(() => {
-            $turnstile.removeClass('loading');
-            markAsNotAutoProvable($sequentTable);
-        }, 1000); // Short delay to show loading state
-        
-        return;
-    }
 
     // Get sequent data
     let sequent = $sequentTable.data('sequentWithoutPermutation');
