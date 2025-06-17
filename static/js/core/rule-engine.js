@@ -64,8 +64,6 @@ class RuleEngine {
      * @param {jQuery} $sequentTable - Sequent table element
      */
     applyRuleToSequent(ruleRequest, $sequentTable) {
-        console.log('DEBUG: RuleEngine.applyRuleToSequent called with:', ruleRequest);
-        console.log('DEBUG: Rule engine mode:', this.getModeName());
         // Just delegate to the global applyRule function
         // which handles all the backend communication
         applyRule(ruleRequest, $sequentTable);
@@ -110,15 +108,12 @@ class RuleEngine {
      * @param {Object} options - Display and interaction options
      */
     setupFormulaInteraction($li, formulaAsJson, options) {
-        console.log('DEBUG: Setting up formula interaction for:', formulaAsJson.type, 'mode:', this.getModeName());
         // Determine which side of the turnstile we're on
         let $formulaList = $li.closest('ul');
         let isLeftSide = $formulaList.hasClass('hyp');
         let rules = this.getRules(formulaAsJson, options, isLeftSide, $li);
-        console.log('DEBUG: Got rules for formula:', rules);
 
         if (rules.length === 0) {
-            console.log('DEBUG: No rules found for formula, skipping interaction setup');
             return; // No rules to apply
         }
 
@@ -128,7 +123,6 @@ class RuleEngine {
         // Set up click handlers for each rule
         for (let ruleEvent of rules) {
             let $spanForEvent = $li.find('span.' + ruleEvent.element).first();
-            console.log('DEBUG: Setting up click handler for element:', ruleEvent.element);
 
             // Add clickable styling
             $spanForEvent.addClass('clickable');
@@ -158,20 +152,15 @@ class RuleEngine {
      */
     buildApplyRuleCallback(ruleConfig, $li, options) {
         return () => {
-            console.log('DEBUG: Formula clicked, rule config:', ruleConfig);
             let ruleRequest = this.buildRuleRequest(ruleConfig, $li, options);
-            console.log('DEBUG: Built rule request:', ruleRequest);
             
             if (!ruleRequest) {
-                console.log('DEBUG: Rule request is null, not applying rule');
                 return;
             }
             
             if (options.withInteraction) {
-                console.log('DEBUG: Applying rule with interaction enabled');
                 this.applyRuleToSequent(ruleRequest, $li.closest('table'));
             } else if (options.proofTransformation?.value) {
-                console.log('DEBUG: Applying transformation');
                 let $sequentTable = $li.closest('table');
                 applyTransformation($sequentTable, {
                     transformation: ruleConfig.transformation, 

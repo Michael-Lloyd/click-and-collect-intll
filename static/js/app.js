@@ -155,6 +155,11 @@ function buildOptions() {
             options[option] = true;
         }
     }
+    
+    // withInteraction should be enabled by default unless explicitly disabled
+    if (options.withInteraction === undefined) {
+        options.withInteraction = true;
+    }
 
     // Toggle options with callbacks
     for (let option of ['autoReverse', 'intuitionisticMode', 'cutMode', 'proofTransformation']) {

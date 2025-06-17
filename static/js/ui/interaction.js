@@ -116,6 +116,23 @@ function autoProveSequent($sequentTable) {
     let options = $container.data('options');
     let ruleEngine = $container.data('ruleEngine');
 
+    // Include mode information for the backend
+    let intuitionisticMode = options.intuitionisticMode?.value || false;
+    
+    // ILL auto-prover is not implemented yet, so timeout gracefully
+    if (intuitionisticMode) {
+        let $turnstile = $sequentTable.find('.turnstile');
+        $turnstile.addClass('loading');
+        
+        // Simulate timeout by marking as not auto-provable after a brief delay
+        setTimeout(() => {
+            $turnstile.removeClass('loading');
+            markAsNotAutoProvable($sequentTable);
+        }, 1000); // Short delay to show loading state
+        
+        return;
+    }
+
     // Get sequent data
     let sequent = $sequentTable.data('sequentWithoutPermutation');
     let notations = getNotations($container);
@@ -126,7 +143,7 @@ function autoProveSequent($sequentTable) {
         type: 'POST',
         url: '/auto_prove_sequent',
         contentType: 'application/json; charset=utf-8',
-        data: compressJson(JSON.stringify({sequent, notations})),
+        data: compressJson(JSON.stringify({sequent, notations, intuitionisticMode})),
         beforeSend: function() {
             $turnstile.addClass('loading');
         },

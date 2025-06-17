@@ -50,14 +50,8 @@ function createSequent(sequent, $sequentTable, options, ruleEngine = null) {
     if (options.withInteraction && ruleEngine) {
         $thesisSpan.addClass('clickable');
         addClickAndDoubleClickEvent($thesisSpan, function () {
-            console.log('DEBUG: Turnstile clicked');
-            console.log('DEBUG: Rule engine mode:', ruleEngine.getModeName());
-            // Simple axiom rule request for turnstile click
-            let ruleRequest = { rule: 'axiom' };
-            console.log('DEBUG: Applying axiom rule from turnstile:', ruleRequest);
-            ruleEngine.applyRuleToSequent(ruleRequest, $sequentTable);
+            // No action on single click - turnstile is only for auto-prover via double-click
         }, function () {
-            console.log('DEBUG: Turnstile double-clicked for auto-prove');
             autoProveSequent($sequentTable);
         });
     }

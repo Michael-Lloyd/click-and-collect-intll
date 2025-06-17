@@ -57,10 +57,6 @@ function uncompressJson(json) {
  * @param {string} errorThrown - Error message
  */
 function onAjaxError(jqXHR, textStatus, errorThrown) {
-    console.log(jqXHR);
-    console.log(jqXHR.responseText);
-    console.log(textStatus);
-    console.log(errorThrown);
 
     let alertText = 'Technical error, check browser console for more details.';
     if (jqXHR.responseText === 'Body content is too big') {
@@ -150,27 +146,22 @@ function invertPermutation(permutation) {
  * @param {jQuery} $sequentTable - Sequent table element
  */
 function applyRule(ruleRequest, $sequentTable) {
-    console.log('DEBUG: applyRule called with:', ruleRequest);
     let $container = $sequentTable.closest('.proof-container');
     let options = $container.data('options');
-    console.log('DEBUG: Container options:', options);
 
     // Get sequent data and permutation
     let sequentWithoutPermutation = $sequentTable.data('sequentWithoutPermutation');
     let permutationBeforeRule = getSequentPermutation($sequentTable);
     let sequent = permuteSequent(sequentWithoutPermutation, permutationBeforeRule);
-    console.log('DEBUG: Sequent data:', sequent);
 
     let notations = getNotations($container);
 
     // Gather intuitionisticMode value
     let intuitionisticMode = options.intuitionisticMode?.value || false;
-    console.log('DEBUG: Intuitionistic mode:', intuitionisticMode);
 
     let requestData = { 
         ruleRequest, sequent, notations, intuitionisticMode 
     };
-    console.log('DEBUG: Sending AJAX request with data:', requestData);
 
     $.ajax({
         type: 'POST',
@@ -178,9 +169,7 @@ function applyRule(ruleRequest, $sequentTable) {
         contentType:'application/json; charset=utf-8',
         data: compressJson(JSON.stringify(requestData)),
         success: function(data) {
-            console.log('DEBUG: AJAX success response:', data);
             if (data.success === true) {
-                console.log('DEBUG: Rule application successful');
                 clearSavedProof();
                 cleanPedagogicMessage($container);
                 let ruleEngine = $container.data('ruleEngine');
@@ -190,12 +179,10 @@ function applyRule(ruleRequest, $sequentTable) {
                     autoReverseSequentPremises($sequentTable);
                 }
             } else {
-                console.log('DEBUG: Rule application failed:', data['errorMessage']);
                 displayPedagogicError(data['errorMessage'], $container);
             }
         },
         error: function(jqXHR, textStatus, errorThrown) {
-            console.log('DEBUG: AJAX error:', jqXHR, textStatus, errorThrown);
             onAjaxError(jqXHR, textStatus, errorThrown);
         }
     });
@@ -253,7 +240,6 @@ function checkProvability($sequentTable) {
 function autoReverseSequentPremises($sequentTable) {
     // This would contain the auto-reverse logic from the original code
     // For now, it's a placeholder
-    console.log('Auto-reverse would be applied to:', $sequentTable);
 }
 
 /**
@@ -264,7 +250,6 @@ function autoReverseSequentPremises($sequentTable) {
 function applyTransformation($sequentTable, transformRequest) {
     // This would contain the transformation logic from the original code
     // For now, it's a placeholder
-    console.log('Transformation would be applied:', transformRequest);
 }
 
 /**
@@ -338,7 +323,6 @@ function switchOffOption($container, optionName) {
  * @param {jQuery} $container - Container for export bar
  */
 function createExportBar($container) {
-    console.log('Creating export bar for container:', $container);
 }
 
 /**
@@ -347,7 +331,6 @@ function createExportBar($container) {
  * @param {Function} callback - Callback when done
  */
 function createNotationBar($container, callback) {
-    console.log('Creating notation bar for container:', $container);
     if (callback) callback();
 }
 
@@ -420,7 +403,6 @@ function removeTransformStack($container) {
  * @param {Object} options - Options object
  */
 function reloadProofWithTransformationOptions($container, options) {
-    console.log('Reloading proof with transformation options');
 }
 
 /**
@@ -434,6 +416,5 @@ function removeTransformBar($container) {
 // Stub for analytics
 if (typeof gtag === 'undefined') {
     function gtag() {
-        console.log('Analytics event:', arguments);
     }
 }

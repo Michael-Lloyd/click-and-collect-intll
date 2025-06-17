@@ -27,7 +27,7 @@ class LLRuleEngine extends RuleEngine {
         }
 
         if (options.withInteraction) {
-            return this.getInteractiveRules(formulaAsJson, isLeftSide);
+            return this.getInteractiveRules(formulaAsJson, isLeftSide, $li);
         } else if (options.proofTransformation?.value) {
             return this.getTransformationRules(formulaAsJson);
         }
@@ -39,9 +39,10 @@ class LLRuleEngine extends RuleEngine {
      * Get interactive rules for LL mode
      * @param {Object} formulaAsJson - Formula data structure
      * @param {boolean} isLeftSide - Whether formula is on left side
+     * @param {jQuery} $li - List item element containing the formula
      * @return {Array} Array of rule event configurations
      */
-    getInteractiveRules(formulaAsJson, isLeftSide) {
+    getInteractiveRules(formulaAsJson, isLeftSide, $li = null) {
         switch (formulaAsJson.type) {
             case 'litt':
             case 'dual':
@@ -153,19 +154,55 @@ class LLRuleEngine extends RuleEngine {
     canApplyAxiom(sequent) {
         // In LL, axiom rule is more permissive than in ILL
         // Can be applied when there are matching formulas
-        if (!sequent.hyp || !sequent.cons || sequent.hyp.length === 0 || sequent.cons.length === 0) {
-            return false;
+        
+        // Handle one-sided sequents (typical in classical LL)
+        if (sequent.cons && sequent.cons.length >= 2 && (!sequent.hyp || sequent.hyp.length === 0)) {
+            // Check for dual pairs in the conclusion
+            for (let i = 0; i < sequent.cons.length; i++) {
+                for (let j = i + 1; j < sequent.cons.length; j++) {
+                    let formula1 = sequent.cons[i];
+                    let formula2 = sequent.cons[j];
+                    
+                    // Check if one is the dual of the other
+                    if (this.areDuals(formula1, formula2)) {
+                        return true;
+                    }
+                }
+            }
         }
-
-        // Check for matching literals or duals
-        for (let hypFormula of sequent.hyp) {
-            for (let consFormula of sequent.cons) {
-                if (formulasMatch(hypFormula, consFormula)) {
-                    return true;
+        
+        // Handle two-sided sequents
+        if (sequent.hyp && sequent.cons && sequent.hyp.length > 0 && sequent.cons.length > 0) {
+            // Check for matching literals or duals between hyp and cons
+            for (let hypFormula of sequent.hyp) {
+                for (let consFormula of sequent.cons) {
+                    if (formulasMatch(hypFormula, consFormula)) {
+                        return true;
+                    }
                 }
             }
         }
 
+        return false;
+    }
+
+    /**
+     * Check if two formulas are duals of each other
+     * @param {Object} formula1 - First formula
+     * @param {Object} formula2 - Second formula
+     * @return {boolean} True if they are duals
+     */
+    areDuals(formula1, formula2) {
+        // Check if formula1 is dual of formula2
+        if (formula1.type === 'dual' && formulasMatch(formula1.value, formula2)) {
+            return true;
+        }
+        
+        // Check if formula2 is dual of formula1
+        if (formula2.type === 'dual' && formulasMatch(formula2.value, formula1)) {
+            return true;
+        }
+        
         return false;
     }
 
@@ -181,8 +218,16 @@ class LLRuleEngine extends RuleEngine {
         
         let ruleRequest = { rule: ruleConfigCopy.rule };
 
-        // Handle axiom rule with notation unfolding
+        // Handle axiom rule with applicability checking and notation unfolding
         if (ruleConfigCopy.rule === 'axiom' && $li) {
+            // First check if axiom rule is actually applicable
+            let $sequentTable = $li.closest('table');
+            let sequent = $sequentTable.data('sequentWithoutPermutation');
+            
+            if (!sequent || !this.canApplyAxiom(sequent)) {
+                return null; // Don't apply the rule if not applicable
+            }
+            
             let formula = $li.data('formula');
             let atomName = formula['value'];
             if (formula['type'] === 'dual') {
