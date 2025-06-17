@@ -361,6 +361,9 @@ function applyModeStyles($container, modeName) {
 function toggleIntuitionisticMode($container, intuitionisticMode, currentRuleEngine) {
     let options = $container.data('options');
     
+    // Reset proof completion status when switching modes
+    markAsIncomplete($container);
+    
     // Create new rule engine for the selected mode
     let newRuleEngine;
     if (intuitionisticMode) {
