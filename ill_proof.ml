@@ -49,7 +49,7 @@ exception ILL_Proof_Exception of bool * string;;
    @param proof - ILL proof tree
    @return ill_sequent - The sequent that this proof establishes
 *)
-let get_conclusion_sequent = function
+let rec get_conclusion_sequent = function
     | ILL_Axiom_proof atom -> 
         { context = [Litt atom]; goal = Litt atom }
     | ILL_One_proof -> 
@@ -58,24 +58,26 @@ let get_conclusion_sequent = function
         { context = context; goal = Top }
     | ILL_Tensor_proof (context, f1, f2, _, _) -> 
         { context = context; goal = Tensor (f1, f2) }
-    | ILL_Tensor_left_proof (context, _, _, _) -> 
-        { context = context; goal = Top }  (* Goal extracted from premise *)
-    | ILL_With_left_1_proof (context, _, _) -> 
-        { context = context; goal = Top }  (* Goal extracted from premise *)
-    | ILL_With_left_2_proof (context, _, _) -> 
-        { context = context; goal = Top }  (* Goal extracted from premise *)
+    | ILL_Tensor_left_proof (context, _, _, premise_proof) -> 
+        { context = context; goal = (get_conclusion_sequent premise_proof).goal }
+    | ILL_With_left_1_proof (context, _, premise_proof) -> 
+        { context = context; goal = (get_conclusion_sequent premise_proof).goal }
+    | ILL_With_left_2_proof (context, _, premise_proof) -> 
+        { context = context; goal = (get_conclusion_sequent premise_proof).goal }
     | ILL_With_right_proof (context, f1, f2, _, _) -> 
         { context = context; goal = With (f1, f2) }
-    | ILL_Plus_left_proof (context, _, _, _, _) -> 
-        { context = context; goal = Top }  (* Goal extracted from premise *)
+    | ILL_Plus_left_proof (context, _, _, premise1, _) -> 
+        (* Both premises prove the same goal C, so we can use either one *)
+        { context = context; goal = (get_conclusion_sequent premise1).goal }
     | ILL_Plus_right_1_proof (context, f1, f2, _) -> 
         { context = context; goal = Plus (f1, f2) }
     | ILL_Plus_right_2_proof (context, f1, f2, _) -> 
         { context = context; goal = Plus (f1, f2) }
     | ILL_Lollipop_proof (context, f1, f2, _) -> 
         { context = context; goal = Lollipop (f1, f2) }
-    | ILL_Lollipop_left_proof (context, _, _, _, _) -> 
-        { context = context; goal = Top }  (* Goal extracted from premise *)
+    | ILL_Lollipop_left_proof (context, _, _, _, proof2) -> 
+        (* The goal is the same as the goal of the second premise (Delta, B |- C) *)
+        { context = context; goal = (get_conclusion_sequent proof2).goal }
     | ILL_Hypothesis_proof sequent -> 
         sequent
 

@@ -337,6 +337,7 @@ let rule_from_json json =
          | Some (`String "lollipop") -> ILL_Lollipop  (* Backward compatibility *)
          | Some (`String "ill_lollipop_left") -> ILL_Lollipop_left
          | Some (`String "lollipop_left") -> ILL_Lollipop_left  (* Backward compatibility *)
+         | Some (`String "lollipop_right") -> ILL_Lollipop  (* Frontend sends lollipop_right for right rule *)
          | Some (`String "with") -> ILL_With_left_1  (* Generic "with" for rule inference *)
          | _ -> raise (ILL_Rule_Json_Exception "Unknown ILL rule"))
     | _ -> raise (ILL_Rule_Json_Exception "Invalid rule JSON format")
