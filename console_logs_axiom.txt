@@ -1,0 +1,59 @@
+This page is in Almost Standards Mode. Page layout may be impacted. For Standards Mode use “<!DOCTYPE html>”. localhost:3000
+Loading failed for the <script> with source “https://www.googletagmanager.com/gtag/js?id=G-6M0JK9PWN1”. localhost:3000:51:109
+Creating notation bar for container: 
+Object { 0: div#main-proof-container.proof-container, length: 1 }
+compatibility.js:350:13
+DEBUG: Setting up formula interaction for: litt mode: intuitionistic rule-engine.js:113:17
+DEBUG: Got rules for formula: 
+Array [ {…} ]
+rule-engine.js:118:17
+DEBUG: Setting up click handler for element: main-formula rule-engine.js:131:21
+DEBUG: Setting up formula interaction for: litt mode: intuitionistic rule-engine.js:113:17
+DEBUG: Got rules for formula: 
+Array [ {…} ]
+rule-engine.js:118:17
+DEBUG: Setting up click handler for element: main-formula rule-engine.js:131:21
+Creating export bar for container: 
+Object { 0: div#main-proof-container.proof-container, length: 1 }
+compatibility.js:341:13
+DEBUG: Setting up formula interaction for: litt mode: intuitionistic rule-engine.js:113:17
+DEBUG: Got rules for formula: 
+Array [ {…} ]
+rule-engine.js:118:17
+DEBUG: Setting up click handler for element: main-formula rule-engine.js:131:21
+DEBUG: Setting up formula interaction for: litt mode: intuitionistic rule-engine.js:113:17
+DEBUG: Got rules for formula: 
+Array [ {…} ]
+rule-engine.js:118:17
+DEBUG: Setting up click handler for element: main-formula rule-engine.js:131:21
+DEBUG: Formula clicked, rule config: 
+Object { rule: "axiom_ill", needPosition: false }
+rule-engine.js:161:21
+Uncaught TypeError: can't access property "length", options.notations.formulasAsString is null
+    notationNameExists http://localhost:3000/static/js/compatibility.js:102
+    buildRuleRequest http://localhost:3000/static/js/modes/ill-mode.js:283
+    buildApplyRuleCallback http://localhost:3000/static/js/core/rule-engine.js:162
+    jQuery 8
+    setupFormulaInteraction http://localhost:3000/static/js/core/rule-engine.js:142
+    setupFormulaInteraction http://localhost:3000/static/js/modes/ill-mode.js:328
+    createFormulaList http://localhost:3000/static/js/core/sequent-core.js:125
+    createSequent http://localhost:3000/static/js/core/sequent-core.js:68
+    createSequentTable http://localhost:3000/static/js/core/proof-core.js:133
+    createSubProof http://localhost:3000/static/js/core/proof-core.js:91
+    success http://localhost:3000/static/js/core/proof-core.js:392
+    jQuery 6
+    toggleIntuitionisticMode http://localhost:3000/static/js/core/proof-core.js:382
+    buildProof http://localhost:3000/static/js/core/proof-core.js:61
+    createOption http://localhost:3000/static/js/compatibility.js:308
+    buildProof http://localhost:3000/static/js/core/proof-core.js:57
+    initProof http://localhost:3000/static/js/core/proof-core.js:29
+    createNotationBar http://localhost:3000/static/js/compatibility.js:351
+    initProof http://localhost:3000/static/js/core/proof-core.js:28
+    initMainProof http://localhost:3000/static/js/app.js:129
+    success http://localhost:3000/static/js/app.js:108
+    jQuery 6
+    parseSequentAsString http://localhost:3000/static/js/app.js:102
+    submitSequent http://localhost:3000/static/js/app.js:89
+    <anonymous> http://localhost:3000/static/js/app.js:34
+    jQuery 13
+compatibility.js:102:25

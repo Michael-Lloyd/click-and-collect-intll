@@ -11,10 +11,27 @@
         <!-- Mobile touch support for drag-and-drop on tablets/phones -->
         <script type="text/javascript" src="static/jquery/jquery.ui.touch-punch.min.js"></script>
         
-        <!-- Application JavaScript modules -->
-        <script type="text/javascript" src="static/js/sequent.js"></script>    <!-- Formula rendering and interaction -->
-        <script type="text/javascript" src="static/js/proof.js"></script>      <!-- Proof tree visualization -->
-        <script type="text/javascript" src="static/js/app.js"></script>        <!-- Main application logic -->
+        <!-- Refactored Application JavaScript modules -->
+        <!-- Compatibility layer (provides stubs and implementations) -->
+        <script type="text/javascript" src="static/js/compatibility.js"></script>
+        
+        <!-- Core modules (no dependencies on each other) -->
+        <script type="text/javascript" src="static/js/core/rule-engine.js"></script>
+        <script type="text/javascript" src="static/js/core/sequent-core.js"></script>
+        
+        <!-- UI modules (depend on core) -->
+        <script type="text/javascript" src="static/js/ui/visual-feedback.js"></script>
+        <script type="text/javascript" src="static/js/ui/interaction.js"></script>
+        
+        <!-- Mode implementations (depend on core) -->
+        <script type="text/javascript" src="static/js/modes/ll-mode.js"></script>
+        <script type="text/javascript" src="static/js/modes/ill-mode.js"></script>
+        
+        <!-- Proof core (depends on sequent-core and rule-engine) -->
+        <script type="text/javascript" src="static/js/core/proof-core.js"></script>
+        
+        <!-- Main application (depends on everything) -->
+        <script type="text/javascript" src="static/js/app.js"></script>
         
         <!-- jQuery UI styling for dialogs, buttons, and interactions -->
         <link rel="stylesheet" type="text/css" href="static/css/jquery-ui.min.css">

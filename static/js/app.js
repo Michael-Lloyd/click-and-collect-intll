@@ -1,6 +1,6 @@
-// CLICK-AND-COLLECT FRONTEND APPLICATION
+// CLICK-AND-COLLECT FRONTEND APPLICATION (REFACTORED)
 // Main JavaScript file that handles UI initialization, sequent parsing, and proof interaction
-// Uses jQuery for DOM manipulation and jQuery UI for dialogs and drag-and-drop
+// Refactored to use modular rule engines for clean separation of LL and ILL logic
 
 /* APPLICATION INITIALIZATION
    Sets up event handlers, processes URL parameters, and initializes the interface
@@ -60,10 +60,11 @@ $( function() {
    Functions for processing user input of Linear Logic sequents and initializing proofs
 */
 
-/* Submit sequent form and start proof construction
-   @param element - Form element or child element  
-   @param autoSubmit - Whether this is automatic (from URL) or user-initiated
-*/
+/**
+ * Submit sequent form and start proof construction
+ * @param {jQuery} element - Form element or child element  
+ * @param {boolean} autoSubmit - Whether this is automatic (from URL) or user-initiated
+ */
 function submitSequent(element, autoSubmit = false) {
     let form = $(element).closest('form');
     let sequentAsString = form.find($('input[name=sequentAsString]')).val();
@@ -88,22 +89,20 @@ function submitSequent(element, autoSubmit = false) {
     parseSequentAsString(sequentAsString, $('#main-proof-container'));
 }
 
-/* Parse sequent string and send to backend for validation
-   @param sequentAsString - Linear Logic sequent in text format (e.g., "A*B |- A,B")  
-   @param $container - jQuery element where proof will be displayed
-*/
+/**
+ * Parse sequent string and send to backend for validation
+ * @param {string} sequentAsString - Linear Logic sequent in text format (e.g., "A*B |- A,B")  
+ * @param {jQuery} $container - jQuery element where proof will be displayed
+ */
 function parseSequentAsString(sequentAsString, $container) {
-
-    // Check for intuitionistic mode option (experimental feature)
-    let options = $container.data('options') || {};
-    let intuitionisticMode = options.intuitionisticMode?.value ? '1' : '0';
+    // Determine which mode to use based on URL parameters
+    let intuitionisticMode = getQueryParamInUrl('intuitionisticMode') === '1' ? '1' : '0';
     
     // Send GET request to backend parser
     $.ajax({
         type: 'GET',
         url: `/parse_sequent/${urlEncode(sequentAsString)}?intuitionisticMode=${intuitionisticMode}`,
-        success: function(data)
-        {
+        success: function(data) {
             if (data['is_valid']) {
                 // Sequent parsed successfully, initialize interactive proof
                 initMainProof(data['proof']);
@@ -117,19 +116,47 @@ function parseSequentAsString(sequentAsString, $container) {
     });
 }
 
+/**
+ * Initialize the main proof with appropriate rule engine
+ * @param {Object} proofAsJson - Proof data from backend
+ */
 function initMainProof(proofAsJson) {
     cleanMainProof();
 
+    let options = buildOptions();
+    let ruleEngine = createRuleEngine(options);
+
+    initProof(proofAsJson, $('#main-proof-container'), options, ruleEngine);
+}
+
+/**
+ * Create appropriate rule engine based on options
+ * @param {Object} options - Display and interaction options
+ * @return {RuleEngine} Appropriate rule engine instance
+ */
+function createRuleEngine(options) {
+    if (options.intuitionisticMode?.value) {
+        return new ILLRuleEngine();
+    } else {
+        return new LLRuleEngine();
+    }
+}
+
+/**
+ * Build options object from URL parameters
+ * @return {Object} Options configuration
+ */
+function buildOptions() {
     let options = {};
 
+    // Standard boolean options
     for (let option of ['withInteraction', 'exportButtons', 'checkProvability']) {
         if (getQueryParamInUrl(option) !== '0') {
             options[option] = true;
         }
     }
 
-    // TODO: Check for problems
-    // I've added 'intuitionisticMode' here
+    // Toggle options with callbacks
     for (let option of ['autoReverse', 'intuitionisticMode', 'cutMode', 'proofTransformation']) {
         if (getQueryParamInUrl(option) !== '0') {
             options[option] = {
@@ -139,6 +166,7 @@ function initMainProof(proofAsJson) {
         }
     }
 
+    // Notation options
     if (getQueryParamInUrl('n') !== '0') {
         options.notations = {
             formulasAsString: getQueryPairListParamInUrl('n'),
@@ -147,30 +175,37 @@ function initMainProof(proofAsJson) {
         };
     }
 
-    initProof(proofAsJson, $('#main-proof-container'), options);
+    return options;
 }
 
+/**
+ * Clean the main proof container
+ */
 function cleanMainProof() {
     $('#main-proof-container').html('');
 }
 
-// ********
-// TUTORIAL
-// ********
+// *********
+// TUTORIALS
+// *********
 
+/**
+ * Show the main LL tutorial
+ */
 function showTutorial() {
     cleanUrlParams('Show tutorial');
 
     let $tutorial = $('.tutorial');
     if ($tutorial.data('init') !== true) {
-        // Create tutorial proof
+        // Create tutorial proof with LL rule engine
         $('.tutorial .proof-container').each(function (i, container) {
             let $container = $(container);
             let proof = JSON.parse(uncompressJson($container.html()));
             $container.html('');
+            let ruleEngine = new LLRuleEngine();
             initProof(proof, $container, {
                 withInteraction: true
-            });
+            }, ruleEngine);
         })
 
         $tutorial.data('init', true);
@@ -179,26 +214,29 @@ function showTutorial() {
     $tutorial.removeClass('hidden');
 }
 
+/**
+ * Hide the tutorial
+ */
 function hideTutorial() {
     $('.tutorial').addClass('hidden');
     cleanUrlHash('Hide tutorial');
 }
 
-// *****
-// RULES
-// *****
-
+/**
+ * Show the LL rules reference
+ */
 function showRules() {
     cleanUrlParams('Show rules');
 
     let $rules = $('.rules');
     if ($rules.data('init') !== true) {
-        // Create rules proof
+        // Create rules proof with LL rule engine
         $('.rules .proof-container').each(function (i, container) {
             let $container = $(container);
             let proofAsJson = JSON.parse(uncompressJson($container.html()));
             $container.html('');
-            initProof(proofAsJson, $container);
+            let ruleEngine = new LLRuleEngine();
+            initProof(proofAsJson, $container, {}, ruleEngine);
         })
 
         $rules.data('init', true);
@@ -206,30 +244,31 @@ function showRules() {
     $rules.removeClass('hidden');
 }
 
+/**
+ * Hide the rules reference
+ */
 function hideRules() {
     $('.rules').addClass('hidden');
     cleanUrlHash('Hide rules');
 }
 
-// *********
-// ILL RULES
-// *********
-
+/**
+ * Show the ILL rules reference
+ */
 function showILLRules() {
     cleanUrlParams('Show ILL rules');
 
     let $illRules = $('.ill-rules');
     if ($illRules.data('init') !== true) {
-        // Create ILL rules proof with ILL symbols (no UI toggle)
+        // Create ILL rules proof with ILL rule engine
         $('.ill-rules .proof-container').each(function (i, container) {
             let $container = $(container);
             let proofAsJson = JSON.parse(uncompressJson($container.html()));
             $container.html('');
-            // Force ILL symbols for tutorial display without UI options
-            let options = {
+            let ruleEngine = new ILLRuleEngine();
+            initProof(proofAsJson, $container, {
                 forceILLSymbols: true
-            };
-            initProof(proofAsJson, $container, options);
+            }, ruleEngine);
         })
 
         $illRules.data('init', true);
@@ -237,6 +276,9 @@ function showILLRules() {
     $illRules.removeClass('hidden');
 }
 
+/**
+ * Hide the ILL rules reference
+ */
 function hideILLRules() {
     $('.ill-rules').addClass('hidden');
     cleanUrlHash('Hide ILL rules');
@@ -246,6 +288,11 @@ function hideILLRules() {
 // OPTIONS
 // *******
 
+/**
+ * Create option toggle callback
+ * @param {string} param - URL parameter name
+ * @return {Function} Toggle callback function
+ */
 function onOptionToggle(param) {
     return function (value) {
         if (value) {
@@ -256,10 +303,18 @@ function onOptionToggle(param) {
     }
 }
 
+/**
+ * Handle notation addition
+ * @param {Array} notation - Notation to add
+ */
 function onNotationAdd(notation) {
     addQueryPairInUrl('n', notation, 'Add notation');
 }
 
+/**
+ * Handle notation updates
+ * @param {Array} notationFormulasAsString - Updated notations
+ */
 function onNotationUpdate(notationFormulasAsString) {
     addQueryParamInUrl('n', null, 'Remove all notations');
     for (let notation of notationFormulasAsString) {
@@ -271,14 +326,18 @@ function onNotationUpdate(notationFormulasAsString) {
 // UNCOMPRESS PROOF
 // ****************
 
+/**
+ * Uncompress and display a proof from compressed data
+ * @param {string} compressedProof - Compressed proof data
+ * @param {jQuery} $container - Container to display proof in
+ */
 function uncompressProof(compressedProof, $container) {
     $.ajax({
         type: 'POST',
         url: '/uncompress_proof',
         contentType:'application/json; charset=utf-8',
         data: JSON.stringify({ compressedProof }),
-        success: function(data)
-        {
+        success: function(data) {
             if (data['proof']) {
                 initMainProof(data['proof']);
             } else {
@@ -294,6 +353,12 @@ function uncompressProof(compressedProof, $container) {
 // UTILS
 // *****
 
+/**
+ * Add query parameter to URL
+ * @param {string} key - Parameter key
+ * @param {string|null} value - Parameter value (null to remove)
+ * @param {string} title - History title
+ */
 function addQueryParamInUrl (key, value, title) {
     let currentUrl = new URL(window.location.href);
 
@@ -306,6 +371,11 @@ function addQueryParamInUrl (key, value, title) {
     window.history.pushState(value, title, currentUrl.toString());
 }
 
+/**
+ * Get query parameter from URL
+ * @param {string} key - Parameter key
+ * @return {string|null} Parameter value or null
+ */
 function getQueryParamInUrl (key) {
     let searchParams = new URLSearchParams(window.location.search);
     if (searchParams.has(key)) {
@@ -315,6 +385,12 @@ function getQueryParamInUrl (key) {
     return null;
 }
 
+/**
+ * Add query parameter pair to URL (for multiple values)
+ * @param {string} key - Parameter key
+ * @param {Array} pair - Parameter value pair
+ * @param {string} title - History title
+ */
 function addQueryPairInUrl (key, pair, title) {
     let currentUrl = new URL(window.location.href);
 
@@ -323,6 +399,11 @@ function addQueryPairInUrl (key, pair, title) {
     window.history.pushState(pair, title, currentUrl.toString());
 }
 
+/**
+ * Get query parameter pair list from URL
+ * @param {string} key - Parameter key
+ * @return {Array|null} Array of parameter pairs or null
+ */
 function getQueryPairListParamInUrl (key) {
     let searchParams = new URLSearchParams(window.location.search);
     if (searchParams.has(key)) {
@@ -338,6 +419,10 @@ function getQueryPairListParamInUrl (key) {
     return null;
 }
 
+/**
+ * Clean URL hash
+ * @param {string} title - History title
+ */
 function cleanUrlHash (title) {
     let currentUrl = new URL(window.location.href);
 
@@ -345,6 +430,10 @@ function cleanUrlHash (title) {
     window.history.pushState(null, title, currentUrl.toString());
 }
 
+/**
+ * Clean URL parameters
+ * @param {string} title - History title
+ */
 function cleanUrlParams (title) {
     let currentUrl = new URL(window.location.href);
 
@@ -355,6 +444,9 @@ function cleanUrlParams (title) {
     window.history.pushState(null, title, currentUrl.toString());
 }
 
+/**
+ * Copy current URL to clipboard
+ */
 function copyUrlToClipboard () {
     // https://stackoverflow.com/questions/49618618/copy-current-url-to-clipboard/49618964#49618964
 
