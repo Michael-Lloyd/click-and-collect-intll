@@ -87,8 +87,9 @@ input[type=text], .code { background-color: #FFF; font-family: "Courier New", sa
     font-weight: bold;
 }
 .proof .commaList li:last-child span.comma:after { content: ''; }
-/* Cut mode dots now handled entirely by JavaScript, not CSS content */
-.proof.cut-mode span.first-point:after, .proof.cut-mode .commaList li:last-child span.comma:after { content: ''; }
+/* Cut mode dots: enabled in standard LL, disabled in ILL mode (JavaScript handles ILL) */
+.proof.cut-mode span.first-point:after, .proof.cut-mode .commaList li:last-child span.comma:after { content: '.'; }
+.proof.cut-mode.intuitionistic-mode span.first-point:after, .proof.cut-mode.intuitionistic-mode .commaList li:last-child span.comma:after { content: ''; }
 .proof.cut-mode span.first-point, .proof.cut-mode .commaList li span.comma { cursor: pointer; margin-left: 0.3em; margin-right: 0.3em; }
 
 /* Override ILL mode comma styling in cut mode to ensure consistent dot appearance */
