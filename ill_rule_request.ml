@@ -309,36 +309,20 @@ let rule_from_json json =
     | `Assoc assoc_list ->
         (match List.assoc_opt "rule" assoc_list with
          | Some (`String "ill_axiom") -> ILL_Axiom
-         | Some (`String "axiom") -> ILL_Axiom  (* Backward compatibility *)
          | Some (`String "ill_one") -> ILL_One
-         | Some (`String "one") -> ILL_One  (* Backward compatibility *)
          | Some (`String "ill_top") -> ILL_Top
-         | Some (`String "top") -> ILL_Top  (* Backward compatibility *)
          | Some (`String "ill_tensor_right") -> ILL_Tensor
-         | Some (`String "ill_tensor") -> ILL_Tensor  (* Backward compatibility *)
-         | Some (`String "tensor_right") -> ILL_Tensor  (* Backward compatibility *)
-         | Some (`String "tensor") -> ILL_Tensor  (* Backward compatibility *)
+         | Some (`String "ill_tensor") -> ILL_Tensor
          | Some (`String "ill_tensor_left") -> ILL_Tensor_left
-         | Some (`String "tensor_left") -> ILL_Tensor_left  (* Backward compatibility *)
          | Some (`String "ill_with_left_1") -> ILL_With_left_1
-         | Some (`String "with_left_1") -> ILL_With_left_1  (* Backward compatibility *)
          | Some (`String "ill_with_left_2") -> ILL_With_left_2
-         | Some (`String "with_left_2") -> ILL_With_left_2  (* Backward compatibility *)
          | Some (`String "ill_with_right") -> ILL_With_right
-         | Some (`String "with_right") -> ILL_With_right  (* Backward compatibility *)
          | Some (`String "ill_plus_left") -> ILL_Plus_left
-         | Some (`String "plus_left") -> ILL_Plus_left  (* Backward compatibility *)
          | Some (`String "ill_plus_right_1") -> ILL_Plus_right_1
-         | Some (`String "plus_right_1") -> ILL_Plus_right_1  (* Backward compatibility *)
          | Some (`String "ill_plus_right_2") -> ILL_Plus_right_2
-         | Some (`String "plus_right_2") -> ILL_Plus_right_2  (* Backward compatibility *)
-         | Some (`String "plus_right") -> ILL_Plus_right_1  (* Backward compatibility *)
          | Some (`String "ill_lollipop") -> ILL_Lollipop
-         | Some (`String "lollipop") -> ILL_Lollipop  (* Backward compatibility *)
+         | Some (`String "ill_lollipop_right") -> ILL_Lollipop
          | Some (`String "ill_lollipop_left") -> ILL_Lollipop_left
-         | Some (`String "lollipop_left") -> ILL_Lollipop_left  (* Backward compatibility *)
-         | Some (`String "lollipop_right") -> ILL_Lollipop  (* Frontend sends lollipop_right for right rule *)
-         | Some (`String "with") -> ILL_With_left_1  (* Generic "with" for rule inference *)
          | _ -> raise (ILL_Rule_Json_Exception "Unknown ILL rule"))
     | _ -> raise (ILL_Rule_Json_Exception "Invalid rule JSON format")
 

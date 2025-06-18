@@ -47,15 +47,15 @@ class ILLRuleEngine extends RuleEngine {
             case 'litt':
             case 'dual':
                 // ILL axiom rule with applicability checking
-                return [{'element': 'main-formula', 'onclick': [{'rule': 'axiom_ill', 'needPosition': false}]}];
+                return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_axiom', 'needPosition': false}]}];
 
             case 'tensor':
                 if (isLeftSide) {
                     // ILL: Left side tensor elimination
-                    return [{'element': 'main-formula', 'onclick': [{'rule': 'tensor_left', 'needPosition': true}]}];
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_tensor_left', 'needPosition': true}]}];
                 } else {
                     // ILL: Right side tensor introduction
-                    return [{'element': 'main-formula', 'onclick': [{'rule': 'tensor_right', 'needPosition': true}]}];
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_tensor_right', 'needPosition': true}]}];
                 }
 
             case 'par':
@@ -66,39 +66,39 @@ class ILLRuleEngine extends RuleEngine {
                 if (isLeftSide) {
                     // ILL: Left side with elimination (choose left or right sub-formula)
                     return [
-                        {'element': 'left-formula', 'onclick': [{'rule': 'with_left_1', 'needPosition': true}]},
-                        {'element': 'right-formula', 'onclick': [{'rule': 'with_left_2', 'needPosition': true}]}
+                        {'element': 'left-formula', 'onclick': [{'rule': 'ill_with_left_1', 'needPosition': true}]},
+                        {'element': 'right-formula', 'onclick': [{'rule': 'ill_with_left_2', 'needPosition': true}]}
                     ];
                 } else {
                     // ILL: Right side with introduction
-                    return [{'element': 'main-formula', 'onclick': [{'rule': 'with_right', 'needPosition': true}]}];
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_with_right', 'needPosition': true}]}];
                 }
 
             case 'plus':
                 if (isLeftSide) {
                     // ILL: Left side plus elimination
-                    return [{'element': 'main-formula', 'onclick': [{'rule': 'plus_left', 'needPosition': true}]}];
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_plus_left', 'needPosition': true}]}];
                 } else {
                     // ILL: Right side plus introduction (choose left or right sub-formula)
                     return [
-                        {'element': 'left-formula', 'onclick': [{'rule': 'plus_right_1', 'needPosition': true}]},
-                        {'element': 'right-formula', 'onclick': [{'rule': 'plus_right_2', 'needPosition': true}]}
+                        {'element': 'left-formula', 'onclick': [{'rule': 'ill_plus_right_1', 'needPosition': true}]},
+                        {'element': 'right-formula', 'onclick': [{'rule': 'ill_plus_right_2', 'needPosition': true}]}
                     ];
                 }
 
             case 'lollipop':
                 if (isLeftSide) {
                     // ILL: Left side lollipop elimination (modus ponens)
-                    return [{'element': 'main-formula', 'onclick': [{'rule': 'lollipop_left', 'needPosition': true}]}];
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_lollipop_left', 'needPosition': true}]}];
                 } else {
                     // ILL: Right side lollipop introduction (implication introduction)
-                    return [{'element': 'main-formula', 'onclick': [{'rule': 'lollipop_right', 'needPosition': true}]}];
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_lollipop_right', 'needPosition': true}]}];
                 }
 
             case 'one':
                 // In ILL mode, one rule only applicable on right side with empty context
                 if (!isLeftSide && $li && this.isOneRuleApplicable($li.closest('table'))) {
-                    return [{'element': 'main-formula', 'onclick': [{'rule': formulaAsJson.type, 'needPosition': false}]}];
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_' + formulaAsJson.type, 'needPosition': false}]}];
                 }
                 return [];
 
@@ -109,13 +109,13 @@ class ILLRuleEngine extends RuleEngine {
             case 'top':
                 // In ILL mode, top rule is always applicable on right side
                 if (!isLeftSide) {
-                    return [{'element': 'main-formula', 'onclick': [{'rule': formulaAsJson.type, 'needPosition': true}]}];
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_' + formulaAsJson.type, 'needPosition': true}]}];
                 }
                 return [];
 
             case 'bottom':
                 // Bottom rule in ILL
-                return [{'element': 'main-formula', 'onclick': [{'rule': formulaAsJson.type, 'needPosition': true}]}];
+                return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_' + formulaAsJson.type, 'needPosition': true}]}];
 
             case 'ofcourse':
             case 'whynot':
@@ -151,15 +151,15 @@ class ILLRuleEngine extends RuleEngine {
 
         // ILL rule validation with stricter constraints
         switch (ruleRequest.rule) {
-            case 'axiom':
+            case 'ill_axiom':
                 return this.canApplyAxiom(sequent);
-            case 'one':
+            case 'ill_one':
                 return sequent.hyp.length === 0 && sequent.cons.length === 1;
-            case 'top':
+            case 'ill_top':
                 return sequent.cons.length === 1;
-            case 'tensor_right':
+            case 'ill_tensor_right':
                 return this.canApplyTensorRight(sequent);
-            case 'with_right':
+            case 'ill_with_right':
                 return sequent.cons.length === 1;
             default:
                 return true; // Most other rules are context-dependent
@@ -251,7 +251,7 @@ class ILLRuleEngine extends RuleEngine {
         let ruleConfigCopy = JSON.parse(JSON.stringify(ruleConfig)); // deep copy
         
         // Handle ILL axiom rule with applicability check
-        if (ruleConfigCopy.rule === 'axiom_ill') {
+        if (ruleConfigCopy.rule === 'ill_axiom') {
             if ($li) {
                 let formula = $li.data('formula');
                 let $sequentTable = $li.closest('table');
@@ -259,21 +259,16 @@ class ILLRuleEngine extends RuleEngine {
                 let isLeftSide = $formulaList.hasClass('hyp');
                 
                 // Check if axiom rule is actually applicable now
-                if (this.isAxiomRuleApplicable($sequentTable, formula, isLeftSide)) {
-                    ruleConfigCopy.rule = 'axiom'; // Convert to regular axiom rule
-                } else {
+                if (!this.isAxiomRuleApplicable($sequentTable, formula, isLeftSide)) {
                     return null; // Don't apply the rule
                 }
-            } else {
-                // For turnstile clicks, just convert to regular axiom
-                ruleConfigCopy.rule = 'axiom';
             }
         }
         
         let ruleRequest = { rule: ruleConfigCopy.rule };
 
         // Handle axiom rule with notation unfolding
-        if (ruleConfigCopy.rule === 'axiom' && $li) {
+        if (ruleConfigCopy.rule === 'ill_axiom' && $li) {
             let formula = $li.data('formula');
             let atomName = formula['value'];
             if (formula['type'] === 'dual') {
@@ -295,7 +290,7 @@ class ILLRuleEngine extends RuleEngine {
             ruleRequest['sequentSide'] = sequentSide;
             
             // Special handling for ILL tensor_right rule: default to empty Gamma
-            if (ruleConfigCopy.rule === 'tensor_right' && sequentSide === 'right') {
+            if (ruleConfigCopy.rule === 'ill_tensor_right' && sequentSide === 'right') {
                 ruleRequest['contextSplit'] = [0]; // Empty Gamma, all context goes to Delta
             }
         }
@@ -555,7 +550,7 @@ class ILLRuleEngine extends RuleEngine {
      */
     applyTensorRuleWithSplit($sequentTable, commaPosition) {
         let ruleRequest = {
-            rule: 'tensor_right',
+            rule: 'ill_tensor_right',
             sequentSide: 'right',
             contextSplit: [commaPosition]
         };
