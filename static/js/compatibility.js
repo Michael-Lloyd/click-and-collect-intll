@@ -346,6 +346,86 @@ function toggleCutMode($container, cutMode) {
     } else {
         $mainDiv.removeClass('cut-mode');
     }
+    
+    // Refresh ILL tensor dot visibility when cut mode is toggled
+    let ruleEngine = $container.data('ruleEngine');
+    if (ruleEngine && ruleEngine.getModeName() === 'intuitionistic') {
+        refreshILLTensorDotVisibility($container);
+    }
+}
+
+/**
+ * Refresh ILL tensor dot visibility for all sequents in the container
+ * @param {jQuery} $container - Container element
+ */
+function refreshILLTensorDotVisibility($container) {
+    let ruleEngine = $container.data('ruleEngine');
+    if (!ruleEngine || ruleEngine.getModeName() !== 'intuitionistic') {
+        return;
+    }
+    
+    let $proofDiv = $container.children('div.proof');
+    let isCutModeEnabled = $proofDiv.hasClass('cut-mode');
+    
+    // Find all sequent tables in the container
+    $container.find('table').each(function() {
+        let $sequentTable = $(this);
+        
+        // Check if dots should be shown (tensor applicable OR cut mode enabled)
+        let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
+        let tensorApplicable = ruleEngine.isTensorRuleApplicable && ruleEngine.isTensorRuleApplicable($sequentTable);
+        let hasMultipleFormulas = sequent && sequent.hyp && sequent.hyp.length > 1;
+        let shouldShowDots = (tensorApplicable && hasMultipleFormulas) || isCutModeEnabled;
+        
+        // Refresh first-point visibility
+        $sequentTable.find('.hyp span.first-point').each(function() {
+            let $firstPoint = $(this);
+            updateDotVisibility($firstPoint, shouldShowDots, isCutModeEnabled);
+        });
+        
+        // Refresh comma visibility for last comma spans in the context
+        $sequentTable.find('.hyp li:last-child span.comma').each(function() {
+            let $commaSpan = $(this);
+            updateDotVisibility($commaSpan, shouldShowDots, isCutModeEnabled);
+        });
+    });
+}
+
+/**
+ * Update dot visibility for a specific element
+ * @param {jQuery} $element - The element to update
+ * @param {boolean} shouldShowDots - Whether dots should be visible
+ * @param {boolean} isCutMode - Whether cut mode is enabled
+ */
+function updateDotVisibility($element, shouldShowDots, isCutMode) {
+    if (shouldShowDots) {
+        // Store original content if not already stored
+        if (!$element.data('original-content')) {
+            $element.data('original-content', $element.html());
+        }
+        
+        // Set appropriate class and title
+        if (isCutMode) {
+            $element.addClass('cut-applicable');
+            $element.attr('title', 'Click to apply cut rule');
+        } else {
+            $element.addClass('tensor-applicable');
+            $element.attr('title', 'Click to select context split for tensor rule');
+        }
+        
+        // Replace content with just the dot
+        $element.html('.');
+    } else {
+        // Remove classes and titles
+        $element.removeClass('tensor-applicable cut-applicable');
+        $element.removeAttr('title');
+        
+        // Restore original content
+        let originalContent = $element.data('original-content');
+        if (originalContent !== undefined) {
+            $element.html(originalContent);
+        }
+    }
 }
 
 /**

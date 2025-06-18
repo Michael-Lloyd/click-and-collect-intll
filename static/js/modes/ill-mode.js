@@ -377,18 +377,8 @@ class ILLRuleEngine extends RuleEngine {
                 this.setupCommaInteraction($commaSpan, $li, options);
             }
             
-            // Add clickable space before first formula for empty Gamma (only when tensor rule applicable)
-            let $formulaList = $li.closest('ul');
-            let isLeftSide = $formulaList.hasClass('hyp');
-            if (isLeftSide && $li.index() === 0) {
-                let $sequentTable = $li.closest('table');
-                // Only add the space if tensor rule is applicable
-                setTimeout(() => {
-                    if (this.isTensorRuleApplicable($sequentTable)) {
-                        this.setupPreFirstFormulaSpace($li, options);
-                    }
-                }, 100); // Small delay to ensure sequent data is available
-            }
+            // Don't add pre-space-clickable since first-point already handles this
+            // The first-point element in sequent-core.js already provides clickable space before first formula
         }
     }
 
@@ -443,8 +433,24 @@ class ILLRuleEngine extends RuleEngine {
         let $sequentTable = $li.closest('table');
         this.updateCommaVisibility($commaSpan, $sequentTable);
         
+        // Also trigger refresh for immediate visibility
+        setTimeout(() => {
+            let $container = $li.closest('.proof-container');
+            if ($container.length > 0) {
+                refreshILLTensorDotVisibility($container);
+            }
+        }, 150);
+        
         // Add click handler that checks if tensor rule is applicable
         $commaSpan.on('click', (e) => {
+            // Check if cut mode is enabled - if so, let cut mode handle the click
+            let $proofDiv = $li.closest('.proof');
+            let isCutModeEnabled = $proofDiv && $proofDiv.hasClass('cut-mode');
+            
+            if (isCutModeEnabled) {
+                return; // Let cut mode handle this click
+            }
+            
             e.stopPropagation(); // Prevent event bubbling
             
             // Re-find the sequent table in case DOM has changed
@@ -480,11 +486,10 @@ class ILLRuleEngine extends RuleEngine {
                 $commaSpan.attr('title', 'Click to select context split for tensor rule');
                 
                 // Only add dots to elements that don't show CSS commas
-                // This includes: pre-space elements and the last comma element in the list
-                let isPreSpace = $commaSpan.hasClass('pre-space-clickable');
+                // This includes the last comma element in the list (pre-space no longer used)
                 let isLastComma = $commaSpan.closest('li').is(':last-child');
                 
-                if (isPreSpace || isLastComma) {
+                if (isLastComma) {
                     // Store original content if not already stored
                     if (!$commaSpan.data('original-content')) {
                         $commaSpan.data('original-content', $commaSpan.html());
@@ -498,10 +503,9 @@ class ILLRuleEngine extends RuleEngine {
                 $commaSpan.removeAttr('title');
                 
                 // Restore original content for elements that had dots
-                let isPreSpace = $commaSpan.hasClass('pre-space-clickable');
                 let isLastComma = $commaSpan.closest('li').is(':last-child');
                 
-                if (isPreSpace || isLastComma) {
+                if (isLastComma) {
                     let originalContent = $commaSpan.data('original-content');
                     if (originalContent !== undefined) {
                         $commaSpan.html(originalContent);
@@ -520,7 +524,7 @@ class ILLRuleEngine extends RuleEngine {
         // Always check for tensor rule applicability dynamically
         setTimeout(() => {
             let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
-            let canSplit = this.isTensorRuleApplicable($sequentTable) && sequent && sequent.hyp && sequent.hyp.length > 0;
+            let canSplit = this.isTensorRuleApplicable($sequentTable) && sequent && sequent.hyp && sequent.hyp.length > 1;
             
             if (canSplit) {
                 $firstPoint.addClass('tensor-applicable');
@@ -706,23 +710,6 @@ function updateAllCommaVisibility($container) {
             ruleEngine.updateCommaVisibility($(this), $sequentTable);
         });
         
-        $sequentTable.find('.hyp li span.pre-space-clickable').each(function() {
-            ruleEngine.updateCommaVisibility($(this), $sequentTable);
-        });
-        
-        // Handle adding/removing pre-space for first formula based on tensor rule applicability
-        let $firstFormulaLi = $sequentTable.find('.hyp li').first();
-        if ($firstFormulaLi.length > 0) {
-            let $existingPreSpace = $firstFormulaLi.find('span.pre-space-clickable');
-            let isTensorApplicable = ruleEngine.isTensorRuleApplicable($sequentTable);
-            
-            if (isTensorApplicable && $existingPreSpace.length === 0) {
-                // Add pre-space if tensor rule is applicable and doesn't exist
-                ruleEngine.setupPreFirstFormulaSpace($firstFormulaLi, {withInteraction: true});
-            } else if (!isTensorApplicable && $existingPreSpace.length > 0) {
-                // Remove pre-space if tensor rule is not applicable but exists
-                $existingPreSpace.remove();
-            }
-        }
+        // Pre-space functionality removed - first-point element handles space before first formula
     });
 }

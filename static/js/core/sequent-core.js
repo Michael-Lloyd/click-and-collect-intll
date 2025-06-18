@@ -101,6 +101,14 @@ function createFormulaList(sequent, sequentPart, $sequentDiv, options, ruleEngin
         if (isILLMode && sequentPart === 'hyp') {
             // Add tensor rule handling to first-point
             $firstPoint.on('click', (e) => {
+                // Check if cut mode is enabled - if so, let cut mode handle the click
+                let $proofDiv = $firstPoint.closest('.proof');
+                let isCutModeEnabled = $proofDiv && $proofDiv.hasClass('cut-mode');
+                
+                if (isCutModeEnabled) {
+                    return; // Let cut mode handle this click
+                }
+                
                 e.stopPropagation();
                 
                 let $sequentTable = $firstPoint.closest('table');
@@ -116,6 +124,14 @@ function createFormulaList(sequent, sequentPart, $sequentDiv, options, ruleEngin
             if (ruleEngine && ruleEngine.updateFirstPointVisibility) {
                 ruleEngine.updateFirstPointVisibility($firstPoint, $ul.closest('table'));
             }
+            
+            // Also trigger immediate refresh for ILL mode to ensure dots show on initial load
+            setTimeout(() => {
+                let $container = $ul.closest('.proof-container');
+                if ($container.length > 0) {
+                    refreshILLTensorDotVisibility($container);
+                }
+            }, 150);
         }
     }
 

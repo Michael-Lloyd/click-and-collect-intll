@@ -87,7 +87,8 @@ input[type=text], .code { background-color: #FFF; font-family: "Courier New", sa
     font-weight: bold;
 }
 .proof .commaList li:last-child span.comma:after { content: ''; }
-.proof.cut-mode span.first-point:after, .proof.cut-mode .commaList li:last-child span.comma:after { content: '.'; }
+/* Cut mode dots now handled entirely by JavaScript, not CSS content */
+.proof.cut-mode span.first-point:after, .proof.cut-mode .commaList li:last-child span.comma:after { content: ''; }
 .proof.cut-mode span.first-point, .proof.cut-mode .commaList li span.comma { cursor: pointer; margin-left: 0.3em; margin-right: 0.3em; }
 
 /* Override ILL mode comma styling in cut mode to ensure consistent dot appearance */
@@ -177,18 +178,22 @@ input:checked + .slider:before { -webkit-transform: translateX(1em); -ms-transfo
 }
 
 .proof.intuitionistic-mode .hyp li span.comma.tensor-applicable,
-.proof.intuitionistic-mode .hyp li span.pre-space-clickable.tensor-applicable {
-    /* Make commas and pre-spaces clickable when tensor rule is applicable */
+.proof.intuitionistic-mode .hyp li span.pre-space-clickable.tensor-applicable,
+.proof.intuitionistic-mode .hyp span.first-point.tensor-applicable {
+    /* Make commas, pre-spaces, and first-point clickable when tensor rule is applicable */
     cursor: pointer;
     /* Subtle indication that comma is clickable */
     border-radius: 0.2em;
     /* Very subtle background hint */
     background-color: rgba(255, 235, 59, 0.05);
+    margin-left: 0.3em;
+    margin-right: 0.3em;
 }
 
 .proof.intuitionistic-mode .hyp li span.comma.tensor-applicable:hover,
-.proof.intuitionistic-mode .hyp li span.pre-space-clickable.tensor-applicable:hover {
-    /* Enhanced hover effect for clickable commas and pre-spaces */
+.proof.intuitionistic-mode .hyp li span.pre-space-clickable.tensor-applicable:hover,
+.proof.intuitionistic-mode .hyp span.first-point.tensor-applicable:hover {
+    /* Enhanced hover effect for clickable commas, pre-spaces, and first-point */
     background-color: #ffeb3b;
     color: #333;
     border: 2px solid #ffeb3b;
