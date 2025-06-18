@@ -61,7 +61,11 @@ class LLRuleEngine extends RuleEngine {
                 if (isLeftSide) {
                     return [{'element': 'main-formula', 'onclick': [{'rule': 'plus_left', 'needPosition': true}]}];
                 } else {
-                    return [{'element': 'main-formula', 'onclick': [{'rule': 'plus_right', 'needPosition': true}]}];
+                    // LL: Right side plus introduction (choose left or right sub-formula)
+                    return [
+                        {'element': 'left-formula', 'onclick': [{'rule': 'plus_left', 'needPosition': true}]},
+                        {'element': 'right-formula', 'onclick': [{'rule': 'plus_right', 'needPosition': true}]}
+                    ];
                 }
 
             case 'lollipop':
@@ -243,7 +247,9 @@ class LLRuleEngine extends RuleEngine {
 
         // Add position if needed
         if (ruleConfigCopy.needPosition && $li) {
-            ruleRequest['formulaPosition'] = $li.parent().children().index($li);
+            // Use position among formula items only, not all children
+            let $formulaItems = $li.parent().children('li');
+            ruleRequest['formulaPosition'] = $formulaItems.index($li);
         }
 
         return ruleRequest;

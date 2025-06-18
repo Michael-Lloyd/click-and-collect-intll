@@ -314,7 +314,9 @@ class ILLRuleEngine extends RuleEngine {
 
         // Add position if needed
         if (ruleConfigCopy.needPosition && $li) {
-            ruleRequest['formulaPosition'] = $li.parent().children().index($li);
+            // Use position among formula items only, not all children
+            let $formulaItems = $li.parent().children('li');
+            ruleRequest['formulaPosition'] = $formulaItems.index($li);
         }
 
         return ruleRequest;
