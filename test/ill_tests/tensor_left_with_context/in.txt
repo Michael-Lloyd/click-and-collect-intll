@@ -1,1 +1,0 @@
-{"intuitionisticMode":1,"sequent":{"context":[{"type":"litt","value":"D"},{"type":"tensor","left":{"type":"litt","value":"A"},"right":{"type":"litt","value":"B"}}],"goal":{"type":"litt","value":"C"}},"rule":"ill_tensor_left","focusedFormula":1}

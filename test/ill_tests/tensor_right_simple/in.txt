@@ -1,1 +1,0 @@
-{"intuitionisticMode":1,"sequent":{"context":[{"type":"litt","value":"A"},{"type":"litt","value":"B"}],"goal":{"type":"tensor","left":{"type":"litt","value":"A"},"right":{"type":"litt","value":"B"}}},"rule":"ill_tensor_right"}

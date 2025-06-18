@@ -1,1 +1,0 @@
-{"intuitionisticMode":1,"sequent":{"context":[],"goal":{"type":"tensor","left":{"type":"one"},"right":{"type":"one"}}},"rule":"ill_tensor_right"}

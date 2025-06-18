@@ -1,1 +1,0 @@
-{"is_valid":true,"proof":{"sequent":{"cons":[{"type":"one"}]},"appliedRule":null},"sequent":{"context":[],"goal":{"t":"one"}}}

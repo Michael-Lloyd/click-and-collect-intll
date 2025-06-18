@@ -1,1 +1,0 @@
-{"intuitionisticMode":1,"notations":[],"ruleRequest":{"rule":"ill_tensor_left","formulaPosition":0},"sequent":{"hyp":[{"t":"tensor","v1":{"t":"tensor","v1":{"t":"litt","v":"A"},"v2":{"t":"litt","v":"B"}},"v2":{"t":"litt","v":"C"}}],"cons":[{"t":"litt","v":"D"}]}}

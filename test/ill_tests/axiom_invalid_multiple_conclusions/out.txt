@@ -1,1 +1,0 @@
-{"is_valid":false,"error_message":"Invalid ILL sequent: ILL sequent can have only one conclusion formula"}

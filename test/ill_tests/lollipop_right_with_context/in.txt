@@ -1,1 +1,0 @@
-{"intuitionisticMode":1,"sequent":{"context":[{"type":"litt","value":"C"}],"goal":{"type":"lollipop","left":{"type":"litt","value":"A"},"right":{"type":"litt","value":"B"}}},"rule":"ill_lollipop_right"}
