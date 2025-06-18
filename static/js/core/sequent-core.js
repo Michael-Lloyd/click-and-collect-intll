@@ -96,6 +96,27 @@ function createFormulaList(sequent, sequentPart, $sequentDiv, options, ruleEngin
         if (!isILLMode || sequentPart === 'hyp') {
             addCutOnClick($firstPoint, true);
         }
+        
+        // In ILL mode, also set up tensor rule interaction for first-point on left side
+        if (isILLMode && sequentPart === 'hyp') {
+            // Add tensor rule handling to first-point
+            $firstPoint.on('click', (e) => {
+                e.stopPropagation();
+                
+                let $sequentTable = $firstPoint.closest('table');
+                
+                // Check if tensor rule is applicable
+                if (ruleEngine && ruleEngine.isTensorRuleApplicable && ruleEngine.isTensorRuleApplicable($sequentTable)) {
+                    // Enter comma selection mode with empty Gamma (position 0)
+                    ruleEngine.enterCommaSelectionMode($sequentTable, 0);
+                }
+            });
+            
+            // Set up dynamic dot visibility for first-point
+            if (ruleEngine && ruleEngine.updateFirstPointVisibility) {
+                ruleEngine.updateFirstPointVisibility($firstPoint, $ul.closest('table'));
+            }
+        }
     }
 
     // Create formula elements

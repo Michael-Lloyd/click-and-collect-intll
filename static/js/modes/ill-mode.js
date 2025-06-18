@@ -472,12 +472,76 @@ class ILLRuleEngine extends RuleEngine {
     updateCommaVisibility($commaSpan, $sequentTable) {
         // Always check for tensor rule applicability dynamically
         setTimeout(() => {
-            if (this.isTensorRuleApplicable($sequentTable)) {
+            let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
+            let canSplit = this.isTensorRuleApplicable($sequentTable) && sequent && sequent.hyp && sequent.hyp.length > 1;
+            
+            if (canSplit) {
                 $commaSpan.addClass('tensor-applicable');
                 $commaSpan.attr('title', 'Click to select context split for tensor rule');
+                
+                // Only add dots to elements that don't show CSS commas
+                // This includes: pre-space elements and the last comma element in the list
+                let isPreSpace = $commaSpan.hasClass('pre-space-clickable');
+                let isLastComma = $commaSpan.closest('li').is(':last-child');
+                
+                if (isPreSpace || isLastComma) {
+                    // Store original content if not already stored
+                    if (!$commaSpan.data('original-content')) {
+                        $commaSpan.data('original-content', $commaSpan.html());
+                    }
+                    
+                    // Replace content with just the dot
+                    $commaSpan.html('.');
+                }
             } else {
                 $commaSpan.removeClass('tensor-applicable');
                 $commaSpan.removeAttr('title');
+                
+                // Restore original content for elements that had dots
+                let isPreSpace = $commaSpan.hasClass('pre-space-clickable');
+                let isLastComma = $commaSpan.closest('li').is(':last-child');
+                
+                if (isPreSpace || isLastComma) {
+                    let originalContent = $commaSpan.data('original-content');
+                    if (originalContent !== undefined) {
+                        $commaSpan.html(originalContent);
+                    }
+                }
+            }
+        }, 100); // Small delay to ensure sequent data is available
+    }
+
+    /**
+     * Update first-point visibility based on tensor rule applicability
+     * @param {jQuery} $firstPoint - The first-point span element
+     * @param {jQuery} $sequentTable - The sequent table element
+     */
+    updateFirstPointVisibility($firstPoint, $sequentTable) {
+        // Always check for tensor rule applicability dynamically
+        setTimeout(() => {
+            let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
+            let canSplit = this.isTensorRuleApplicable($sequentTable) && sequent && sequent.hyp && sequent.hyp.length > 0;
+            
+            if (canSplit) {
+                $firstPoint.addClass('tensor-applicable');
+                $firstPoint.attr('title', 'Click to select empty Gamma for tensor rule');
+                
+                // Store original content if not already stored
+                if (!$firstPoint.data('original-content')) {
+                    $firstPoint.data('original-content', $firstPoint.html());
+                }
+                
+                // Replace content with just the dot
+                $firstPoint.html('.');
+            } else {
+                $firstPoint.removeClass('tensor-applicable');
+                $firstPoint.removeAttr('title');
+                
+                // Restore original content
+                let originalContent = $firstPoint.data('original-content');
+                if (originalContent !== undefined) {
+                    $firstPoint.html(originalContent);
+                }
             }
         }, 100); // Small delay to ensure sequent data is available
     }
