@@ -161,8 +161,12 @@ and apply_rule_with_exceptions request_as_json =
         raise (ILL_Rule_Application_Exception (false, "Bad request: " ^ msg))
     | ILL_Rule_Json_Exception msg -> 
         raise (ILL_Rule_Application_Exception (false, "Invalid rule JSON: " ^ msg))
-    | _ -> 
-        raise (ILL_Rule_Application_Exception (false, "Unknown error in rule application"))
+    | Failure msg ->
+        raise (ILL_Rule_Application_Exception (false, "Failure: " ^ msg))
+    | Invalid_argument msg ->
+        raise (ILL_Rule_Application_Exception (false, "Invalid argument: " ^ msg))
+    | exn -> 
+        raise (ILL_Rule_Application_Exception (false, "Unknown error: " ^ (Printexc.to_string exn)))
 
 (* Apply a specific ILL rule to a sequent.
    @param rule_req - Parsed rule request
@@ -204,6 +208,8 @@ and apply_ill_rule_internal rule_req ill_seq _notations =
         apply_lollipop_rule ill_seq
     | ILL_Lollipop_left ->
         apply_lollipop_left_rule rule_req ill_seq
+    | ILL_Cut ->
+        apply_cut_rule rule_req ill_seq
 
 (* INDIVIDUAL RULE IMPLEMENTATIONS *)
 
@@ -583,6 +589,52 @@ and apply_lollipop_left_rule rule_req ill_seq =
             | f :: rest -> find_and_extract_lollipop (acc @ [f]) rest
         in
         find_and_extract_lollipop [] ill_seq.context
+
+(* Apply ILL cut rule: Γ,Δ ⊢ C becomes Γ ⊢ A and Δ,A ⊢ C
+   @param rule_req - Rule request with cut formula and position
+   @param ill_seq - Sequent to apply cut to
+   @return ill_proof - Cut proof with two premises
+*)
+and apply_cut_rule rule_req ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
+    (* Extract cut formula and position from rule request *)
+    let cut_formula = match rule_req.cut_formula with
+        | Some f -> f
+        | None -> raise (ILL_Rule_Application_Exception (true, "Cut rule requires a cut formula"))
+    in
+    
+    let cut_position = match rule_req.cut_position with
+        | Some pos -> pos
+        | None -> 0  (* Default to beginning of context *)
+    in
+    
+    (* Split context at cut position *)
+    let gamma, delta = 
+        if cut_position < 0 || cut_position > List.length ill_seq.context then
+            raise (ILL_Rule_Application_Exception (true, "Invalid cut position"))
+        else
+            let ctx_array = Array.of_list ill_seq.context in
+            let gamma = Array.sub ctx_array 0 cut_position |> Array.to_list in
+            let delta = Array.sub ctx_array cut_position (Array.length ctx_array - cut_position) |> Array.to_list in
+            (gamma, delta)
+    in
+    
+    (* Create the two premises *)
+    let premise1 = { context = gamma; goal = cut_formula } in
+    let premise2 = { context = delta @ [cut_formula]; goal = ill_seq.goal } in
+    
+    (* Validate that both premises maintain ILL constraints *)
+    validate_ill_sequent_constraints premise1;
+    validate_ill_sequent_constraints premise2;
+    
+    (* Create hypothesis proofs for the premises *)
+    let subproof1 = ILL_Hypothesis_proof premise1 in
+    let subproof2 = ILL_Hypothesis_proof premise2 in
+    
+    (* Return cut proof *)
+    ILL_Cut_proof (gamma, cut_formula, delta, subproof1, subproof2)
 
 (* CONTEXT MANAGEMENT *)
 

@@ -89,6 +89,12 @@ input[type=text], .code { background-color: #FFF; font-family: "Courier New", sa
 .proof .commaList li:last-child span.comma:after { content: ''; }
 .proof.cut-mode span.first-point:after, .proof.cut-mode .commaList li:last-child span.comma:after { content: '.'; }
 .proof.cut-mode span.first-point, .proof.cut-mode .commaList li span.comma { cursor: pointer; margin-left: 0.3em; margin-right: 0.3em; }
+
+/* Override ILL mode comma styling in cut mode to ensure consistent dot appearance */
+.proof.cut-mode.intuitionistic-mode .hyp li span.comma:after { 
+    font-size: 1em;
+    font-weight: normal;
+}
 .proof .binary-connector { margin-left: 3px; margin-right: 3px; }
 .proof .clickable { cursor: pointer; }
 .proof .highlightableExpr:hover { background: #e0ecf8; }

@@ -258,6 +258,7 @@ let is_reversible_rule = function
     | ILL_Plus_left -> true     (* Plus left is reversible - unique rule for context elimination *)
     | ILL_Plus_right_1 -> false (* Plus right 1 requires choice *)
     | ILL_Plus_right_2 -> false (* Plus right 2 requires choice *)
+    | ILL_Cut -> false          (* Cut requires user input (cut formula and position) *)
 
 (* Check if a sequent has a unique reversible rule that applies.
    @param ill_seq - ILL sequent

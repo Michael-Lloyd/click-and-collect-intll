@@ -250,6 +250,11 @@ class ILLRuleEngine extends RuleEngine {
     buildRuleRequest(ruleConfig, $li, options) {
         let ruleConfigCopy = JSON.parse(JSON.stringify(ruleConfig)); // deep copy
         
+        // Handle ILL cut rule - transform to ILL-specific version
+        if (ruleConfigCopy.rule === 'cut') {
+            ruleConfigCopy.rule = 'ill_cut';
+        }
+        
         // Handle ILL axiom rule with applicability check
         if (ruleConfigCopy.rule === 'ill_axiom') {
             if ($li) {
@@ -266,6 +271,18 @@ class ILLRuleEngine extends RuleEngine {
         }
         
         let ruleRequest = { rule: ruleConfigCopy.rule };
+        
+        // Handle ILL cut rule parameters
+        if (ruleConfigCopy.rule === 'ill_cut') {
+            // Handle both cut-specific parameters and generic formula/formulaPosition
+            if (ruleConfigCopy.formula || ruleConfigCopy.cutFormula) {
+                ruleRequest['cutFormula'] = ruleConfigCopy.formula || ruleConfigCopy.cutFormula;
+            }
+            if (ruleConfigCopy.formulaPosition !== undefined || ruleConfigCopy.cutPosition !== undefined) {
+                ruleRequest['cutPosition'] = ruleConfigCopy.formulaPosition !== undefined ? 
+                    ruleConfigCopy.formulaPosition : ruleConfigCopy.cutPosition;
+            }
+        }
 
         // Handle axiom rule with notation unfolding
         if (ruleConfigCopy.rule === 'ill_axiom' && $li) {
@@ -310,6 +327,29 @@ class ILLRuleEngine extends RuleEngine {
      */
     getRuleSymbol(rule) {
         return ILL_RULES[rule] || LL_RULES[rule] || rule;
+    }
+
+    /**
+     * Override applyRuleToSequent to handle cut rule transformation
+     * @param {Object} ruleRequest - Rule application request  
+     * @param {jQuery} $sequentTable - Sequent table element
+     */
+    applyRuleToSequent(ruleRequest, $sequentTable) {
+        // Transform cut rule to ill_cut if needed
+        if (ruleRequest.rule === 'cut') {
+            // Create a new rule request with ILL-specific parameters
+            let illRuleRequest = {
+                rule: 'ill_cut',
+                cutFormula: ruleRequest.formula,
+                cutPosition: ruleRequest.formulaPosition
+            };
+            
+            // Apply the transformed rule
+            super.applyRuleToSequent(illRuleRequest, $sequentTable);
+        } else {
+            // For non-cut rules, use normal processing
+            super.applyRuleToSequent(ruleRequest, $sequentTable);
+        }
     }
 
     /**
@@ -580,7 +620,8 @@ const ILL_RULES = {
     'ill_lollipop': '⊸<sub>R</sub>',
     'ill_lollipop_left': '⊸<sub>L</sub>',
     'ill_one': '1',
-    'ill_top': '⊤'
+    'ill_top': '⊤',
+    'ill_cut': '<span class="italic">cut</span>'
 };
 
 /**

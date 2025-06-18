@@ -23,6 +23,50 @@
 
 open Ill_sequent
 
+(* Convert raw formula to ILL formula.
+   @param raw_formula - Raw formula from JSON
+   @return formula - ILL formula
+   @raises ILL_Rule_Json_Exception for non-ILL connectives
+*)
+let rec convert_raw_formula_to_ill = function
+    | Raw_sequent.One -> One
+    | Raw_sequent.Top -> Top
+    | Raw_sequent.Litt s -> Litt s
+    | Raw_sequent.Tensor (f1, f2) -> 
+        Tensor (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
+    | Raw_sequent.Plus (f1, f2) -> 
+        Plus (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
+    | Raw_sequent.Lollipop (f1, f2) ->
+        Lollipop (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
+    | Raw_sequent.With (f1, f2) ->
+        With (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
+    (* Invalid connectives for ILL *)
+    | Raw_sequent.Bottom -> 
+        failwith "⊥ (bottom) is not allowed in ILL"
+    | Raw_sequent.Zero -> 
+        failwith "0 (zero) is not allowed in ILL"
+    | Raw_sequent.Dual _ -> 
+        failwith "^ (dual) is not allowed in ILL"
+    | Raw_sequent.Par (_, _) -> 
+        failwith "⅋ (par) is not allowed in ILL"
+    | Raw_sequent.Ofcourse _ -> 
+        failwith "! (of course) is not allowed in ILL"
+    | Raw_sequent.Whynot _ -> 
+        failwith "? (why not) is not allowed in ILL"
+
+(* Convert ILL formula to raw formula for JSON serialization.
+   @param ill_formula - ILL formula  
+   @return Raw_sequent.formula - Raw formula
+*)
+let rec ill_formula_to_raw = function
+    | One -> Raw_sequent.One
+    | Top -> Raw_sequent.Top
+    | Litt s -> Raw_sequent.Litt s
+    | Tensor (f1, f2) -> Raw_sequent.Tensor (ill_formula_to_raw f1, ill_formula_to_raw f2)
+    | Plus (f1, f2) -> Raw_sequent.Plus (ill_formula_to_raw f1, ill_formula_to_raw f2)
+    | Lollipop (f1, f2) -> Raw_sequent.Lollipop (ill_formula_to_raw f1, ill_formula_to_raw f2)
+    | With (f1, f2) -> Raw_sequent.With (ill_formula_to_raw f1, ill_formula_to_raw f2)
+
 (* ILL inference rule types.
    Each rule corresponds to an introduction or elimination rule for the respective connective.
    ILL requires both left (elimination) and right (introduction) rules.
@@ -41,6 +85,7 @@ type ill_rule =
     | ILL_Plus_right_2   (* +R₂: right rule for right sub-formula *)
     | ILL_Lollipop
     | ILL_Lollipop_left
+    | ILL_Cut            (* Cut: Γ,Δ ⊢ C / Γ ⊢ A & Δ,A ⊢ C *)
 
 (* Rule request data structure.
    Contains the rule to apply and additional parameters like formula position.
@@ -51,6 +96,8 @@ type ill_rule_request = {
     side: string option;              (* For rules with choices (left/right) *)
     context_split: int list option;   (* For tensor rule context splitting *)
     sequent_side: string option;     (* Which side of turnstile was clicked (left/right) *)
+    cut_formula: formula option;      (* Cut formula for cut rule *)
+    cut_position: int option;         (* Position to insert cut in context *)
 }
 
 (* Exception for malformed rule requests *)
@@ -130,6 +177,10 @@ let can_apply_rule rule ill_seq =
         let has_lollipop = List.exists is_lollipop ill_seq.context in
         if has_lollipop then (true, "")
         else (false, "Lollipop left rule requires A⊸B in context")
+    
+    | ILL_Cut ->
+        (* Cut rule can always be applied *)
+        (true, "")
 
 (* CONTEXT MANIPULATION HELPERS *)
 
@@ -147,7 +198,7 @@ let split_context_simple ctx =
 *)
 let split_context_at_position ctx comma_position =
     if comma_position < 0 || comma_position > List.length ctx then
-        raise (ILL_Rule_Json_Exception "Invalid comma position for context split")
+        failwith "Invalid comma position for context split"
     else
         let ctx_array = Array.of_list ctx in
         let gamma = Array.sub ctx_array 0 comma_position |> Array.to_list in
@@ -163,8 +214,22 @@ let split_context_for_tensor ctx context_split_opt =
     match context_split_opt with
     | Some [comma_pos] -> split_context_at_position ctx comma_pos
     | Some [] -> ([], ctx)  (* Empty Gamma case *)
-    | Some _ -> raise (ILL_Rule_Json_Exception "Invalid context split format for tensor rule")
+    | Some _ -> failwith "Invalid context split format for tensor rule"
     | None -> split_context_simple ctx  (* Fallback to simple split *)
+
+(* Split context for cut rule at specified position.
+   @param ctx - Context formulas list
+   @param cut_position - Position to split context (0-based)
+   @return (gamma, delta) - Split context where cut formula will be inserted between
+*)
+let split_context_for_cut ctx cut_position =
+    if cut_position < 0 || cut_position > List.length ctx then
+        failwith "Invalid cut position for context split"
+    else
+        let ctx_array = Array.of_list ctx in
+        let gamma = Array.sub ctx_array 0 cut_position |> Array.to_list in
+        let delta = Array.sub ctx_array cut_position (Array.length ctx_array - cut_position) |> Array.to_list in
+        (gamma, delta)
 
 (* Expand tensor formula in context: A⊗B becomes A,B *)
 let expand_tensor_in_context ctx =
@@ -297,6 +362,22 @@ let apply_rule_to_sequent rule_req ill_seq =
              [{ context = gamma; goal = a };
               { context = delta @ [b]; goal = ill_seq.goal }]
          | _ -> [])
+    
+    | ILL_Cut ->
+        (* Cut rule: Γ,Δ ⊢ C becomes Γ ⊢ A and Δ,A ⊢ C *)
+        (match rule_req.cut_formula, rule_req.cut_position with
+         | Some cut_formula, Some cut_pos ->
+             let gamma, delta = split_context_for_cut ill_seq.context cut_pos in
+             [{ context = gamma; goal = cut_formula };
+              { context = delta @ [cut_formula]; goal = ill_seq.goal }]
+         | _ ->
+             (* Fallback: split at beginning if no position specified *)
+             let cut_formula = match rule_req.cut_formula with
+                 | Some f -> f
+                 | None -> Litt "A"  (* Default cut formula *)
+             in
+             [{ context = []; goal = cut_formula };
+              { context = ill_seq.context @ [cut_formula]; goal = ill_seq.goal }])
 
 (* JSON PARSING *)
 
@@ -323,8 +404,9 @@ let rule_from_json json =
          | Some (`String "ill_lollipop") -> ILL_Lollipop
          | Some (`String "ill_lollipop_right") -> ILL_Lollipop
          | Some (`String "ill_lollipop_left") -> ILL_Lollipop_left
-         | _ -> raise (ILL_Rule_Json_Exception "Unknown ILL rule"))
-    | _ -> raise (ILL_Rule_Json_Exception "Invalid rule JSON format")
+         | Some (`String "ill_cut") -> ILL_Cut
+         | _ -> failwith "Unknown ILL rule")
+    | _ -> failwith "Invalid rule JSON format"
 
 (* Parse complete ILL rule request from JSON.
    @param json - JSON object from frontend
@@ -354,6 +436,19 @@ let from_json json =
                 | _ -> None
             with _ -> None
         in
+        let cut_formula = 
+            try
+                let cut_json = List.assoc "cutFormula" (match json with `Assoc l -> l | _ -> []) in
+                Some (Raw_sequent.json_to_raw_formula cut_json |> convert_raw_formula_to_ill)
+            with _ -> None
+        in
+        let cut_position =
+            try
+                match List.assoc "cutPosition" (match json with `Assoc l -> l | _ -> []) with
+                | `Int pos -> Some pos
+                | _ -> None
+            with _ -> None
+        in
         {
             rule = rule;
             formula_position = formula_position;
@@ -364,16 +459,18 @@ let from_json json =
                     | `List int_list ->
                         let positions = List.map (function
                             | `Int i -> i
-                            | _ -> raise (ILL_Rule_Json_Exception "Invalid context split position"))
+                            | _ -> failwith "Invalid context split position")
                             int_list in
                         Some positions
                     | _ -> None
                 with _ -> None);
             sequent_side = sequent_side;
+            cut_formula = cut_formula;
+            cut_position = cut_position;
         }
     with
-    | ILL_Rule_Json_Exception msg -> raise (ILL_Rule_Json_Exception msg)
-    | _ -> raise (ILL_Rule_Json_Exception "Failed to parse ILL rule request")
+    | ILL_Rule_Json_Exception msg -> failwith msg
+    | _ -> failwith "Failed to parse ILL rule request"
 
 (* JSON SERIALIZATION *)
 
@@ -395,6 +492,7 @@ let rule_to_json = function
     | ILL_Plus_right_2 -> `String "ill_plus_right_2"
     | ILL_Lollipop -> `String "ill_lollipop"
     | ILL_Lollipop_left -> `String "ill_lollipop_left"
+    | ILL_Cut -> `String "ill_cut"
 
 (* Convert ILL rule request to JSON representation.
    @param rule_req - ILL rule request
@@ -418,7 +516,15 @@ let to_json rule_req =
         | Some s -> ("sequentSide", `String s) :: with_context_split
         | None -> with_context_split
     in
-    `Assoc with_sequent_side
+    let with_cut_formula = match rule_req.cut_formula with
+        | Some f -> ("cutFormula", Raw_sequent.raw_formula_to_json (ill_formula_to_raw f)) :: with_sequent_side
+        | None -> with_sequent_side
+    in
+    let with_cut_position = match rule_req.cut_position with
+        | Some pos -> ("cutPosition", `Int pos) :: with_cut_formula
+        | None -> with_cut_formula
+    in
+    `Assoc with_cut_position
 
 (* RULE INFERENCE *)
 
@@ -509,6 +615,7 @@ let rule_description = function
     | ILL_Plus_right_2 -> "Plus right 2: Γ ⊢ A⊕B / Γ ⊢ B"
     | ILL_Lollipop -> "Lollipop introduction: Γ ⊢ A⊸B / Γ,A ⊢ B"
     | ILL_Lollipop_left -> "Lollipop elimination: Γ ⊢ A & Δ,B ⊢ C / Γ,A⊸B,Δ ⊢ C"
+    | ILL_Cut -> "Cut rule: Γ,Δ ⊢ C / Γ ⊢ A & Δ,A ⊢ C"
 
 (* Get rule name for display in proof trees.
    @param rule - ILL rule
@@ -528,3 +635,4 @@ let rule_name = function
     | ILL_Plus_right_2 -> "⊕₂"
     | ILL_Lollipop -> "⊸"
     | ILL_Lollipop_left -> "⊸L"
+    | ILL_Cut -> "cut"

@@ -74,11 +74,11 @@ function createSequent(sequent, $sequentTable, options, ruleEngine = null) {
  * @param {RuleEngine} ruleEngine - Rule engine for interaction handling
  */
 function createFormulaList(sequent, sequentPart, $sequentDiv, options, ruleEngine = null) {
-    let $firstPoint = $('<span>', {'class': 'first-point'});
-    $sequentDiv.append($firstPoint);
-
     let $ul = $('<ul>', {'class': ['commaList ' + sequentPart]});
     $sequentDiv.append($ul);
+
+    let $firstPoint = $('<span>', {'class': 'first-point'});
+    $ul.prepend($firstPoint);
 
     // Set up sortable interaction if enabled
     if (options.withInteraction) {
@@ -90,7 +90,12 @@ function createFormulaList(sequent, sequentPart, $sequentDiv, options, ruleEngin
                 ui.placeholder.width(ui.item.width());
             }
         });
-        addCutOnClick($firstPoint, true);
+        
+        // Only add cut mode to left side (context) in ILL mode
+        let isILLMode = ruleEngine && ruleEngine.getModeName() === 'intuitionistic';
+        if (!isILLMode || sequentPart === 'hyp') {
+            addCutOnClick($firstPoint, true);
+        }
     }
 
     // Create formula elements
@@ -117,7 +122,12 @@ function createFormulaList(sequent, sequentPart, $sequentDiv, options, ruleEngin
         // Set up interactions using rule engine
         if (ruleEngine && options.withInteraction) {
             ruleEngine.setupFormulaInteraction($li, formulaAsJson, options);
-            addCutOnClick($commaSpan, false);
+            
+            // Only add cut mode to left side (context) in ILL mode
+            let isILLMode = ruleEngine.getModeName() === 'intuitionistic';
+            if (!isILLMode || sequentPart === 'hyp') {
+                addCutOnClick($commaSpan, false);
+            }
         }
     }
 }

@@ -37,6 +37,7 @@ type ill_proof =
     | ILL_Plus_right_2_proof of formula list * formula * formula * ill_proof      (* ⊕₂: Γ ⊢ A⊕B / Γ ⊢ B *)
     | ILL_Lollipop_proof of formula list * formula * formula * ill_proof           (* ⊸: Γ ⊢ A⊸B / Γ,A ⊢ B *)
     | ILL_Lollipop_left_proof of formula list * formula * formula * ill_proof * ill_proof  (* ⊸L: Γ,A⊸B,Δ ⊢ C / Γ ⊢ A & Δ,B ⊢ C *)
+    | ILL_Cut_proof of formula list * formula * formula list * ill_proof * ill_proof  (* cut: Γ,Δ ⊢ C / Γ ⊢ A & Δ,A ⊢ C *)
     | ILL_Hypothesis_proof of ill_sequent;;                              (* open goal (leaf) *)
 
 (* Exception for invalid proof operations *)
@@ -78,6 +79,9 @@ let rec get_conclusion_sequent = function
     | ILL_Lollipop_left_proof (context, _, _, _, proof2) -> 
         (* The goal is the same as the goal of the second premise (Delta, B |- C) *)
         { context = context; goal = (get_conclusion_sequent proof2).goal }
+    | ILL_Cut_proof (head_ctx, _, tail_ctx, _, proof2) ->
+        (* The conclusion is the full context (head + tail) with the goal from second premise *)
+        { context = head_ctx @ tail_ctx; goal = (get_conclusion_sequent proof2).goal }
     | ILL_Hypothesis_proof sequent -> 
         sequent
 
@@ -99,6 +103,7 @@ let get_premises = function
     | ILL_Plus_right_2_proof (_, _, _, p) -> [p]
     | ILL_Lollipop_proof (_, _, _, p) -> [p]
     | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> [p1; p2]
+    | ILL_Cut_proof (_, _, _, p1, p2) -> [p1; p2]
     | ILL_Hypothesis_proof _ -> []
 
 (* Replace the premises of a proof tree with new sub-proofs.
@@ -121,6 +126,7 @@ let set_premises proof new_premises = match proof, new_premises with
     | ILL_Plus_right_2_proof (ctx, f1, f2, _), [p] -> ILL_Plus_right_2_proof (ctx, f1, f2, p)
     | ILL_Lollipop_proof (ctx, f1, f2, _), [p] -> ILL_Lollipop_proof (ctx, f1, f2, p)
     | ILL_Lollipop_left_proof (ctx, f1, f2, _, _), [p1; p2] -> ILL_Lollipop_left_proof (ctx, f1, f2, p1, p2)
+    | ILL_Cut_proof (head_ctx, f, tail_ctx, _, _), [p1; p2] -> ILL_Cut_proof (head_ctx, f, tail_ctx, p1, p2)
     | ILL_Hypothesis_proof _, [] -> proof
     | _ -> raise (ILL_Proof_Exception (false, "Invalid premise count for proof type"))
 
@@ -160,6 +166,7 @@ let rec is_complete_proof = function
     | ILL_Plus_right_2_proof (_, _, _, p) -> is_complete_proof p
     | ILL_Lollipop_proof (_, _, _, p) -> is_complete_proof p
     | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> is_complete_proof p1 && is_complete_proof p2
+    | ILL_Cut_proof (_, _, _, p1, p2) -> is_complete_proof p1 && is_complete_proof p2
 
 (* Check if a proof tree is valid (rules correctly applied).
    @param proof - ILL proof tree to validate
@@ -183,6 +190,7 @@ let rec is_valid_proof proof =
     | ILL_Plus_right_2_proof (_, _, _, p) -> is_valid_proof p
     | ILL_Lollipop_proof (_, _, _, p) -> is_valid_proof p
     | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> is_valid_proof p1 && is_valid_proof p2
+    | ILL_Cut_proof (_, _, _, p1, p2) -> is_valid_proof p1 && is_valid_proof p2
 
 (* JSON SERIALIZATION *)
 
@@ -238,6 +246,7 @@ let rec to_json proof =
             | ILL_Plus_right_2_proof _ -> "ill_plus_right_2"
             | ILL_Lollipop_proof _ -> "ill_lollipop"
             | ILL_Lollipop_left_proof _ -> "ill_lollipop_left"
+            | ILL_Cut_proof _ -> "ill_cut"
             | _ -> "unknown"
         in
         let rule_request_json = `Assoc [("rule", `String rule_name)] in
@@ -308,6 +317,7 @@ let rec count_inference_rules = function
     | ILL_Plus_right_2_proof (_, _, _, p) -> 1 + count_inference_rules p
     | ILL_Lollipop_proof (_, _, _, p) -> 1 + count_inference_rules p
     | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> 1 + count_inference_rules p1 + count_inference_rules p2
+    | ILL_Cut_proof (_, _, _, p1, p2) -> 1 + count_inference_rules p1 + count_inference_rules p2
 
 (* Count the number of open hypotheses in a proof.
    @param proof - ILL proof tree  
@@ -328,3 +338,4 @@ let rec count_open_hypotheses = function
     | ILL_Plus_right_2_proof (_, _, _, p) -> count_open_hypotheses p
     | ILL_Lollipop_proof (_, _, _, p) -> count_open_hypotheses p
     | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> count_open_hypotheses p1 + count_open_hypotheses p2
+    | ILL_Cut_proof (_, _, _, p1, p2) -> count_open_hypotheses p1 + count_open_hypotheses p2

@@ -44,7 +44,10 @@ function addCutOnClick($element, isFirst) {
                 let formulaPosition = 0;
                 if (!isFirst) {
                     let $li = $element.closest('li');
-                    formulaPosition = $li.parent().children().index($li) + 1;
+                    let $ul = $li.parent();
+                    // Count only the <li> elements, not other children like first-point spans
+                    let $formulaItems = $ul.children('li');
+                    formulaPosition = $formulaItems.index($li) + 1;
                 }
                 let ruleRequest = { rule: 'cut', formula, formulaPosition };
                 
