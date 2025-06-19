@@ -605,8 +605,8 @@ function refreshILLTensorDotVisibility($container) {
  */
 function updateDotVisibility($element, shouldShowDots, isCutMode) {
     if (shouldShowDots) {
-        // Store original content if not already stored
-        if (!$element.data('original-content')) {
+        // Store original content only if not already stored
+        if ($element.data('original-content') === undefined) {
             $element.data('original-content', $element.html());
         }
         
@@ -630,6 +630,8 @@ function updateDotVisibility($element, shouldShowDots, isCutMode) {
         let originalContent = $element.data('original-content');
         if (originalContent !== undefined) {
             $element.html(originalContent);
+            // Clear the stored original content so it can be stored fresh next time
+            $element.removeData('original-content');
         }
     }
 }
