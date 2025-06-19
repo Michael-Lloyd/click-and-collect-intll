@@ -565,17 +565,22 @@ function toggleCutMode($container, cutMode) {
  * @param {jQuery} $container - Container element
  */
 function refreshILLTensorDotVisibility($container) {
+    console.log("REFRESH - refreshILLTensorDotVisibility called");
+    
     let ruleEngine = $container.data('ruleEngine');
     if (!ruleEngine || ruleEngine.getModeName() !== 'intuitionistic') {
+        console.log("REFRESH - not ILL mode, returning");
         return;
     }
     
     let $proofDiv = $container.children('div.proof');
     let isCutModeEnabled = $proofDiv.hasClass('cut-mode');
+    console.log("REFRESH - cut mode enabled:", isCutModeEnabled);
     
     // Find all sequent tables in the container
     $container.find('table').each(function() {
         let $sequentTable = $(this);
+        console.log("REFRESH - processing sequent table");
         
         // Check if dots should be shown (tensor applicable OR cut mode enabled)
         let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
@@ -583,16 +588,50 @@ function refreshILLTensorDotVisibility($container) {
         let hasMultipleFormulas = sequent && sequent.hyp && sequent.hyp.length > 1;
         let shouldShowDots = (tensorApplicable && hasMultipleFormulas) || isCutModeEnabled;
         
+        console.log("REFRESH - sequent:", sequent);
+        console.log("REFRESH - tensor applicable:", tensorApplicable);
+        console.log("REFRESH - has multiple formulas:", hasMultipleFormulas);
+        console.log("REFRESH - should show dots:", shouldShowDots);
+        
         // Refresh first-point visibility
         $sequentTable.find('.hyp span.first-point').each(function() {
             let $firstPoint = $(this);
+            console.log("REFRESH - updating first-point, current html:", $firstPoint.html());
             updateDotVisibility($firstPoint, shouldShowDots, isCutModeEnabled);
+            console.log("REFRESH - first-point after update:", $firstPoint.html());
         });
         
         // Refresh comma visibility for last comma spans in the context
-        $sequentTable.find('.hyp li:last-child span.comma').each(function() {
+        let $contextFormulas = $sequentTable.find('.hyp li');
+        if ($contextFormulas.length > 0) {
+            let $lastFormula = $contextFormulas.last();
+            let $lastComma = $lastFormula.find('span.comma');
+            if ($lastComma.length > 0) {
+                console.log("REFRESH - updating last comma, current html:", $lastComma.html());
+                updateDotVisibility($lastComma, shouldShowDots, isCutModeEnabled);
+                console.log("REFRESH - last comma after update:", $lastComma.html());
+            }
+        }
+        
+        // Reset all comma spans that are NOT the last one to ensure they show nothing (CSS handles commas)
+        $sequentTable.find('.hyp li span.comma').each(function(index) {
             let $commaSpan = $(this);
-            updateDotVisibility($commaSpan, shouldShowDots, isCutModeEnabled);
+            let $parentLi = $commaSpan.closest('li');
+            let isLastFormula = $parentLi.is(':last-child');
+            
+            console.log("REFRESH - comma " + index + " html:", $commaSpan.html());
+            console.log("REFRESH - comma " + index + " classes:", $commaSpan.attr('class'));
+            console.log("REFRESH - comma " + index + " data-original-content:", $commaSpan.data('original-content'));
+            console.log("REFRESH - comma " + index + " is last formula:", isLastFormula);
+            
+            // If this is NOT the last formula's comma, ensure it's reset to empty
+            if (!isLastFormula) {
+                $commaSpan.removeClass('tensor-applicable cut-applicable');
+                $commaSpan.removeAttr('title');
+                $commaSpan.html(''); // CSS will handle showing commas between formulas
+                $commaSpan.removeData('original-content');
+                console.log("REFRESH - comma " + index + " reset to empty (not last)");
+            }
         });
     });
 }
@@ -604,9 +643,16 @@ function refreshILLTensorDotVisibility($container) {
  * @param {boolean} isCutMode - Whether cut mode is enabled
  */
 function updateDotVisibility($element, shouldShowDots, isCutMode) {
+    console.log("UPDATE_DOT - element:", $element[0]);
+    console.log("UPDATE_DOT - current html:", $element.html());
+    console.log("UPDATE_DOT - shouldShowDots:", shouldShowDots);
+    console.log("UPDATE_DOT - isCutMode:", isCutMode);
+    console.log("UPDATE_DOT - stored original-content:", $element.data('original-content'));
+    
     if (shouldShowDots) {
         // Store original content only if not already stored
         if ($element.data('original-content') === undefined) {
+            console.log("UPDATE_DOT - storing original content:", $element.html());
             $element.data('original-content', $element.html());
         }
         
@@ -620,6 +666,7 @@ function updateDotVisibility($element, shouldShowDots, isCutMode) {
         }
         
         // Replace content with just the dot
+        console.log("UPDATE_DOT - setting html to dot");
         $element.html('.');
     } else {
         // Remove classes and titles
@@ -628,12 +675,15 @@ function updateDotVisibility($element, shouldShowDots, isCutMode) {
         
         // Restore original content
         let originalContent = $element.data('original-content');
+        console.log("UPDATE_DOT - restoring original content:", originalContent);
         if (originalContent !== undefined) {
             $element.html(originalContent);
             // Clear the stored original content so it can be stored fresh next time
             $element.removeData('original-content');
         }
     }
+    
+    console.log("UPDATE_DOT - final html:", $element.html());
 }
 
 /**

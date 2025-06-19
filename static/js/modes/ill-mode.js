@@ -442,20 +442,29 @@ class ILLRuleEngine extends RuleEngine {
      * @param {Object} options - Display options
      */
     setupCommaInteraction($commaSpan, $li, options) {
+        console.log("SETUP_COMMA - setting up comma interaction");
+        console.log("SETUP_COMMA - comma html:", $commaSpan.html());
+        console.log("SETUP_COMMA - li html:", $li.html());
+        
         // Check if this comma is in the context (left side)
         let $formulaList = $li.closest('ul');
         let isLeftSide = $formulaList.hasClass('hyp');
         
+        console.log("SETUP_COMMA - is left side:", isLeftSide);
+        
         if (!isLeftSide) {
+            console.log("SETUP_COMMA - not left side, returning");
             return; // Comma selection only applies to context formulas
         }
         
         // Set up dynamic comma visibility based on tensor rule applicability
         let $sequentTable = $li.closest('table');
+        console.log("SETUP_COMMA - calling updateCommaVisibility");
         this.updateCommaVisibility($commaSpan, $sequentTable, options);
         
         // Also trigger refresh for immediate visibility
         setTimeout(() => {
+            console.log("SETUP_COMMA - triggering refresh after 150ms");
             let $container = $li.closest('.proof-container');
             if ($container.length > 0) {
                 refreshILLTensorDotVisibility($container);
@@ -497,8 +506,11 @@ class ILLRuleEngine extends RuleEngine {
      * @param {jQuery} $sequentTable - The sequent table element
      */
     updateCommaVisibility($commaSpan, $sequentTable, options = {}) {
+        console.log("ILL_UPDATE_COMMA - called with comma:", $commaSpan.html());
+        
         // Skip interaction setup if withInteraction is false
         if (options.withInteraction === false) {
+            console.log("ILL_UPDATE_COMMA - withInteraction is false, returning");
             return;
         }
         
@@ -507,6 +519,10 @@ class ILLRuleEngine extends RuleEngine {
             let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
             let canSplit = this.isTensorRuleApplicable($sequentTable) && sequent && sequent.hyp && sequent.hyp.length > 1;
             
+            console.log("ILL_UPDATE_COMMA - sequent:", sequent);
+            console.log("ILL_UPDATE_COMMA - tensor applicable:", this.isTensorRuleApplicable($sequentTable));
+            console.log("ILL_UPDATE_COMMA - can split:", canSplit);
+            
             if (canSplit) {
                 $commaSpan.addClass('tensor-applicable');
                 $commaSpan.attr('title', 'Click to select context split for tensor rule');
@@ -514,14 +530,17 @@ class ILLRuleEngine extends RuleEngine {
                 // Only add dots to elements that don't show CSS commas
                 // This includes the last comma element in the list (pre-space no longer used)
                 let isLastComma = $commaSpan.closest('li').is(':last-child');
+                console.log("ILL_UPDATE_COMMA - is last comma:", isLastComma);
                 
                 if (isLastComma) {
                     // Store original content if not already stored
                     if (!$commaSpan.data('original-content')) {
+                        console.log("ILL_UPDATE_COMMA - storing original content:", $commaSpan.html());
                         $commaSpan.data('original-content', $commaSpan.html());
                     }
                     
                     // Replace content with just the dot
+                    console.log("ILL_UPDATE_COMMA - setting to dot");
                     $commaSpan.html('.');
                 }
             } else {
@@ -530,14 +549,18 @@ class ILLRuleEngine extends RuleEngine {
                 
                 // Restore original content for elements that had dots
                 let isLastComma = $commaSpan.closest('li').is(':last-child');
+                console.log("ILL_UPDATE_COMMA - is last comma (restore):", isLastComma);
                 
                 if (isLastComma) {
                     let originalContent = $commaSpan.data('original-content');
+                    console.log("ILL_UPDATE_COMMA - restoring original content:", originalContent);
                     if (originalContent !== undefined) {
                         $commaSpan.html(originalContent);
                     }
                 }
             }
+            
+            console.log("ILL_UPDATE_COMMA - final comma html:", $commaSpan.html());
         }, 100); // Small delay to ensure sequent data is available
     }
 

@@ -88,6 +88,16 @@ function createFormulaList(sequent, sequentPart, $sequentDiv, options, ruleEngin
             opacity: 0.2,
             start: function(e, ui) {
                 ui.placeholder.width(ui.item.width());
+            },
+            stop: function(e, ui) {
+                // Check if we're in ILL mode and this is the context side
+                let isILLMode = ruleEngine && ruleEngine.getModeName() === 'intuitionistic';
+                if (isILLMode && sequentPart === 'hyp') {
+                    let $container = $ul.closest('.proof-container');
+                    setTimeout(() => {
+                        refreshILLTensorDotVisibility($container);
+                    }, 100);
+                }
             }
         });
         
