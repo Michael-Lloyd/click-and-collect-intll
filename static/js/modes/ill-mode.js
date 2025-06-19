@@ -133,9 +133,28 @@ class ILLRuleEngine extends RuleEngine {
      * @return {Array} Array of rule event configurations
      */
     getTransformationRules(formulaAsJson) {
-        // ILL transformation rules would be similar to LL but with directional restrictions
-        // For now, return empty array as transformations are less common in ILL
-        return [];
+        switch (formulaAsJson.type) {
+            case 'tensor':
+                return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_tensor_right', 'needPosition': true, 'transformation': 'apply_reversible_first'}]}];
+                
+            case 'with':
+                return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_with_right', 'needPosition': true, 'transformation': 'apply_reversible_first'}]}];
+
+            case 'plus':
+                return [
+                    {'element': 'left-formula', 'onclick': [{'rule': 'ill_plus_right_1', 'needPosition': true, 'transformation': 'apply_reversible_first'}]},
+                    {'element': 'right-formula', 'onclick': [{'rule': 'ill_plus_right_2', 'needPosition': true, 'transformation': 'apply_reversible_first'}]}
+                ];
+
+            case 'lollipop':
+                return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_lollipop_right', 'needPosition': true, 'transformation': 'apply_reversible_first'}]}];
+
+            case 'top':
+                return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_top', 'needPosition': true, 'transformation': 'apply_reversible_first'}]}];
+
+            default:
+                return [];
+        }
     }
 
     /**

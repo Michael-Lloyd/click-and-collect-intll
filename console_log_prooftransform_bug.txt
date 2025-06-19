@@ -1,0 +1,87 @@
+This page is in Almost Standards Mode. Page layout may be impacted. For Standards Mode use “<!DOCTYPE html>”. localhost:3000
+Loading failed for the <script> with source “https://www.googletagmanager.com/gtag/js?id=G-6M0JK9PWN1”. localhost:3000:51:109
+[ILL DEBUG] getRules called with options: 
+Object { withInteraction: true, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+ formula: 
+Object { type: "tensor", value1: {…}, value2: {…} }
+ isLeftSide: true ill-mode.js:25:17
+[ILL DEBUG] Using interactive rules ill-mode.js:33:21
+[ILL DEBUG] getRules called with options: 
+Object { withInteraction: true, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+ formula: 
+Object { type: "litt", value: "B" }
+ isLeftSide: false ill-mode.js:25:17
+[ILL DEBUG] Using interactive rules ill-mode.js:33:21
+[ILL DEBUG] getRules called with options: 
+Object { withInteraction: true, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+ formula: 
+Object { type: "tensor", value1: {…}, value2: {…} }
+ isLeftSide: true ill-mode.js:25:17
+[ILL DEBUG] Using interactive rules ill-mode.js:33:21
+[ILL DEBUG] getRules called with options: 
+Object { withInteraction: true, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+ formula: 
+Object { type: "litt", value: "B" }
+ isLeftSide: false ill-mode.js:25:17
+[ILL DEBUG] Using interactive rules ill-mode.js:33:21
+[APP DEBUG] Option toggle cutMode changing to: true app.js:303:17
+[ILL DEBUG] getRules called with options: 
+Object { withInteraction: true, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+ formula: 
+Object { type: "tensor", value1: {…}, value2: {…} }
+ isLeftSide: true ill-mode.js:25:17
+[ILL DEBUG] Using interactive rules ill-mode.js:33:21
+[ILL DEBUG] getRules called with options: 
+Object { withInteraction: true, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+ formula: 
+Object { type: "litt", value: "A" }
+ isLeftSide: false ill-mode.js:25:17
+[ILL DEBUG] Using interactive rules ill-mode.js:33:21
+[ILL DEBUG] getRules called with options: 
+Object { withInteraction: true, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+ formula: 
+Object { type: "litt", value: "A" }
+ isLeftSide: true ill-mode.js:25:17
+[ILL DEBUG] Using interactive rules ill-mode.js:33:21
+[ILL DEBUG] getRules called with options: 
+Object { withInteraction: true, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+ formula: 
+Object { type: "litt", value: "B" }
+ isLeftSide: false ill-mode.js:25:17
+[ILL DEBUG] Using interactive rules ill-mode.js:33:21
+[APP DEBUG] Option toggle cutMode changing to: false app.js:303:17
+[APP DEBUG] Option toggle proofTransformation changing to: true app.js:303:17
+[APP DEBUG] Proof transformation mode toggled to: true app.js:313:21
+[APP DEBUG] Current URL params: ?s=A*%28A-oB%29+%7C-+B&intuitionisticMode=1&proofTransformation=1 app.js:314:21
+ILL Transform Options Request: 
+Object { proof: {…}, notations: [] }
+compatibility.js:808:21
+ILL Transform Options Response: 
+Object { illProofWithTransformationOptions: {…}, canSimplify: true, canEliminateAllCuts: false }
+compatibility.js:809:21
+ProofWithOptions: 
+Object { sequent: {…}, appliedRule: {…}, transformOptions: (4) […] }
+compatibility.js:819:21
+Uncaught TypeError: can't access property Symbol.iterator, transformOptions is undefined
+    addPremises http://localhost:3000/static/js/core/proof-core.js:200
+    createSubProof http://localhost:3000/static/js/core/proof-core.js:111
+    reloadProof http://localhost:3000/static/js/compatibility.js:852
+    success http://localhost:3000/static/js/compatibility.js:822
+    jQuery 6
+    reloadProofWithTransformationOptions http://localhost:3000/static/js/compatibility.js:801
+    toggleProofTransformation http://localhost:3000/static/js/compatibility.js:653
+    createOption http://localhost:3000/static/js/compatibility.js:496
+    jQuery 8
+    createOption http://localhost:3000/static/js/compatibility.js:487
+    buildProof http://localhost:3000/static/js/core/proof-core.js:72
+    initProof http://localhost:3000/static/js/core/proof-core.js:29
+    createNotationBar http://localhost:3000/static/js/compatibility.js:540
+    initProof http://localhost:3000/static/js/core/proof-core.js:28
+    initMainProof http://localhost:3000/static/js/app.js:129
+    success http://localhost:3000/static/js/app.js:108
+    jQuery 6
+    parseSequentAsString http://localhost:3000/static/js/app.js:102
+    submitSequent http://localhost:3000/static/js/app.js:89
+    <anonymous> http://localhost:3000/static/js/app.js:34
+    jQuery 13
+proof-core.js:200:37

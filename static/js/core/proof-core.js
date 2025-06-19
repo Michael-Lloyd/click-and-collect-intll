@@ -190,12 +190,26 @@ function addPremises($sequentTable, proofAsJson, permutationBeforeRule, options,
         });
     } else if (options.proofTransformation?.value) {
         let transformDiv = $('<div>', {'class': 'transform'});
-        let transformOptions = proofAsJson.appliedRule['transformOptions'];
-        $sequentTable.data('transformOptions', transformOptions);
         
-        // Check if we're in ILL mode to use appropriate transformation options
+        // Check if we're in ILL mode to get transformation options from correct location
         let isIllMode = options.intuitionisticMode?.value || false;
+        let transformOptions;
+        
+        if (isIllMode) {
+            // ILL mode: transformOptions are at root level of proof object
+            transformOptions = proofAsJson.transformOptions;
+        } else {
+            // LL mode: transformOptions are inside appliedRule
+            transformOptions = proofAsJson.appliedRule ? proofAsJson.appliedRule['transformOptions'] : undefined;
+        }
+        
+        $sequentTable.data('transformOptions', transformOptions);
         let activeTransformOptions = getTransformOptions(isIllMode);
+        
+        // Handle case where transformOptions might be undefined
+        if (!transformOptions) {
+            return;
+        }
         
         for (let transformOption of transformOptions) {
             let transformation = transformOption.transformation;
