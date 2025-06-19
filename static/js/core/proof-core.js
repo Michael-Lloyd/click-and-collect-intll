@@ -193,9 +193,13 @@ function addPremises($sequentTable, proofAsJson, permutationBeforeRule, options,
         let transformOptions = proofAsJson.appliedRule['transformOptions'];
         $sequentTable.data('transformOptions', transformOptions);
         
+        // Check if we're in ILL mode to use appropriate transformation options
+        let isIllMode = options.intuitionisticMode?.value || false;
+        let activeTransformOptions = getTransformOptions(isIllMode);
+        
         for (let transformOption of transformOptions) {
             let transformation = transformOption.transformation;
-            let transformConfig = TRANSFORM_OPTIONS[transformation];
+            let transformConfig = activeTransformOptions[transformation];
             
             if (!transformConfig) {
                 // Fallback for unknown transformation types

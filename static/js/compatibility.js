@@ -56,6 +56,58 @@ const TRANSFORM_OPTIONS = {
     }
 };
 
+// ILL-specific transformation options symbols and configurations
+const ILL_TRANSFORM_OPTIONS = {
+    'ill_expand_axiom': {
+        'button': '⇫',
+        'title': 'One step axiom expansion (ILL)',
+        'singleClick': 'ill_expand_axiom',
+        'doubleClick': null
+    },
+    'ill_expand_axiom_full': {
+        'button': '⇯',
+        'title': 'Full axiom expansion (ILL)',
+        'singleClick': 'ill_expand_axiom_full',
+        'doubleClick': null
+    },
+    'ill_eliminate_cut_left': {
+        'button': '←',
+        'title': 'Eliminate cut or commute it on left hand-side (ILL)',
+        'singleClick': 'ill_eliminate_cut_left',
+        'doubleClick': null
+    },
+    'ill_eliminate_cut_right': {
+        'button': '→',
+        'title': 'Eliminate cut or commute it on right hand-side (ILL)',
+        'singleClick': 'ill_eliminate_cut_right',
+        'doubleClick': null
+    },
+    'ill_eliminate_cut_key_case': {
+        'button': '↑',
+        'title': 'Eliminate cut key-case (ILL)',
+        'singleClick': 'ill_eliminate_cut_key_case',
+        'doubleClick': null
+    },
+    'ill_eliminate_cut_full': {
+        'button': '✄',
+        'title': 'Fully eliminate this cut (ILL)',
+        'singleClick': 'ill_eliminate_cut_full',
+        'doubleClick': null
+    },
+    'ill_eliminate_all_cuts': {
+        'button': '✂',
+        'title': 'Eliminate all cuts from proof (ILL)',
+        'singleClick': 'ill_eliminate_all_cuts',
+        'doubleClick': null
+    },
+    'ill_simplify': {
+        'button': '⚬',
+        'title': 'Simplify proof (ILL)',
+        'singleClick': 'ill_simplify',
+        'doubleClick': null
+    }
+};
+
 /**
  * Compress JSON by replacing long field names with abbreviations
  * @param {string} json - JSON string to compress
@@ -93,6 +145,15 @@ function onAjaxError(jqXHR, textStatus, errorThrown) {
         alertText = 'Sorry, your proof exceeds the limit.';
     }
     alert(alertText);
+}
+
+/**
+ * Get transformation options based on current mode (Classical LL vs ILL)
+ * @param {boolean} isIllMode - Whether we're in ILL mode
+ * @return {Object} Appropriate transformation options object
+ */
+function getTransformOptions(isIllMode) {
+    return isIllMode ? ILL_TRANSFORM_OPTIONS : TRANSFORM_OPTIONS;
 }
 
 /**
@@ -340,6 +401,9 @@ function applyTransformation($sequentTable, transformRequest) {
     let $container = $sequentTable.closest('.proof-container');
     let options = $container.data('options');
 
+    // Check if we're in ILL mode
+    let isIllMode = options.intuitionisticMode?.value || false;
+    
     // Get the proof data from the sequent table
     let proof = recGetProofAsJson($sequentTable);
     let notations = getNotations($container);
@@ -351,9 +415,12 @@ function applyTransformation($sequentTable, transformRequest) {
         transformRequest: transformRequest
     };
 
+    // Use appropriate endpoint based on mode
+    let transformationUrl = isIllMode ? '/apply_ill_transformation' : '/apply_transformation';
+
     $.ajax({
         type: 'POST',
-        url: '/apply_transformation',
+        url: transformationUrl,
         contentType: 'application/json; charset=utf-8',
         data: compressJson(JSON.stringify(requestData)),
         success: function(data) {
@@ -725,22 +792,40 @@ function reloadProofWithTransformationOptions($container, options) {
     let proof = getProofAsJson($container);
     let notations = getNotations($container);
 
+    // Check if we're in ILL mode
+    let isIllMode = options.intuitionisticMode?.value || false;
+    let optionsUrl = isIllMode ? '/get_ill_proof_transformation_options' : '/get_proof_transformation_options';
+
     $.ajax({
         type: 'POST',
-        url: '/get_proof_transformation_options',
+        url: optionsUrl,
         contentType: 'application/json; charset=utf-8',
         data: compressJson(JSON.stringify({ proof, notations })),
         success: function(data) {
+            // DEBUG: Log the request and response
+            console.log("ILL Transform Options Request:", { proof, notations });
+            console.log("ILL Transform Options Response:", data);
+            
             // Disable interaction mode for transformation mode
             options.withInteraction = false;
             
+            // Use appropriate response field based on mode
+            let proofWithOptions = isIllMode ? 
+                data['illProofWithTransformationOptions'] : 
+                data['proofWithTransformationOptions'];
+            
+            console.log("ProofWithOptions:", proofWithOptions);
+            
             // Reload the proof with transformation options
-            reloadProof($container, data['proofWithTransformationOptions'], options);
+            reloadProof($container, proofWithOptions, options);
             
             // Add to transformation stack for undo/redo
             stackProofTransformation($container);
         },
-        error: onAjaxError
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.log("ILL Transform Options Error:", jqXHR.responseText, textStatus, errorThrown);
+            onAjaxError(jqXHR, textStatus, errorThrown);
+        }
     });
 }
 

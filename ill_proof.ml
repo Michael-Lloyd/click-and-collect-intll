@@ -130,6 +130,75 @@ let set_premises proof new_premises = match proof, new_premises with
     | ILL_Hypothesis_proof _, [] -> proof
     | _ -> raise (ILL_Proof_Exception (false, "Invalid premise count for proof type"))
 
+(* Extract the rule request information from a proof tree node.
+   This reconstructs the rule that was applied to create this proof step.
+   @param proof - ILL proof tree node
+   @return ill_rule_request - Rule request that created this proof
+   @raises ILL_Proof_Exception for hypothesis proofs (no applied rule)
+*)
+let get_rule_request proof =
+    let open Ill_rule_request in
+    match proof with
+    | ILL_Axiom_proof _ -> 
+        { rule = ILL_Axiom; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_One_proof -> 
+        { rule = ILL_One; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_Top_proof _ -> 
+        { rule = ILL_Top; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_Tensor_proof (_, _, _, _, _) -> 
+        (* Context split information could be inferred but not stored in proof tree *)
+        { rule = ILL_Tensor; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_Tensor_left_proof (_, _, _, _) -> 
+        { rule = ILL_Tensor_left; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_With_left_1_proof (_, _, _) -> 
+        { rule = ILL_With_left_1; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_With_left_2_proof (_, _, _) -> 
+        { rule = ILL_With_left_2; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_With_right_proof (_, _, _, _, _) -> 
+        { rule = ILL_With_right; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_Plus_left_proof (_, _, _, _, _) -> 
+        { rule = ILL_Plus_left; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_Plus_right_1_proof (_, _, _, _) -> 
+        { rule = ILL_Plus_right_1; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_Plus_right_2_proof (_, _, _, _) -> 
+        { rule = ILL_Plus_right_2; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_Lollipop_proof (_, _, _, _) -> 
+        { rule = ILL_Lollipop; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_Lollipop_left_proof (_, _, _, _, _) -> 
+        { rule = ILL_Lollipop_left; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_Cut_proof (_, cut_f, _, _, _) -> 
+        { rule = ILL_Cut; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = Some cut_f; cut_position = None }
+    
+    | ILL_Hypothesis_proof _ -> 
+        raise (ILL_Proof_Exception (false, "Cannot get rule request from hypothesis proof"))
+
 (* PROOF CONSTRUCTION FROM RULE REQUESTS *)
 
 (* Apply an ILL inference rule to create a new proof tree.
@@ -144,6 +213,140 @@ let from_sequent_and_rule_request sequent _notations _rule_request =
     (* For now, just return a hypothesis proof as a stub *)
     let ill_seq = sequent_list_to_ill_sequent sequent in
     ILL_Hypothesis_proof ill_seq
+
+(* Reconstruct ILL proof tree from sequent, rule request, and premise proofs.
+   This is used when parsing JSON proof data from the frontend.
+   @param ill_seq - The conclusion sequent of this proof step
+   @param rule_request - The rule that was applied
+   @param premises - List of premise proofs
+   @return ill_proof - Reconstructed proof tree
+*)
+and from_sequent_and_rule_request_and_premises ill_seq rule_request premises =
+    let open Ill_rule_request in
+    match rule_request.rule, premises with
+    
+    (* Rules with no premises *)
+    | ILL_Axiom, [] ->
+        (match ill_seq.context, ill_seq.goal with
+         | [Litt a], Litt b when a = b -> ILL_Axiom_proof a
+         | _ -> raise (ILL_Proof_Exception (false, "Invalid axiom: context and goal must match")))
+    
+    | ILL_One, [] ->
+        (match ill_seq.context, ill_seq.goal with
+         | [], One -> ILL_One_proof
+         | _ -> raise (ILL_Proof_Exception (false, "Invalid one rule: context must be empty and goal must be 1")))
+    
+    | ILL_Top, [] ->
+        (match ill_seq.goal with
+         | Top -> ILL_Top_proof ill_seq.context
+         | _ -> raise (ILL_Proof_Exception (false, "Invalid top rule: goal must be ⊤")))
+    
+    (* Rules with one premise *)
+    | ILL_Tensor_left, [premise] ->
+        (match ill_seq.goal with
+         | _ ->
+             (* Extract tensor formula from context - simplified reconstruction *)
+             (* In a full implementation, we would need to track which formula was the tensor *)
+             let rec find_tensor_components ctx =
+                 match ctx with
+                 | Tensor (f1, f2) :: _ -> (f1, f2)
+                 | _ :: rest -> find_tensor_components rest
+                 | [] -> raise (ILL_Proof_Exception (false, "No tensor formula found in context"))
+             in
+             let (f1, f2) = find_tensor_components ill_seq.context in
+             ILL_Tensor_left_proof (ill_seq.context, f1, f2, premise))
+    
+    | ILL_With_left_1, [premise] ->
+        let rec find_with_components ctx =
+            match ctx with
+            | With (f1, f2) :: _ -> (f1, f2)
+            | _ :: rest -> find_with_components rest
+            | [] -> raise (ILL_Proof_Exception (false, "No with formula found in context"))
+        in
+        let (f1, f2) = find_with_components ill_seq.context in
+        ILL_With_left_1_proof (ill_seq.context, With (f1, f2), premise)
+    
+    | ILL_With_left_2, [premise] ->
+        let rec find_with_components ctx =
+            match ctx with
+            | With (f1, f2) :: _ -> (f1, f2)
+            | _ :: rest -> find_with_components rest
+            | [] -> raise (ILL_Proof_Exception (false, "No with formula found in context"))
+        in
+        let (f1, f2) = find_with_components ill_seq.context in
+        ILL_With_left_2_proof (ill_seq.context, With (f1, f2), premise)
+    
+    | ILL_Plus_right_1, [premise] ->
+        (match ill_seq.goal with
+         | Plus (f1, f2) -> ILL_Plus_right_1_proof (ill_seq.context, f1, f2, premise)
+         | _ -> raise (ILL_Proof_Exception (false, "Invalid plus right 1: goal must be A⊕B")))
+    
+    | ILL_Plus_right_2, [premise] ->
+        (match ill_seq.goal with
+         | Plus (f1, f2) -> ILL_Plus_right_2_proof (ill_seq.context, f1, f2, premise)
+         | _ -> raise (ILL_Proof_Exception (false, "Invalid plus right 2: goal must be A⊕B")))
+    
+    | ILL_Lollipop, [premise] ->
+        (match ill_seq.goal with
+         | Lollipop (f1, f2) -> ILL_Lollipop_proof (ill_seq.context, f1, f2, premise)
+         | _ -> raise (ILL_Proof_Exception (false, "Invalid lollipop: goal must be A⊸B")))
+    
+    (* Rules with two premises *)
+    | ILL_Tensor, [premise1; premise2] ->
+        (match ill_seq.goal with
+         | Tensor (f1, f2) -> ILL_Tensor_proof (ill_seq.context, f1, f2, premise1, premise2)
+         | _ -> raise (ILL_Proof_Exception (false, "Invalid tensor: goal must be A⊗B")))
+    
+    | ILL_With_right, [premise1; premise2] ->
+        (match ill_seq.goal with
+         | With (f1, f2) -> ILL_With_right_proof (ill_seq.context, f1, f2, premise1, premise2)
+         | _ -> raise (ILL_Proof_Exception (false, "Invalid with right: goal must be A&B")))
+    
+    | ILL_Plus_left, [premise1; premise2] ->
+        let rec find_plus_components ctx =
+            match ctx with
+            | Plus (f1, f2) :: _ -> (f1, f2)
+            | _ :: rest -> find_plus_components rest
+            | [] -> raise (ILL_Proof_Exception (false, "No plus formula found in context"))
+        in
+        let (f1, f2) = find_plus_components ill_seq.context in
+        ILL_Plus_left_proof (ill_seq.context, f1, f2, premise1, premise2)
+    
+    | ILL_Lollipop_left, [premise1; premise2] ->
+        let rec find_lollipop_components ctx =
+            match ctx with
+            | Lollipop (f1, f2) :: _ -> (f1, f2)
+            | _ :: rest -> find_lollipop_components rest
+            | [] -> raise (ILL_Proof_Exception (false, "No lollipop formula found in context"))
+        in
+        let (f1, f2) = find_lollipop_components ill_seq.context in
+        ILL_Lollipop_left_proof (ill_seq.context, f1, f2, premise1, premise2)
+    
+    | ILL_Cut, [premise1; premise2] ->
+        (* For cut, we need the cut formula from the rule request *)
+        (match rule_request.cut_formula with
+         | Some cut_f -> 
+             (* Simple reconstruction - in practice, context splitting would be more complex *)
+             let cut_pos = Option.value rule_request.cut_position ~default:0 in
+             let (head_ctx, tail_ctx) = 
+                 let rec split acc n lst =
+                     match n, lst with
+                     | 0, rest -> (List.rev acc, rest)
+                     | n, h :: t when n > 0 -> split (h :: acc) (n - 1) t
+                     | _ -> (List.rev acc, lst)
+                 in
+                 split [] cut_pos ill_seq.context
+             in
+             ILL_Cut_proof (head_ctx, cut_f, tail_ctx, premise1, premise2)
+         | None -> raise (ILL_Proof_Exception (false, "Cut rule requires cut formula")))
+    
+    (* Invalid combinations *)
+    | rule, prems -> 
+        let rule_name = Ill_rule_request.rule_name rule in
+        let premise_count = List.length prems in
+        raise (ILL_Proof_Exception (false, 
+            Printf.sprintf "Invalid premise count for rule %s: expected specific count, got %d" 
+            rule_name premise_count))
 
 (* PROOF VALIDATION *)
 
@@ -230,26 +433,10 @@ let rec to_json proof =
             ("appliedRule", `Null)
         ]
     | _ ->
-        (* For non-hypothesis proofs, we need to include rule information *)
+        (* For non-hypothesis proofs, include proper rule information *)
         let premises_json = List.map to_json (get_premises proof) in
-        let rule_name = match proof with
-            | ILL_Axiom_proof _ -> "ill_axiom"
-            | ILL_One_proof -> "ill_one"
-            | ILL_Top_proof _ -> "ill_top"
-            | ILL_Tensor_proof _ -> "ill_tensor_right"
-            | ILL_Tensor_left_proof _ -> "ill_tensor_left"
-            | ILL_With_left_1_proof _ -> "ill_with_left_1"
-            | ILL_With_left_2_proof _ -> "ill_with_left_2"
-            | ILL_With_right_proof _ -> "ill_with_right"
-            | ILL_Plus_left_proof _ -> "ill_plus_left"
-            | ILL_Plus_right_1_proof _ -> "ill_plus_right_1"
-            | ILL_Plus_right_2_proof _ -> "ill_plus_right_2"
-            | ILL_Lollipop_proof _ -> "ill_lollipop"
-            | ILL_Lollipop_left_proof _ -> "ill_lollipop_left"
-            | ILL_Cut_proof _ -> "ill_cut"
-            | _ -> "unknown"
-        in
-        let rule_request_json = `Assoc [("rule", `String rule_name)] in
+        let rule_request = get_rule_request proof in
+        let rule_request_json = Ill_rule_request.to_json rule_request in
         let applied_rule_json = `Assoc [
             ("ruleRequest", rule_request_json);
             ("premises", `List premises_json)
@@ -263,7 +450,7 @@ let rec to_json proof =
    @param json - JSON representation from frontend
    @return ill_proof - Parsed ILL proof tree
 *)
-let from_json json =
+let rec from_json json =
     (* Extract sequent from JSON *)
     let sequent_json = Yojson.Basic.Util.member "sequent" json in
     let raw_seq = Raw_sequent.from_json sequent_json in
@@ -293,8 +480,15 @@ let from_json json =
     if applied_rule_json = `Null then
         ILL_Hypothesis_proof ill_seq
     else
-        (* For now, just return hypothesis proof - full rule parsing would need more implementation *)
-        ILL_Hypothesis_proof ill_seq
+        (* Parse rule request and premises to reconstruct proof tree *)
+        let rule_request_json = Yojson.Basic.Util.member "ruleRequest" applied_rule_json in
+        let rule_request = Ill_rule_request.from_json rule_request_json in
+        let premises_json = Yojson.Basic.Util.member "premises" applied_rule_json in
+        let premises_list = Yojson.Basic.Util.to_list premises_json in
+        let premises = List.map from_json premises_list in
+        
+        (* Reconstruct the proof tree based on the rule and premises *)
+        from_sequent_and_rule_request_and_premises ill_seq rule_request premises
 
 (* PROOF STATISTICS *)
 

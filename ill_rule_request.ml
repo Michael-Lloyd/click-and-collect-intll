@@ -409,10 +409,10 @@ let rule_from_json json =
     | _ -> failwith "Invalid rule JSON format"
 
 (* Parse complete ILL rule request from JSON.
-   @param json - JSON object from frontend
+   @param json - JSON object from frontend  
    @return ill_rule_request - Parsed rule request
 *)
-let from_json json =
+let from_json_deprecated json =
     try
         let rule = rule_from_json json in
         let formula_position = 
@@ -494,37 +494,6 @@ let rule_to_json = function
     | ILL_Lollipop_left -> `String "ill_lollipop_left"
     | ILL_Cut -> `String "ill_cut"
 
-(* Convert ILL rule request to JSON representation.
-   @param rule_req - ILL rule request
-   @return Yojson.Basic.t - JSON representation
-*)
-let to_json rule_req =
-    let base_assoc = [("rule", rule_to_json rule_req.rule)] in
-    let with_pos = match rule_req.formula_position with
-        | Some pos -> ("formulaPosition", `Int pos) :: base_assoc
-        | None -> base_assoc
-    in
-    let with_side = match rule_req.side with
-        | Some s -> ("side", `String s) :: with_pos
-        | None -> with_pos
-    in
-    let with_context_split = match rule_req.context_split with
-        | Some split_list -> ("contextSplit", `List (List.map (fun i -> `Int i) split_list)) :: with_side
-        | None -> with_side
-    in
-    let with_sequent_side = match rule_req.sequent_side with
-        | Some s -> ("sequentSide", `String s) :: with_context_split
-        | None -> with_context_split
-    in
-    let with_cut_formula = match rule_req.cut_formula with
-        | Some f -> ("cutFormula", Raw_sequent.raw_formula_to_json (ill_formula_to_raw f)) :: with_sequent_side
-        | None -> with_sequent_side
-    in
-    let with_cut_position = match rule_req.cut_position with
-        | Some pos -> ("cutPosition", `Int pos) :: with_cut_formula
-        | None -> with_cut_formula
-    in
-    `Assoc with_cut_position
 
 (* RULE INFERENCE *)
 
@@ -636,3 +605,156 @@ let rule_name = function
     | ILL_Lollipop -> "⊸"
     | ILL_Lollipop_left -> "⊸L"
     | ILL_Cut -> "cut"
+
+(* JSON SERIALIZATION *)
+
+(* Convert ILL rule to JSON string for frontend communication.
+   @param rule - ILL rule type
+   @return string - Rule name for JSON serialization
+*)
+let rule_to_json_string = function
+    | ILL_Axiom -> "ill_axiom"
+    | ILL_One -> "ill_one"
+    | ILL_Top -> "ill_top"
+    | ILL_Tensor -> "ill_tensor_right"
+    | ILL_Tensor_left -> "ill_tensor_left"
+    | ILL_With_left_1 -> "ill_with_left_1"
+    | ILL_With_left_2 -> "ill_with_left_2"
+    | ILL_With_right -> "ill_with_right"
+    | ILL_Plus_left -> "ill_plus_left"
+    | ILL_Plus_right_1 -> "ill_plus_right_1"
+    | ILL_Plus_right_2 -> "ill_plus_right_2"
+    | ILL_Lollipop -> "ill_lollipop_right"
+    | ILL_Lollipop_left -> "ill_lollipop_left"
+    | ILL_Cut -> "ill_cut"
+
+(* Convert JSON string to ILL rule type.
+   @param rule_str - Rule name from JSON
+   @return ill_rule - Parsed ILL rule
+   @raises ILL_Rule_Json_Exception for unknown rules
+*)
+let rule_from_json_string = function
+    | "ill_axiom" -> ILL_Axiom
+    | "ill_one" -> ILL_One
+    | "ill_top" -> ILL_Top
+    | "ill_tensor_right" -> ILL_Tensor
+    | "ill_tensor_left" -> ILL_Tensor_left
+    | "ill_with_left_1" -> ILL_With_left_1
+    | "ill_with_left_2" -> ILL_With_left_2
+    | "ill_with_right" -> ILL_With_right
+    | "ill_plus_left" -> ILL_Plus_left
+    | "ill_plus_right_1" -> ILL_Plus_right_1
+    | "ill_plus_right_2" -> ILL_Plus_right_2
+    | "ill_lollipop_right" -> ILL_Lollipop
+    | "ill_lollipop_left" -> ILL_Lollipop_left
+    | "ill_cut" -> ILL_Cut
+    | unknown -> raise (ILL_Rule_Json_Exception ("Unknown ILL rule: " ^ unknown))
+
+(* Convert ILL rule request to JSON representation.
+   @param rule_req - ILL rule request
+   @return Yojson.Basic.t - JSON representation
+*)
+let to_json rule_req =
+    let rule_json = `String (rule_to_json_string rule_req.rule) in
+    let base_fields = [("rule", rule_json)] in
+    
+    (* Add optional fields if they exist *)
+    let fields_with_position = match rule_req.formula_position with
+        | Some pos -> ("formulaPosition", `Int pos) :: base_fields
+        | None -> base_fields
+    in
+    
+    let fields_with_side = match rule_req.side with
+        | Some s -> ("side", `String s) :: fields_with_position
+        | None -> fields_with_position
+    in
+    
+    let fields_with_context_split = match rule_req.context_split with
+        | Some split_list -> ("contextSplit", `List (List.map (fun i -> `Int i) split_list)) :: fields_with_side
+        | None -> fields_with_side
+    in
+    
+    let fields_with_sequent_side = match rule_req.sequent_side with
+        | Some ss -> ("sequentSide", `String ss) :: fields_with_context_split
+        | None -> fields_with_context_split
+    in
+    
+    let fields_with_cut_formula = match rule_req.cut_formula with
+        | Some f -> ("cutFormula", Raw_sequent.raw_formula_to_json (ill_formula_to_raw f)) :: fields_with_sequent_side
+        | None -> fields_with_sequent_side
+    in
+    
+    let final_fields = match rule_req.cut_position with
+        | Some pos -> ("cutPosition", `Int pos) :: fields_with_cut_formula
+        | None -> fields_with_cut_formula
+    in
+    
+    `Assoc final_fields
+
+(* Parse ILL rule request from JSON representation.
+   @param json - JSON object from frontend
+   @return ill_rule_request - Parsed rule request
+   @raises ILL_Rule_Json_Exception for malformed JSON
+*)
+let from_json json =
+    try
+        (* Extract required rule field *)
+        let rule_str = match Yojson.Basic.Util.member "rule" json with
+            | `String s -> s
+            | _ -> raise (ILL_Rule_Json_Exception "rule field must be a string")
+        in
+        let rule = rule_from_json_string rule_str in
+        
+        (* Extract optional fields *)
+        let formula_position = match Yojson.Basic.Util.member "formulaPosition" json with
+            | `Int pos -> Some pos
+            | `Null -> None
+            | _ -> raise (ILL_Rule_Json_Exception "formulaPosition must be an integer or null")
+        in
+        
+        let side = match Yojson.Basic.Util.member "side" json with
+            | `String s -> Some s
+            | `Null -> None
+            | _ -> raise (ILL_Rule_Json_Exception "side must be a string or null")
+        in
+        
+        let context_split = match Yojson.Basic.Util.member "contextSplit" json with
+            | `List split_list -> 
+                Some (List.map (function 
+                    | `Int i -> i 
+                    | _ -> raise (ILL_Rule_Json_Exception "contextSplit must be list of integers")) split_list)
+            | `Null -> None
+            | _ -> raise (ILL_Rule_Json_Exception "contextSplit must be a list or null")
+        in
+        
+        let sequent_side = match Yojson.Basic.Util.member "sequentSide" json with
+            | `String s -> Some s
+            | `Null -> None
+            | _ -> raise (ILL_Rule_Json_Exception "sequentSide must be a string or null")
+        in
+        
+        let cut_formula = match Yojson.Basic.Util.member "cutFormula" json with
+            | `Null -> None
+            | formula_json -> 
+                let raw_formula = Raw_sequent.json_to_raw_formula formula_json in
+                Some (convert_raw_formula_to_ill raw_formula)
+        in
+        
+        let cut_position = match Yojson.Basic.Util.member "cutPosition" json with
+            | `Int pos -> Some pos
+            | `Null -> None
+            | _ -> raise (ILL_Rule_Json_Exception "cutPosition must be an integer or null")
+        in
+        
+        {
+            rule = rule;
+            formula_position = formula_position;
+            side = side;
+            context_split = context_split;
+            sequent_side = sequent_side;
+            cut_formula = cut_formula;
+            cut_position = cut_position;
+        }
+    with
+    | Yojson.Basic.Util.Type_error (msg, _) -> raise (ILL_Rule_Json_Exception ("JSON type error: " ^ msg))
+    | exn -> raise (ILL_Rule_Json_Exception ("JSON parsing error: " ^ (Printexc.to_string exn)))

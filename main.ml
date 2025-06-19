@@ -221,6 +221,20 @@ let get_proof_transformation_options_handler req =
 let apply_transformation_handler req =
     json_handler Proof_transformation.apply_transformation req
 
+(* Get available ILL proof transformation options for a given proof
+   POST /get_ill_proof_transformation_options
+   Body: JSON with ILL proof data
+*)
+let get_ill_proof_transformation_options_handler req =
+    json_handler Ill_proof_transformation.get_ill_proof_transformation_options req
+
+(* Apply an ILL proof transformation (e.g., cut elimination, commuting rules)
+   POST /apply_ill_transformation
+   Body: JSON with ILL transformation request
+*)
+let apply_ill_transformation_handler req =
+    json_handler Ill_proof_transformation.apply_ill_transformation req
+
 (** Configure the logger *)
 let set_logger () =
   Logs.set_reporter (Logs_fmt.reporter ());
@@ -245,5 +259,7 @@ let _ =
   |> App.post "/export_as_latex/:format/:implicit_exchange" export_as_latex_handler
   |> App.post "/get_proof_transformation_options" get_proof_transformation_options_handler
   |> App.post "/apply_transformation" apply_transformation_handler
+  |> App.post "/get_ill_proof_transformation_options" get_ill_proof_transformation_options_handler
+  |> App.post "/apply_ill_transformation" apply_ill_transformation_handler
   |> App.run_command
 ;;
