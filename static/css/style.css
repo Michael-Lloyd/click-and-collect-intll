@@ -111,6 +111,11 @@ img.export { height: 1em; margin: 0 0.2em -0.2em 0.2em; cursor: pointer; }
 .transform-global-button { color: #ccc; margin: 0 0.2em; font-size: 1.5em; display: inline-block; }
 .transform-global-button.enabled { color: #777; cursor: pointer; }
 
+/* Undo/Redo buttons for proof transformation */
+.undo-redo { color: #ccc; margin: 0 0.2em; font-size: 1.5em; display: inline-block; user-select: none; }
+.undo-redo.enabled { color: #777; cursor: pointer; }
+.undo-redo.enabled:hover { color: #66a3e0; }
+
 .notation-bar { margin-top: 1em; }
 .notation-label, .notation-add { vertical-align: middle; color: #777; }
 .notation-add { margin-left: 0.5em; font-size: 1.2em; font-weight: bold; cursor: pointer; }

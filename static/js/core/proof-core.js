@@ -190,17 +190,48 @@ function addPremises($sequentTable, proofAsJson, permutationBeforeRule, options,
         });
     } else if (options.proofTransformation?.value) {
         let transformDiv = $('<div>', {'class': 'transform'});
-        for (let transformOption of proofAsJson.appliedRule['transformOptions']) {
+        let transformOptions = proofAsJson.appliedRule['transformOptions'];
+        $sequentTable.data('transformOptions', transformOptions);
+        
+        for (let transformOption of transformOptions) {
             let transformation = transformOption.transformation;
+            let transformConfig = TRANSFORM_OPTIONS[transformation];
+            
+            if (!transformConfig) {
+                // Fallback for unknown transformation types
+                transformConfig = {
+                    'button': transformation,
+                    'title': transformOption.title || transformation,
+                    'singleClick': transformation,
+                    'doubleClick': null
+                };
+            }
+            
             let $transformSpan = $('<span>', {'class': 'transform-button'})
                 .addClass(transformOption.enabled ? 'enabled' : 'disabled')
-                .text(TRANSFORM_OPTIONS[transformation]);
-            $transformSpan.attr('title', transformOption.title);
+                .text(transformConfig.button);
+            
             if (transformOption.enabled) {
-                $transformSpan.on('click', function () { 
-                    applyTransformation($sequentTable, { transformation }); 
-                });
+                $transformSpan.attr('title', transformConfig.title);
+                
+                if (transformConfig.doubleClick) {
+                    // Add both single and double click handlers
+                    addClickAndDoubleClickEvent($transformSpan, function () {
+                        applyTransformation($sequentTable, { transformation: transformConfig.singleClick });
+                    }, function () {
+                        applyTransformation($sequentTable, { transformation: transformConfig.doubleClick });
+                    });
+                } else {
+                    // Single click only
+                    $transformSpan.on('click', function () {
+                        applyTransformation($sequentTable, { transformation: transformConfig.singleClick });
+                    });
+                }
+            } else {
+                // Disabled transformations get a title explaining why they're disabled
+                $transformSpan.attr('title', transformOption.title || 'Transformation not available');
             }
+            
             transformDiv.append($transformSpan);
         }
         $td.children('.tagBox').append(transformDiv);
@@ -251,7 +282,8 @@ function undoRule($sequentTable) {
         .data('sequentWithPermutation', null)
         .data('permutationBeforeRule', null)
         .data('ruleRequest', null)
-        .data('provabilityCheckStatus', null);
+        .data('provabilityCheckStatus', null)
+        .data('transformOptions', null);
 
     // Remove line
     let $td = $sequentTable.find('div.sequent').closest('td');
@@ -305,6 +337,11 @@ function recGetProofAsJson($sequentTable) {
             }
         }
         appliedRule = { ruleRequest, premises };
+
+        // Include transformation options if they exist
+        if ($sequentTable.data('transformOptions') !== null) {
+            appliedRule.transformOptions = $sequentTable.data('transformOptions');
+        }
 
         let permutationBeforeRule = $sequentTable.data('permutationBeforeRule');
         let displayPermutation = getSequentPermutation($sequentTable);

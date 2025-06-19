@@ -16,14 +16,44 @@ const ABBREVIATIONS = {
     '"value2":': '"v2":'            // Binary formula right value
 };
 
-// Transformation options symbols (from original code)
+// Transformation options symbols and configurations (from original code)
 const TRANSFORM_OPTIONS = {
-    'expand_axiom': '⇫',            // Expand axiom by applying reversible rules
-    'expand_axiom_full': '⇯',       // Fully expand axiom (complete proof)
-    'eliminate_cut_left': '←',      // Move cut to left premise
-    'eliminate_cut_right': '→',     // Move cut to right premise  
-    'eliminate_cut_key_case': '↑',  // Eliminate cut at key case
-    'eliminate_cut_full': '✄',      // Eliminate all cuts in proof
+    'expand_axiom': {
+        'button': '⇫',
+        'title': 'One step axiom expansion',
+        'singleClick': 'expand_axiom',
+        'doubleClick': null
+    },
+    'expand_axiom_full': {
+        'button': '⇯',
+        'title': 'Full axiom expansion',
+        'singleClick': 'expand_axiom_full',
+        'doubleClick': null
+    },
+    'eliminate_cut_left': {
+        'button': '←',
+        'title': 'Eliminate cut or commute it on left hand-side',
+        'singleClick': 'eliminate_cut_left',
+        'doubleClick': null
+    },
+    'eliminate_cut_right': {
+        'button': '→',
+        'title': 'Eliminate cut or commute it on right hand-side',
+        'singleClick': 'eliminate_cut_right',
+        'doubleClick': null
+    },
+    'eliminate_cut_key_case': {
+        'button': '↑',
+        'title': 'Eliminate cut key-case',
+        'singleClick': 'eliminate_cut_key_case',
+        'doubleClick': null
+    },
+    'eliminate_cut_full': {
+        'button': '✄',
+        'title': 'Fully eliminate this cut',
+        'singleClick': 'eliminate_cut_full',
+        'doubleClick': null
+    }
 };
 
 /**
@@ -141,6 +171,65 @@ function invertPermutation(permutation) {
 }
 
 /**
+ * Create identity permutation array
+ * @param {number} length - Length of identity permutation
+ * @return {Array} Identity permutation
+ */
+function identity(length) {
+    return Array.from({length}, (_, i) => i);
+}
+
+/**
+ * Get sequent identity permutation
+ * @param {Object} sequent - Sequent object
+ * @return {Object} Identity permutation for sequent
+ */
+function getSequentIdentityPermutation(sequent) {
+    return {
+        'hyp': identity(sequent.hyp.length),
+        'cons': identity(sequent.cons.length)
+    };
+}
+
+/**
+ * Get current permutation from sequent table
+ * @param {jQuery} $sequentTable - Sequent table
+ * @return {Object} Current permutation
+ */
+function getSequentPermutation($sequentTable) {
+    // For now, return identity permutation
+    // In a full implementation, this would track actual permutations
+    let sequent = $sequentTable.data('sequentWithoutPermutation');
+    if (!sequent) {
+        return { 'hyp': [], 'cons': [] };
+    }
+    return getSequentIdentityPermutation(sequent);
+}
+
+/**
+ * Permute a sequent according to given permutation
+ * @param {Object} sequent - Sequent to permute
+ * @param {Object} permutation - Permutation to apply
+ * @return {Object} Permuted sequent
+ */
+function permuteSequent(sequent, permutation) {
+    return {
+        hyp: permute(sequent.hyp, permutation.hyp),
+        cons: permute(sequent.cons, permutation.cons)
+    };
+}
+
+/**
+ * Apply permutation to an array
+ * @param {Array} array - Array to permute
+ * @param {Array} permutation - Permutation array
+ * @return {Array} Permuted array
+ */
+function permute(array, permutation) {
+    return permutation.map(i => array[i]);
+}
+
+/**
  * Apply rule to sequent (compatibility function)
  * @param {Object} ruleRequest - Rule application request
  * @param {jQuery} $sequentTable - Sequent table element
@@ -243,13 +332,63 @@ function autoReverseSequentPremises($sequentTable) {
 }
 
 /**
- * Apply transformation to sequent (placeholder)
+ * Apply transformation to sequent
  * @param {jQuery} $sequentTable - Sequent table
  * @param {Object} transformRequest - Transformation request
  */
 function applyTransformation($sequentTable, transformRequest) {
-    // This would contain the transformation logic from the original code
-    // For now, it's a placeholder
+    let $container = $sequentTable.closest('.proof-container');
+    let options = $container.data('options');
+
+    // Get the proof data from the sequent table
+    let proof = recGetProofAsJson($sequentTable);
+    let notations = getNotations($container);
+    
+    // Prepare the transformation request
+    let requestData = {
+        proof: proof,
+        notations: notations,
+        transformRequest: transformRequest
+    };
+
+    $.ajax({
+        type: 'POST',
+        url: '/apply_transformation',
+        contentType: 'application/json; charset=utf-8',
+        data: compressJson(JSON.stringify(requestData)),
+        success: function(data) {
+            clearSavedProof();
+            cleanPedagogicMessage($container);
+            
+            // Remove the current sequent table and rebuild
+            let $sequentContainer = removeSequentTable($sequentTable);
+            
+            // Temporarily disable transformation mode to rebuild proof
+            let wasTransformationMode = options.proofTransformation?.value || false;
+            if (options.proofTransformation) {
+                options.proofTransformation.value = false;
+            }
+            
+            // Get the rule engine from container
+            let ruleEngine = $container.data('ruleEngine');
+            
+            // Rebuild the proof
+            createSubProof(data['proof'], $sequentContainer, options, ruleEngine);
+            
+            // Re-enable transformation mode and reload with options
+            if (wasTransformationMode && options.proofTransformation) {
+                options.proofTransformation.value = true;
+                reloadProofWithTransformationOptions($container, options);
+            }
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            if (jqXHR.responseJSON && jqXHR.responseJSON.error_message) {
+                displayPedagogicError(jqXHR.responseJSON.error_message, $container);
+            } else {
+                onAjaxError(jqXHR, textStatus, errorThrown);
+            }
+        }
+    });
 }
 
 /**
@@ -441,6 +580,7 @@ function toggleProofTransformation($container, proofTransformation) {
         $divProof.addClass('proof-transformation');
         options.withInteraction = false;
         removeTransformStack($container);
+        createUndoRedoButton($container);
         reloadProofWithTransformationOptions($container, options);
     } else {
         if ($divProof.hasClass('proof-transformation')) {
@@ -452,6 +592,7 @@ function toggleProofTransformation($container, proofTransformation) {
             let ruleEngine = $container.data('ruleEngine');
             createSubProof(proof, $sequentContainer, options, ruleEngine);
             removeTransformBar($container);
+            removeUndoRedoButton($container);
         }
     }
 }
@@ -469,7 +610,7 @@ function autoReverseContainer($container, autoReverse) {
 }
 
 /**
- * Remove transform stack (placeholder)
+ * Remove transform stack
  * @param {jQuery} $container - Container element
  */
 function removeTransformStack($container) {
@@ -478,19 +619,283 @@ function removeTransformStack($container) {
 }
 
 /**
- * Reload proof with transformation options (placeholder)
+ * Clean pedagogic message from container
+ * @param {jQuery} $container - Container element
+ */
+function cleanPedagogicMessage($container) {
+    $container.find('.pedagogic-message').remove();
+}
+
+/**
+ * Display pedagogic error message
+ * @param {string} message - Error message to display
+ * @param {jQuery} $container - Container element
+ */
+function displayPedagogicError(message, $container) {
+    cleanPedagogicMessage($container);
+    let $errorDiv = $('<div>', {'class': 'pedagogic-message error'})
+        .text(message);
+    $container.prepend($errorDiv);
+}
+
+/**
+ * Mark proof as incomplete
+ * @param {jQuery} $container - Container element
+ */
+function markAsIncomplete($container) {
+    $container.removeClass('complete').addClass('incomplete');
+}
+
+/**
+ * Mark sequent as provable
+ * @param {jQuery} $sequentTable - Sequent table element
+ */
+function markAsProvable($sequentTable) {
+    $sequentTable.data('status', 'provable');
+    $sequentTable.find('.turnstile').removeClass('not-provable').addClass('provable');
+}
+
+/**
+ * Mark sequent as not provable recursively
+ * @param {jQuery} $sequentTable - Sequent table element
+ */
+function recMarkAsNotProvable($sequentTable) {
+    $sequentTable.data('status', 'notProvable');
+    $sequentTable.find('.turnstile').removeClass('provable').addClass('not-provable');
+    markParentSequentsAsNotProvable($sequentTable);
+}
+
+/**
+ * Mark parent sequents as not provable
+ * @param {jQuery} $sequentTable - Sequent table element
+ */
+function markParentSequentsAsNotProvable($sequentTable) {
+    let $parentTable = $sequentTable.nextAll('table').first();
+    if ($parentTable.length) {
+        recMarkAsNotProvable($parentTable);
+    }
+}
+
+/**
+ * Mark sequent as not auto-provable
+ * @param {jQuery} $sequentTable - Sequent table element
+ */
+function markAsNotAutoProvable($sequentTable) {
+    $sequentTable.data('status', 'notAutoProvable');
+    $sequentTable.find('.turnstile').removeClass('provable not-provable').addClass('not-auto-provable');
+}
+
+/**
+ * Check if sequent is proved
+ * @param {jQuery} $sequentTable - Sequent table element
+ * @return {boolean} True if proved
+ */
+function isProved($sequentTable) {
+    return $sequentTable.data('ruleRequest') !== null && 
+           $sequentTable.data('ruleRequest') !== undefined;
+}
+
+/**
+ * Mark parent sequents as proved
+ * @param {jQuery} $sequentTable - Sequent table element
+ */
+function markParentSequentsAsProved($sequentTable) {
+    // Implementation for marking parent sequents as proved
+    // This would involve checking if all premises are complete
+}
+
+/**
+ * Mark parent sequents as provable
+ * @param {jQuery} $sequentTable - Sequent table element
+ */
+function markParentSequentsAsProvable($sequentTable) {
+    let $parentTable = $sequentTable.nextAll('table').first();
+    if ($parentTable.length) {
+        markAsProvable($parentTable);
+    }
+}
+
+/**
+ * Reload proof with transformation options
  * @param {jQuery} $container - Container element
  * @param {Object} options - Options object
  */
 function reloadProofWithTransformationOptions($container, options) {
+    // Get the current proof stored in the container
+    let proof = getProofAsJson($container);
+    let notations = getNotations($container);
+
+    $.ajax({
+        type: 'POST',
+        url: '/get_proof_transformation_options',
+        contentType: 'application/json; charset=utf-8',
+        data: compressJson(JSON.stringify({ proof, notations })),
+        success: function(data) {
+            // Disable interaction mode for transformation mode
+            options.withInteraction = false;
+            
+            // Reload the proof with transformation options
+            reloadProof($container, data['proofWithTransformationOptions'], options);
+            
+            // Add to transformation stack for undo/redo
+            stackProofTransformation($container);
+        },
+        error: onAjaxError
+    });
 }
 
 /**
- * Remove transform bar (placeholder)
+ * Remove transform bar
  * @param {jQuery} $container - Container element
  */
 function removeTransformBar($container) {
     $container.find('.transform-bar').remove();
+}
+
+/**
+ * Reload proof with new data
+ * @param {jQuery} $container - Container element
+ * @param {Object} proofAsJson - Proof data
+ * @param {Object} options - Options object
+ */
+function reloadProof($container, proofAsJson, options) {
+    let $mainSequentTable = $container.find('table').last();
+    let $sequentContainer = removeSequentTable($mainSequentTable);
+    let ruleEngine = $container.data('ruleEngine');
+    createSubProof(proofAsJson, $sequentContainer, options, ruleEngine);
+}
+
+/**
+ * Remove sequent table and return its container
+ * @param {jQuery} $sequentTable - Sequent table to remove
+ * @return {jQuery} Container div where table was located
+ */
+function removeSequentTable($sequentTable) {
+    let $container = $sequentTable.parent();
+    $sequentTable.remove();
+    return $container;
+}
+
+/**
+ * Stack current proof for transformation undo/redo
+ * @param {jQuery} $container - Container element
+ */
+function stackProofTransformation($container) {
+    let transformStack = $container.data('transformStack') || [];
+    let transformPointer = $container.data('transformPointer');
+    
+    // If we're not at the end of the stack, truncate it
+    if (transformPointer !== undefined && transformPointer < transformStack.length - 1) {
+        transformStack.length = transformPointer + 1;
+    }
+    
+    // Add current proof to stack
+    transformStack.push(getProofAsJson($container));
+    $container.data('transformStack', transformStack);
+
+    // Update pointer to the end
+    transformPointer = transformStack.length - 1;
+    $container.data('transformPointer', transformPointer);
+
+    // Update undo/redo button states
+    updateUndoRedoButton($container, transformStack, transformPointer);
+}
+
+/**
+ * Create undo/redo buttons for transformation mode
+ * @param {jQuery} $container - Container element
+ */
+function createUndoRedoButton($container) {
+    let $proof = $container.find('.proof');
+    
+    // Remove existing buttons first
+    $container.find('.undo-redo').remove();
+    
+    let $redoButton = $('<span>', {class: 'undo-redo redo'})
+        .text('↷')
+        .attr('title', 'Redo proof transformation')
+        .on('click', function() { redoTransformation($container); });
+        
+    let $undoButton = $('<span>', {class: 'undo-redo undo'})
+        .text('↶')
+        .attr('title', 'Undo proof transformation')
+        .on('click', function() { undoTransformation($container); });
+        
+    $undoButton.insertAfter($proof);
+    $redoButton.insertAfter($proof);
+}
+
+/**
+ * Remove undo/redo buttons
+ * @param {jQuery} $container - Container element
+ */
+function removeUndoRedoButton($container) {
+    $container.find('.undo-redo').remove();
+}
+
+/**
+ * Update undo/redo button states
+ * @param {jQuery} $container - Container element
+ * @param {Array} transformStack - Stack of transformations
+ * @param {number} transformPointer - Current position in stack
+ */
+function updateUndoRedoButton($container, transformStack, transformPointer) {
+    let $undoButton = $container.find('span.undo');
+    let $redoButton = $container.find('span.redo');
+    
+    // Update undo button
+    if (transformStack.length > 0 && transformPointer > 0) {
+        $undoButton.addClass('enabled').removeClass('disabled');
+    } else {
+        $undoButton.addClass('disabled').removeClass('enabled');
+    }
+    
+    // Update redo button
+    if (transformStack.length > 0 && transformPointer < transformStack.length - 1) {
+        $redoButton.addClass('enabled').removeClass('disabled');
+    } else {
+        $redoButton.addClass('disabled').removeClass('enabled');
+    }
+}
+
+/**
+ * Undo last transformation
+ * @param {jQuery} $container - Container element
+ */
+function undoTransformation($container) {
+    let options = $container.data('options');
+    let transformStack = $container.data('transformStack');
+    let transformPointer = $container.data('transformPointer');
+    
+    if (!transformStack || transformPointer <= 0) {
+        return; // Nothing to undo
+    }
+    
+    transformPointer = transformPointer - 1;
+    $container.data('transformPointer', transformPointer);
+    
+    reloadProof($container, transformStack[transformPointer], options);
+    updateUndoRedoButton($container, transformStack, transformPointer);
+}
+
+/**
+ * Redo next transformation
+ * @param {jQuery} $container - Container element
+ */
+function redoTransformation($container) {
+    let options = $container.data('options');
+    let transformStack = $container.data('transformStack');
+    let transformPointer = $container.data('transformPointer');
+    
+    if (!transformStack || transformPointer >= transformStack.length - 1) {
+        return; // Nothing to redo
+    }
+    
+    transformPointer = transformPointer + 1;
+    $container.data('transformPointer', transformPointer);
+    
+    reloadProof($container, transformStack[transformPointer], options);
+    updateUndoRedoButton($container, transformStack, transformPointer);
 }
 
 // Stub for analytics
