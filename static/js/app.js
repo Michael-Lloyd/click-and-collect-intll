@@ -272,7 +272,7 @@ function showILLRules() {
             $container.html('');
             let ruleEngine = new ILLRuleEngine();
             initProof(proofAsJson, $container, {
-                forceILLSymbols: true
+                withInteraction: false
             }, ruleEngine);
         })
 

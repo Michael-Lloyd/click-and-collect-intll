@@ -433,7 +433,7 @@ class ILLRuleEngine extends RuleEngine {
         
         // Set up dynamic comma visibility based on tensor rule applicability
         let $sequentTable = $li.closest('table');
-        this.updateCommaVisibility($commaSpan, $sequentTable);
+        this.updateCommaVisibility($commaSpan, $sequentTable, options);
         
         // Also trigger refresh for immediate visibility
         setTimeout(() => {
@@ -477,7 +477,12 @@ class ILLRuleEngine extends RuleEngine {
      * @param {jQuery} $commaSpan - The comma span element
      * @param {jQuery} $sequentTable - The sequent table element
      */
-    updateCommaVisibility($commaSpan, $sequentTable) {
+    updateCommaVisibility($commaSpan, $sequentTable, options = {}) {
+        // Skip interaction setup if withInteraction is false
+        if (options.withInteraction === false) {
+            return;
+        }
+        
         // Always check for tensor rule applicability dynamically
         setTimeout(() => {
             let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
@@ -522,7 +527,12 @@ class ILLRuleEngine extends RuleEngine {
      * @param {jQuery} $firstPoint - The first-point span element
      * @param {jQuery} $sequentTable - The sequent table element
      */
-    updateFirstPointVisibility($firstPoint, $sequentTable) {
+    updateFirstPointVisibility($firstPoint, $sequentTable, options = {}) {
+        // Skip interaction setup if withInteraction is false
+        if (options.withInteraction === false) {
+            return;
+        }
+        
         // Always check for tensor rule applicability dynamically
         setTimeout(() => {
             let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
@@ -700,6 +710,7 @@ const ILL_RULES = {
  */
 function updateAllCommaVisibility($container) {
     let ruleEngine = $container.data('ruleEngine');
+    let options = $container.data('options') || {};
     
     if (!ruleEngine || ruleEngine.getModeName() !== 'intuitionistic') {
         return; // Only relevant for ILL mode
@@ -709,7 +720,7 @@ function updateAllCommaVisibility($container) {
         let $sequentTable = $(this);
         
         $sequentTable.find('.hyp li span.comma').each(function() {
-            ruleEngine.updateCommaVisibility($(this), $sequentTable);
+            ruleEngine.updateCommaVisibility($(this), $sequentTable, options);
         });
         
         // Pre-space functionality removed - first-point element handles space before first formula

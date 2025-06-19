@@ -122,7 +122,7 @@ function createFormulaList(sequent, sequentPart, $sequentDiv, options, ruleEngin
             
             // Set up dynamic dot visibility for first-point
             if (ruleEngine && ruleEngine.updateFirstPointVisibility) {
-                ruleEngine.updateFirstPointVisibility($firstPoint, $ul.closest('table'));
+                ruleEngine.updateFirstPointVisibility($firstPoint, $ul.closest('table'), options);
             }
             
             // Also trigger immediate refresh for ILL mode to ensure dots show on initial load
