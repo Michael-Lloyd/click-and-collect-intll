@@ -106,3 +106,11 @@ Gamma |- B
 Gamma |- A+B
 ```
 
+## Cut rule 
+
+```
+Gamma |- B <gap> B, Delta |- C
+-------------------------------(cut)
+Gamma, Delta |- C
+```
+
