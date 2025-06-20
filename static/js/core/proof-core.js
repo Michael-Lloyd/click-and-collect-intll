@@ -268,7 +268,7 @@ function addPremises($sequentTable, proofAsJson, permutationBeforeRule, options,
         $div.insertBefore($sequentTable);
         $sequentTable.addClass('binary-rule');
 
-        if (ruleRequest.rule === 'cut') {
+        if (ruleRequest.rule === 'cut' || ruleRequest.rule === 'ill_cut') {
             premises[0].sequent['cons'].slice(-1)[0]['is_cut_formula'] = true;
             premises[1].sequent['cons'][0]['is_cut_formula'] = true;
         }

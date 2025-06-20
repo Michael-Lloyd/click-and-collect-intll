@@ -503,6 +503,7 @@ class ILLRuleEngine extends RuleEngine {
      * @param {jQuery} $sequentTable - The sequent table element
      */
     updateCommaVisibility($commaSpan, $sequentTable, options = {}) {
+        
         // Skip interaction setup if withInteraction is false
         if (options.withInteraction === false) {
             return;
@@ -520,6 +521,14 @@ class ILLRuleEngine extends RuleEngine {
             let tensorApplicable = this.isTensorRuleApplicable($sequentTable);
             let hasMultipleHyp = sequent && sequent.hyp && sequent.hyp.length > 1;
             let canSplit = tensorApplicable && hasMultipleHyp;
+            
+            // Check if cut mode is enabled - if so, don't interfere with cut mode handling
+            let $proofDiv = $sequentTable.closest('.proof');
+            let isCutModeEnabled = $proofDiv && $proofDiv.hasClass('cut-mode');
+            
+            if (isCutModeEnabled) {
+                return;
+            }
             
             // CRITICAL FIX: Recalculate isLastComma each time to handle rearrangement
             let $allContextLi = $sequentTable.find('.hyp li');
@@ -549,6 +558,7 @@ class ILLRuleEngine extends RuleEngine {
                     // Replace content with just the dot only if not already a dot
                     if (currentContent !== '.') {
                         $commaSpan.html('.');
+                    } else {
                     }
                 } else {
                     // Non-last commas should not have dots - restore any dot content
@@ -572,6 +582,7 @@ class ILLRuleEngine extends RuleEngine {
                 if (originalContent !== undefined && $commaSpan.html() === '.') {
                     $commaSpan.html(originalContent);
                     $commaSpan.removeData('original-content');
+                } else {
                 }
             }
             

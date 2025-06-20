@@ -600,7 +600,10 @@ function refreshILLTensorDotVisibility($container) {
             updateDotVisibility($firstPoint, shouldShowDots, isCutModeEnabled);
         });
         
-        // Refresh comma visibility for last comma spans in the context
+        // Clean up any leftover end-point elements from previous bug
+        $sequentTable.find('span.end-point').remove();
+        
+        // Handle last comma visibility in cut mode - it should show a dot
         let $contextFormulas = $sequentTable.find('.hyp li');
         
         if ($contextFormulas.length > 0) {
@@ -608,30 +611,84 @@ function refreshILLTensorDotVisibility($container) {
             let $lastComma = $lastFormula.find('span.comma');
             
             if ($lastComma.length > 0) {
-                updateDotVisibility($lastComma, shouldShowDots, isCutModeEnabled);
+                // Complex logic: tensor mode vs cut mode for last comma
+                if (isCutModeEnabled && shouldShowDots) {
+                    // Store original content and show dot
+                    if ($lastComma.data('original-content') === undefined) {
+                        $lastComma.data('original-content', $lastComma.html());
+                    }
+                    $lastComma.addClass('cut-applicable');
+                    $lastComma.attr('title', 'Click to apply cut rule');
+                    $lastComma.html('.');
+                } else {
+                    // The general comma processing loop below will handle this case
+                }
             }
         }
         
-        // Reset comma spans, but preserve tensor-applicable and cut-applicable classes
+        // Ensure ALL commas get proper classes in cut mode
         $sequentTable.find('.hyp li span.comma').each(function(index) {
             let $commaSpan = $(this);
             let $parentLi = $commaSpan.closest('li');
             let isLastFormula = $parentLi.is(':last-child');
             
-            // Check if this comma should show dots (has tensor-applicable or cut-applicable)
-            let hasApplicableClass = $commaSpan.hasClass('tensor-applicable') || $commaSpan.hasClass('cut-applicable');
-            
-            // IMPORTANT: Commas should NEVER have their content changed to dots!
-            // Dots should be separate elements, not replacing comma content
-            if (!isLastFormula && !hasApplicableClass) {
-                $commaSpan.removeClass('tensor-applicable cut-applicable');
-                $commaSpan.removeAttr('title');
-                // Do NOT change comma content - commas should remain as commas
-                $commaSpan.removeData('original-content');
-            } else if (!isLastFormula && hasApplicableClass) {
-                // Non-last commas should never have dot content, even if they have applicable classes
-                if ($commaSpan.html() === '.') {
-                    $commaSpan.html('');
+            if (isCutModeEnabled && shouldShowDots) {
+                // In cut mode, ALL commas should be cut-applicable for hover effects
+                $commaSpan.addClass('cut-applicable');
+                $commaSpan.attr('title', 'Click to apply cut rule');
+                
+                // Only the last comma shows a dot, others remain empty
+                if (isLastFormula) {
+                    if ($commaSpan.data('original-content') === undefined) {
+                        $commaSpan.data('original-content', $commaSpan.html());
+                    }
+                    $commaSpan.html('.');
+                } else {
+                    // Non-last commas remain empty but are still clickable
+                    if ($commaSpan.html() === '.') {
+                        $commaSpan.html('');
+                    }
+                }
+            } else {
+                // Not in cut mode, clean up cut classes
+                $commaSpan.removeClass('cut-applicable');
+                
+                // Handle tensor mode for last comma
+                if (isLastFormula && tensorApplicable && hasMultipleFormulas) {
+                    // Last comma should have tensor-applicable class and let ILL mode handle the dot
+                    if (!$commaSpan.hasClass('tensor-applicable')) {
+                        $commaSpan.addClass('tensor-applicable');
+                    }
+                    // Trigger ILL mode to re-evaluate this comma
+                    let ruleEngine = $sequentTable.closest('.proof-container').data('ruleEngine');
+                    if (ruleEngine && ruleEngine.updateCommaVisibility) {
+                        ruleEngine.updateCommaVisibility($commaSpan, $sequentTable, { withInteraction: true });
+                    }
+                } else if (tensorApplicable && hasMultipleFormulas) {
+                    // In tensor mode, ALL commas should be tensor-applicable for context splitting
+                    if (!$commaSpan.hasClass('tensor-applicable')) {
+                        $commaSpan.addClass('tensor-applicable');
+                    }
+                    $commaSpan.attr('title', 'Click to select context split for tensor rule');
+                    // Non-last commas remain empty (no dot) but are clickable
+                    if ($commaSpan.html() === '.') {
+                        let originalContent = $commaSpan.data('original-content');
+                        if (originalContent !== undefined) {
+                            $commaSpan.html(originalContent);
+                        } else {
+                            $commaSpan.html('');
+                        }
+                    }
+                } else {
+                    $commaSpan.removeClass('tensor-applicable');
+                    $commaSpan.removeAttr('title');
+                    
+                    // Restore original content if it was modified
+                    let originalContent = $commaSpan.data('original-content');
+                    if (originalContent !== undefined) {
+                        $commaSpan.html(originalContent);
+                        $commaSpan.removeData('original-content');
+                    }
                 }
             }
         });
@@ -666,9 +723,13 @@ function updateDotVisibility($element, shouldShowDots, isCutMode) {
         if (isCutMode) {
             $element.addClass('cut-applicable');
             $element.attr('title', 'Click to apply cut rule');
+            // CRITICAL: Remove tensor-applicable class when switching to cut mode
+            $element.removeClass('tensor-applicable');
         } else {
             $element.addClass('tensor-applicable');
             $element.attr('title', 'Click to select context split for tensor rule');
+            // CRITICAL: Remove cut-applicable class when switching to tensor mode
+            $element.removeClass('cut-applicable');
         }
         
         // Replace content with just the dot (only for non-comma elements)

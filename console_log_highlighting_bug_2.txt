@@ -1,0 +1,645 @@
+This page is in Almost Standards Mode. Page layout may be impacted. For Standards Mode use “<!DOCTYPE html>”. localhost:3000
+Loading failed for the <script> with source “https://www.googletagmanager.com/gtag/js?id=G-6M0JK9PWN1”. localhost:3000:51:109
+DEBUG: Adding cut mode handler - isILLMode: true sequentPart: hyp sequent-core.js:126:17
+DEBUG: Calling addCutOnClick for first-point sequent-core.js:128:21
+DEBUG: addCutOnClick called for element: 
+Object { 0: span.first-point, length: 1 }
+ isFirst: true interaction.js:37:13
+DEBUG: Element classes when setting up cut handler: first-point interaction.js:38:13
+DEBUG: Setting up ILL first-point click handler sequent-core.js:136:21
+DEBUG: Setting up delayed refresh for ILL tensor dot visibility sequent-core.js:179:21
+DEBUG: Creating comma span for formula index 0 in hyp sequent-core.js:211:17
+DEBUG: Setting up comma interactions - isILLMode: true sequentPart: hyp sequent-core.js:220:21
+DEBUG: Calling addCutOnClick for comma span sequent-core.js:222:25
+DEBUG: addCutOnClick called for element: 
+Object { 0: span.comma, length: 1 }
+ isFirst: false interaction.js:37:13
+DEBUG: Element classes when setting up cut handler: comma interaction.js:38:13
+DEBUG: Creating comma span for formula index 1 in hyp sequent-core.js:211:17
+DEBUG: Setting up comma interactions - isILLMode: true sequentPart: hyp sequent-core.js:220:21
+DEBUG: Calling addCutOnClick for comma span sequent-core.js:222:25
+DEBUG: addCutOnClick called for element: 
+Object { 0: span.comma, length: 1 }
+ isFirst: false interaction.js:37:13
+DEBUG: Element classes when setting up cut handler: comma interaction.js:38:13
+DEBUG: Adding cut mode handler - isILLMode: true sequentPart: cons sequent-core.js:126:17
+DEBUG: NOT adding cut mode handler (ILL mode, not hyp) sequent-core.js:131:21
+DEBUG: Creating comma span for formula index 0 in cons sequent-core.js:211:17
+DEBUG: Setting up comma interactions - isILLMode: true sequentPart: cons sequent-core.js:220:21
+DEBUG: NOT adding cut mode handler for comma (ILL mode, not hyp) sequent-core.js:225:25
+=== DEBUG: ILL updateCommaVisibility called === ill-mode.js:506:17
+DEBUG: Comma span: 
+Object { 0: span.comma, length: 1 }
+ classes: comma ill-mode.js:507:17
+DEBUG: Current comma HTML: <empty string> ill-mode.js:508:17
+=== DEBUG: ILL updateCommaVisibility called === ill-mode.js:506:17
+DEBUG: Comma span: 
+Object { 0: span.comma, length: 1 }
+ classes: comma ill-mode.js:507:17
+DEBUG: Current comma HTML: <empty string> ill-mode.js:508:17
+=== DEBUG: toggleCutMode called === compatibility.js:554:13
+DEBUG: cutMode: false compatibility.js:555:13
+DEBUG: $container: 
+Object { 0: div#main-proof-container.proof-container, length: 1 }
+compatibility.js:556:13
+DEBUG: $mainDiv: 
+Object { 0: div.proof.intuitionistic-mode, length: 1, prevObject: {…} }
+compatibility.js:559:13
+DEBUG: $mainDiv classes before: proof intuitionistic-mode compatibility.js:560:13
+DEBUG: Removing cut-mode class compatibility.js:566:17
+DEBUG: $mainDiv classes after: proof intuitionistic-mode compatibility.js:570:13
+DEBUG: Cut mode enabled check: false compatibility.js:571:13
+DEBUG: ruleEngine: 
+Object { ruleSymbols: {…}, modeName: "intuitionistic" }
+compatibility.js:575:13
+DEBUG: ruleEngine mode: intuitionistic compatibility.js:576:13
+DEBUG: Calling refreshILLTensorDotVisibility compatibility.js:579:17
+=== DEBUG: refreshILLTensorDotVisibility called === compatibility.js:592:13
+DEBUG: ruleEngine: 
+Object { ruleSymbols: {…}, modeName: "intuitionistic" }
+compatibility.js:594:13
+DEBUG: ruleEngine mode: intuitionistic compatibility.js:595:13
+DEBUG: Cut mode enabled: false compatibility.js:604:13
+DEBUG: $proofDiv classes: proof intuitionistic-mode compatibility.js:605:13
+DEBUG: Looking for sequent tables in container compatibility.js:608:13
+DEBUG: Processing sequent table: 
+Object { 0: table, length: 1 }
+compatibility.js:611:17
+DEBUG: Sequent data: 
+Object { hyp: (2) […], cons: (1) […] }
+compatibility.js:615:17
+DEBUG: Tensor applicable: true compatibility.js:618:17
+DEBUG: Has multiple formulas: true hyp length: 2 compatibility.js:621:17
+DEBUG: Should show dots: true (tensor: true || cut: false ) compatibility.js:624:17
+DEBUG: Found first-point elements: 1 compatibility.js:628:17
+DEBUG: Processing first-point element: 
+Object { 0: span.first-point, length: 1 }
+ current HTML: <empty string> compatibility.js:631:21
+=== DEBUG: updateDotVisibility called === compatibility.js:747:13
+DEBUG: Element: 
+Object { 0: span.first-point, length: 1 }
+ classes: first-point compatibility.js:748:13
+DEBUG: shouldShowDots: true isCutMode: false compatibility.js:749:13
+DEBUG: Element current HTML: <empty string> compatibility.js:750:13
+DEBUG: Storing original content: <empty string> compatibility.js:768:21
+DEBUG: Setting tensor-applicable class and dot content compatibility.js:780:21
+DEBUG: Setting element HTML to dot compatibility.js:786:17
+DEBUG: Element HTML after setting dot: . compatibility.js:788:17
+=== DEBUG: updateDotVisibility finished === compatibility.js:805:13
+DEBUG: Found context formulas: 2 compatibility.js:640:17
+DEBUG: Last formula: 
+Object { 0: li, length: 1, prevObject: {…} }
+ has comma: true compatibility.js:645:21
+DEBUG: Processing last comma element: 
+Object { 0: span.comma, length: 1, prevObject: {…} }
+ current HTML: <empty string> compatibility.js:648:25
+DEBUG: Last comma classes: comma compatibility.js:649:25
+DEBUG: Tensor applicable: true compatibility.js:650:25
+DEBUG: Cut mode enabled: false compatibility.js:651:25
+DEBUG: Should show dots: true compatibility.js:652:25
+DEBUG: Last comma - will be handled by general comma loop below compatibility.js:669:29
+DEBUG: Processing comma 0 isLastFormula: false classes: comma compatibility.js:681:21
+DEBUG: Not cut mode - cleaning up comma 0 compatibility.js:705:25
+DEBUG: Non-last comma or no tensor - removing all classes compatibility.js:723:29
+DEBUG: Comma 0 after cleanup classes: comma compatibility.js:734:25
+DEBUG: Processing comma 1 isLastFormula: true classes: comma compatibility.js:681:21
+DEBUG: Not cut mode - cleaning up comma 1 compatibility.js:705:25
+DEBUG: Last comma should be handled by tensor mode - keeping tensor-applicable compatibility.js:711:29
+DEBUG: Triggering ILL mode re-evaluation for last comma compatibility.js:717:29
+=== DEBUG: ILL updateCommaVisibility called === ill-mode.js:506:17
+DEBUG: Comma span: 
+Object { 0: span.comma, length: 1 }
+ classes: comma tensor-applicable ill-mode.js:507:17
+DEBUG: Current comma HTML: <empty string> ill-mode.js:508:17
+DEBUG: Comma 1 after cleanup classes: comma tensor-applicable compatibility.js:734:25
+=== DEBUG: toggleCutMode finished === compatibility.js:584:13
+DEBUG: Adding cut mode handler - isILLMode: true sequentPart: hyp sequent-core.js:126:17
+DEBUG: Calling addCutOnClick for first-point sequent-core.js:128:21
+DEBUG: addCutOnClick called for element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+ isFirst: true interaction.js:37:13
+DEBUG: Element classes when setting up cut handler: first-point interaction.js:38:13
+DEBUG: Setting up ILL first-point click handler sequent-core.js:136:21
+DEBUG: Setting up delayed refresh for ILL tensor dot visibility sequent-core.js:179:21
+DEBUG: Creating comma span for formula index 0 in hyp sequent-core.js:211:17
+DEBUG: Setting up comma interactions - isILLMode: true sequentPart: hyp sequent-core.js:220:21
+DEBUG: Calling addCutOnClick for comma span sequent-core.js:222:25
+DEBUG: addCutOnClick called for element: 
+Object { 0: span.comma, length: 1 }
+ isFirst: false interaction.js:37:13
+DEBUG: Element classes when setting up cut handler: comma interaction.js:38:13
+DEBUG: Creating comma span for formula index 1 in hyp sequent-core.js:211:17
+DEBUG: Setting up comma interactions - isILLMode: true sequentPart: hyp sequent-core.js:220:21
+DEBUG: Calling addCutOnClick for comma span sequent-core.js:222:25
+DEBUG: addCutOnClick called for element: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+ isFirst: false interaction.js:37:13
+DEBUG: Element classes when setting up cut handler: comma interaction.js:38:13
+DEBUG: Adding cut mode handler - isILLMode: true sequentPart: cons sequent-core.js:126:17
+DEBUG: NOT adding cut mode handler (ILL mode, not hyp) sequent-core.js:131:21
+DEBUG: Creating comma span for formula index 0 in cons sequent-core.js:211:17
+DEBUG: Setting up comma interactions - isILLMode: true sequentPart: cons sequent-core.js:220:21
+DEBUG: NOT adding cut mode handler for comma (ILL mode, not hyp) sequent-core.js:225:25
+=== DEBUG: ILL updateCommaVisibility called === ill-mode.js:506:17
+DEBUG: Comma span: 
+Object { 0: span.comma, length: 1 }
+ classes: comma ill-mode.js:507:17
+DEBUG: Current comma HTML: <empty string> ill-mode.js:508:17
+=== DEBUG: ILL updateCommaVisibility called === ill-mode.js:506:17
+DEBUG: Comma span: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+ classes: comma ill-mode.js:507:17
+DEBUG: Current comma HTML: <empty string> ill-mode.js:508:17
+DEBUG: ILL updateCommaVisibility timeout executing ill-mode.js:523:21
+DEBUG: ILL mode - tensorApplicable: false hasMultipleHyp: undefined canSplit: false ill-mode.js:529:21
+DEBUG: ILL mode - cut mode enabled: false ill-mode.js:534:21
+DEBUG: ILL mode - currentIndex: 0 total li: 2 isLastComma: false ill-mode.js:546:21
+DEBUG: ILL tensor mode - cannot split, removing tensor functionality ill-mode.js:595:25
+DEBUG: ILL tensor - restoring original content: undefined current: <empty string> ill-mode.js:601:25
+DEBUG: ILL tensor - no restoration needed ill-mode.js:607:29
+DEBUG: ILL updateCommaVisibility timeout executing ill-mode.js:523:21
+DEBUG: ILL mode - tensorApplicable: false hasMultipleHyp: undefined canSplit: false ill-mode.js:529:21
+DEBUG: ILL mode - cut mode enabled: false ill-mode.js:534:21
+DEBUG: ILL mode - currentIndex: 1 total li: 2 isLastComma: true ill-mode.js:546:21
+DEBUG: ILL tensor mode - cannot split, removing tensor functionality ill-mode.js:595:25
+DEBUG: ILL tensor - restoring original content: undefined current: <empty string> ill-mode.js:601:25
+DEBUG: ILL tensor - no restoration needed ill-mode.js:607:29
+DEBUG: ILL updateCommaVisibility timeout executing ill-mode.js:523:21
+DEBUG: ILL mode - tensorApplicable: true hasMultipleHyp: true canSplit: true ill-mode.js:529:21
+DEBUG: ILL mode - cut mode enabled: false ill-mode.js:534:21
+DEBUG: ILL mode - currentIndex: 0 total li: 2 isLastComma: false ill-mode.js:546:21
+DEBUG: ILL tensor mode - can split context ill-mode.js:555:25
+DEBUG: ILL tensor mode - processing non-last comma ill-mode.js:579:29
+DEBUG: ILL tensor - non-last comma current: <empty string> stored: undefined ill-mode.js:583:29
+DEBUG: ILL updateCommaVisibility timeout executing ill-mode.js:523:21
+DEBUG: ILL mode - tensorApplicable: true hasMultipleHyp: true canSplit: true ill-mode.js:529:21
+DEBUG: ILL mode - cut mode enabled: false ill-mode.js:534:21
+DEBUG: ILL mode - currentIndex: 1 total li: 2 isLastComma: true ill-mode.js:546:21
+DEBUG: ILL tensor mode - can split context ill-mode.js:555:25
+DEBUG: ILL tensor mode - processing last comma for dot ill-mode.js:560:29
+DEBUG: ILL tensor - last comma current content: <empty string> ill-mode.js:563:29
+DEBUG: ILL tensor - stored original content: <empty string> ill-mode.js:568:33
+DEBUG: ILL tensor - setting last comma to dot ill-mode.js:573:33
+DEBUG: Delayed refresh executing sequent-core.js:181:25
+DEBUG: Found container: false sequent-core.js:183:25
+DEBUG: Delayed refresh executing sequent-core.js:181:25
+DEBUG: Found container: true sequent-core.js:183:25
+DEBUG: Calling refreshILLTensorDotVisibility from delayed refresh sequent-core.js:185:29
+=== DEBUG: refreshILLTensorDotVisibility called === compatibility.js:592:13
+DEBUG: ruleEngine: 
+Object { ruleSymbols: {…}, modeName: "intuitionistic" }
+compatibility.js:594:13
+DEBUG: ruleEngine mode: intuitionistic compatibility.js:595:13
+DEBUG: Cut mode enabled: false compatibility.js:604:13
+DEBUG: $proofDiv classes: proof intuitionistic-mode compatibility.js:605:13
+DEBUG: Looking for sequent tables in container compatibility.js:608:13
+DEBUG: Processing sequent table: 
+Object { 0: table, length: 1 }
+compatibility.js:611:17
+DEBUG: Sequent data: 
+Object { hyp: (2) […], cons: (1) […] }
+compatibility.js:615:17
+DEBUG: Tensor applicable: true compatibility.js:618:17
+DEBUG: Has multiple formulas: true hyp length: 2 compatibility.js:621:17
+DEBUG: Should show dots: true (tensor: true || cut: false ) compatibility.js:624:17
+DEBUG: Found first-point elements: 1 compatibility.js:628:17
+DEBUG: Processing first-point element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+ current HTML: <empty string> compatibility.js:631:21
+=== DEBUG: updateDotVisibility called === compatibility.js:747:13
+DEBUG: Element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+ classes: first-point compatibility.js:748:13
+DEBUG: shouldShowDots: true isCutMode: false compatibility.js:749:13
+DEBUG: Element current HTML: <empty string> compatibility.js:750:13
+DEBUG: Storing original content: <empty string> compatibility.js:768:21
+DEBUG: Setting tensor-applicable class and dot content compatibility.js:780:21
+DEBUG: Setting element HTML to dot compatibility.js:786:17
+DEBUG: Element HTML after setting dot: . compatibility.js:788:17
+=== DEBUG: updateDotVisibility finished === compatibility.js:805:13
+DEBUG: Found context formulas: 2 compatibility.js:640:17
+DEBUG: Last formula: 
+Object { 0: li, length: 1, prevObject: {…} }
+ has comma: true compatibility.js:645:21
+DEBUG: Processing last comma element: 
+Object { 0: span.comma.tensor-applicable, length: 1, prevObject: {…} }
+ current HTML: . compatibility.js:648:25
+DEBUG: Last comma classes: comma tensor-applicable compatibility.js:649:25
+DEBUG: Tensor applicable: true compatibility.js:650:25
+DEBUG: Cut mode enabled: false compatibility.js:651:25
+DEBUG: Should show dots: true compatibility.js:652:25
+DEBUG: Last comma - will be handled by general comma loop below compatibility.js:669:29
+DEBUG: Processing comma 0 isLastFormula: false classes: comma tensor-applicable compatibility.js:681:21
+DEBUG: Not cut mode - cleaning up comma 0 compatibility.js:705:25
+DEBUG: Non-last comma or no tensor - removing all classes compatibility.js:723:29
+DEBUG: Comma 0 after cleanup classes: comma compatibility.js:734:25
+DEBUG: Processing comma 1 isLastFormula: true classes: comma tensor-applicable compatibility.js:681:21
+DEBUG: Not cut mode - cleaning up comma 1 compatibility.js:705:25
+DEBUG: Last comma should be handled by tensor mode - keeping tensor-applicable compatibility.js:711:29
+DEBUG: Triggering ILL mode re-evaluation for last comma compatibility.js:717:29
+=== DEBUG: ILL updateCommaVisibility called === ill-mode.js:506:17
+DEBUG: Comma span: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+ classes: comma tensor-applicable ill-mode.js:507:17
+DEBUG: Current comma HTML: . ill-mode.js:508:17
+DEBUG: Comma 1 after cleanup classes: comma tensor-applicable compatibility.js:734:25
+=== DEBUG: refreshILLTensorDotVisibility called === compatibility.js:592:13
+DEBUG: ruleEngine: 
+Object { ruleSymbols: {…}, modeName: "intuitionistic" }
+compatibility.js:594:13
+DEBUG: ruleEngine mode: intuitionistic compatibility.js:595:13
+DEBUG: Cut mode enabled: false compatibility.js:604:13
+DEBUG: $proofDiv classes: proof intuitionistic-mode compatibility.js:605:13
+DEBUG: Looking for sequent tables in container compatibility.js:608:13
+DEBUG: Processing sequent table: 
+Object { 0: table, length: 1 }
+compatibility.js:611:17
+DEBUG: Sequent data: 
+Object { hyp: (2) […], cons: (1) […] }
+compatibility.js:615:17
+DEBUG: Tensor applicable: true compatibility.js:618:17
+DEBUG: Has multiple formulas: true hyp length: 2 compatibility.js:621:17
+DEBUG: Should show dots: true (tensor: true || cut: false ) compatibility.js:624:17
+DEBUG: Found first-point elements: 1 compatibility.js:628:17
+DEBUG: Processing first-point element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+ current HTML: . compatibility.js:631:21
+=== DEBUG: updateDotVisibility called === compatibility.js:747:13
+DEBUG: Element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+ classes: first-point tensor-applicable compatibility.js:748:13
+DEBUG: shouldShowDots: true isCutMode: false compatibility.js:749:13
+DEBUG: Element current HTML: . compatibility.js:750:13
+DEBUG: Original content already stored: <empty string> compatibility.js:771:21
+DEBUG: Setting tensor-applicable class and dot content compatibility.js:780:21
+DEBUG: Setting element HTML to dot compatibility.js:786:17
+DEBUG: Element HTML after setting dot: . compatibility.js:788:17
+=== DEBUG: updateDotVisibility finished === compatibility.js:805:13
+DEBUG: Found context formulas: 2 compatibility.js:640:17
+DEBUG: Last formula: 
+Object { 0: li, length: 1, prevObject: {…} }
+ has comma: true compatibility.js:645:21
+DEBUG: Processing last comma element: 
+Object { 0: span.comma.tensor-applicable, length: 1, prevObject: {…} }
+ current HTML: . compatibility.js:648:25
+DEBUG: Last comma classes: comma tensor-applicable compatibility.js:649:25
+DEBUG: Tensor applicable: true compatibility.js:650:25
+DEBUG: Cut mode enabled: false compatibility.js:651:25
+DEBUG: Should show dots: true compatibility.js:652:25
+DEBUG: Last comma - will be handled by general comma loop below compatibility.js:669:29
+DEBUG: Processing comma 0 isLastFormula: false classes: comma compatibility.js:681:21
+DEBUG: Not cut mode - cleaning up comma 0 compatibility.js:705:25
+DEBUG: Non-last comma or no tensor - removing all classes compatibility.js:723:29
+DEBUG: Comma 0 after cleanup classes: comma compatibility.js:734:25
+DEBUG: Processing comma 1 isLastFormula: true classes: comma tensor-applicable compatibility.js:681:21
+DEBUG: Not cut mode - cleaning up comma 1 compatibility.js:705:25
+DEBUG: Last comma should be handled by tensor mode - keeping tensor-applicable compatibility.js:711:29
+DEBUG: Triggering ILL mode re-evaluation for last comma compatibility.js:717:29
+=== DEBUG: ILL updateCommaVisibility called === ill-mode.js:506:17
+DEBUG: Comma span: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+ classes: comma tensor-applicable ill-mode.js:507:17
+DEBUG: Current comma HTML: . ill-mode.js:508:17
+DEBUG: Comma 1 after cleanup classes: comma tensor-applicable compatibility.js:734:25
+=== DEBUG: refreshILLTensorDotVisibility called === compatibility.js:592:13
+DEBUG: ruleEngine: 
+Object { ruleSymbols: {…}, modeName: "intuitionistic" }
+compatibility.js:594:13
+DEBUG: ruleEngine mode: intuitionistic compatibility.js:595:13
+DEBUG: Cut mode enabled: false compatibility.js:604:13
+DEBUG: $proofDiv classes: proof intuitionistic-mode compatibility.js:605:13
+DEBUG: Looking for sequent tables in container compatibility.js:608:13
+DEBUG: Processing sequent table: 
+Object { 0: table, length: 1 }
+compatibility.js:611:17
+DEBUG: Sequent data: 
+Object { hyp: (2) […], cons: (1) […] }
+compatibility.js:615:17
+DEBUG: Tensor applicable: true compatibility.js:618:17
+DEBUG: Has multiple formulas: true hyp length: 2 compatibility.js:621:17
+DEBUG: Should show dots: true (tensor: true || cut: false ) compatibility.js:624:17
+DEBUG: Found first-point elements: 1 compatibility.js:628:17
+DEBUG: Processing first-point element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+ current HTML: . compatibility.js:631:21
+=== DEBUG: updateDotVisibility called === compatibility.js:747:13
+DEBUG: Element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+ classes: first-point tensor-applicable compatibility.js:748:13
+DEBUG: shouldShowDots: true isCutMode: false compatibility.js:749:13
+DEBUG: Element current HTML: . compatibility.js:750:13
+DEBUG: Original content already stored: <empty string> compatibility.js:771:21
+DEBUG: Setting tensor-applicable class and dot content compatibility.js:780:21
+DEBUG: Setting element HTML to dot compatibility.js:786:17
+DEBUG: Element HTML after setting dot: . compatibility.js:788:17
+=== DEBUG: updateDotVisibility finished === compatibility.js:805:13
+DEBUG: Found context formulas: 2 compatibility.js:640:17
+DEBUG: Last formula: 
+Object { 0: li, length: 1, prevObject: {…} }
+ has comma: true compatibility.js:645:21
+DEBUG: Processing last comma element: 
+Object { 0: span.comma.tensor-applicable, length: 1, prevObject: {…} }
+ current HTML: . compatibility.js:648:25
+DEBUG: Last comma classes: comma tensor-applicable compatibility.js:649:25
+DEBUG: Tensor applicable: true compatibility.js:650:25
+DEBUG: Cut mode enabled: false compatibility.js:651:25
+DEBUG: Should show dots: true compatibility.js:652:25
+DEBUG: Last comma - will be handled by general comma loop below compatibility.js:669:29
+DEBUG: Processing comma 0 isLastFormula: false classes: comma compatibility.js:681:21
+DEBUG: Not cut mode - cleaning up comma 0 compatibility.js:705:25
+DEBUG: Non-last comma or no tensor - removing all classes compatibility.js:723:29
+DEBUG: Comma 0 after cleanup classes: comma compatibility.js:734:25
+DEBUG: Processing comma 1 isLastFormula: true classes: comma tensor-applicable compatibility.js:681:21
+DEBUG: Not cut mode - cleaning up comma 1 compatibility.js:705:25
+DEBUG: Last comma should be handled by tensor mode - keeping tensor-applicable compatibility.js:711:29
+DEBUG: Triggering ILL mode re-evaluation for last comma compatibility.js:717:29
+=== DEBUG: ILL updateCommaVisibility called === ill-mode.js:506:17
+DEBUG: Comma span: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+ classes: comma tensor-applicable ill-mode.js:507:17
+DEBUG: Current comma HTML: . ill-mode.js:508:17
+DEBUG: Comma 1 after cleanup classes: comma tensor-applicable compatibility.js:734:25
+DEBUG: ILL updateCommaVisibility timeout executing ill-mode.js:523:21
+DEBUG: ILL mode - tensorApplicable: true hasMultipleHyp: true canSplit: true ill-mode.js:529:21
+DEBUG: ILL mode - cut mode enabled: false ill-mode.js:534:21
+DEBUG: ILL mode - currentIndex: 1 total li: 2 isLastComma: true ill-mode.js:546:21
+DEBUG: ILL tensor mode - can split context ill-mode.js:555:25
+DEBUG: ILL tensor mode - processing last comma for dot ill-mode.js:560:29
+DEBUG: ILL tensor - last comma current content: . ill-mode.js:563:29
+DEBUG: ILL tensor - last comma already has dot ill-mode.js:576:33
+DEBUG: Mouse enter on cut element: 
+Object { 0: span.comma, length: 1 }
+interaction.js:42:17
+DEBUG: Element classes on hover: comma interaction.js:43:17
+DEBUG: Element HTML on hover: <empty string> interaction.js:44:17
+DEBUG: Cut mode enabled on hover: false interaction.js:47:17
+DEBUG: Mouse leave on cut element: 
+Object { 0: span.comma, length: 1 }
+interaction.js:51:17
+DEBUG: Mouse enter on cut element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+interaction.js:42:17
+DEBUG: Element classes on hover: first-point tensor-applicable interaction.js:43:17
+DEBUG: Element HTML on hover: . interaction.js:44:17
+DEBUG: Cut mode enabled on hover: false interaction.js:47:17
+DEBUG: Mouse leave on cut element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+interaction.js:51:17
+DEBUG: Mouse enter on cut element: 
+Object { 0: span.comma, length: 1 }
+interaction.js:42:17
+DEBUG: Element classes on hover: comma interaction.js:43:17
+DEBUG: Element HTML on hover: <empty string> interaction.js:44:17
+DEBUG: Cut mode enabled on hover: false interaction.js:47:17
+DEBUG: Mouse leave on cut element: 
+Object { 0: span.comma, length: 1 }
+interaction.js:51:17
+DEBUG: Mouse enter on cut element: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+interaction.js:42:17
+DEBUG: Element classes on hover: comma tensor-applicable interaction.js:43:17
+DEBUG: Element HTML on hover: . interaction.js:44:17
+DEBUG: Cut mode enabled on hover: false interaction.js:47:17
+DEBUG: Mouse leave on cut element: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+interaction.js:51:17
+DEBUG: Mouse enter on cut element: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+interaction.js:42:17
+DEBUG: Element classes on hover: comma tensor-applicable interaction.js:43:17
+DEBUG: Element HTML on hover: . interaction.js:44:17
+DEBUG: Cut mode enabled on hover: false interaction.js:47:17
+DEBUG: Mouse leave on cut element: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+interaction.js:51:17
+=== DEBUG: toggleCutMode called === compatibility.js:554:13
+DEBUG: cutMode: true compatibility.js:555:13
+DEBUG: $container: 
+Object { 0: div#main-proof-container.proof-container, length: 1 }
+compatibility.js:556:13
+DEBUG: $mainDiv: 
+Object { 0: div.proof.intuitionistic-mode, length: 1, prevObject: {…} }
+compatibility.js:559:13
+DEBUG: $mainDiv classes before: proof intuitionistic-mode compatibility.js:560:13
+DEBUG: Adding cut-mode class compatibility.js:563:17
+DEBUG: $mainDiv classes after: proof intuitionistic-mode cut-mode compatibility.js:570:13
+DEBUG: Cut mode enabled check: true compatibility.js:571:13
+DEBUG: ruleEngine: 
+Object { ruleSymbols: {…}, modeName: "intuitionistic" }
+compatibility.js:575:13
+DEBUG: ruleEngine mode: intuitionistic compatibility.js:576:13
+DEBUG: Calling refreshILLTensorDotVisibility compatibility.js:579:17
+=== DEBUG: refreshILLTensorDotVisibility called === compatibility.js:592:13
+DEBUG: ruleEngine: 
+Object { ruleSymbols: {…}, modeName: "intuitionistic" }
+compatibility.js:594:13
+DEBUG: ruleEngine mode: intuitionistic compatibility.js:595:13
+DEBUG: Cut mode enabled: true compatibility.js:604:13
+DEBUG: $proofDiv classes: proof intuitionistic-mode cut-mode compatibility.js:605:13
+DEBUG: Looking for sequent tables in container compatibility.js:608:13
+DEBUG: Processing sequent table: 
+Object { 0: table, length: 1 }
+compatibility.js:611:17
+DEBUG: Sequent data: 
+Object { hyp: (2) […], cons: (1) […] }
+compatibility.js:615:17
+DEBUG: Tensor applicable: true compatibility.js:618:17
+DEBUG: Has multiple formulas: true hyp length: 2 compatibility.js:621:17
+DEBUG: Should show dots: true (tensor: true || cut: true ) compatibility.js:624:17
+DEBUG: Found first-point elements: 1 compatibility.js:628:17
+DEBUG: Processing first-point element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+ current HTML: . compatibility.js:631:21
+=== DEBUG: updateDotVisibility called === compatibility.js:747:13
+DEBUG: Element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+ classes: first-point tensor-applicable compatibility.js:748:13
+DEBUG: shouldShowDots: true isCutMode: true compatibility.js:749:13
+DEBUG: Element current HTML: . compatibility.js:750:13
+DEBUG: Original content already stored: <empty string> compatibility.js:771:21
+DEBUG: Setting cut-applicable class and dot content compatibility.js:776:21
+DEBUG: Setting element HTML to dot compatibility.js:786:17
+DEBUG: Element HTML after setting dot: . compatibility.js:788:17
+=== DEBUG: updateDotVisibility finished === compatibility.js:805:13
+DEBUG: Found context formulas: 2 compatibility.js:640:17
+DEBUG: Last formula: 
+Object { 0: li, length: 1, prevObject: {…} }
+ has comma: true compatibility.js:645:21
+DEBUG: Processing last comma element: 
+Object { 0: span.comma.tensor-applicable, length: 1, prevObject: {…} }
+ current HTML: . compatibility.js:648:25
+DEBUG: Last comma classes: comma tensor-applicable compatibility.js:649:25
+DEBUG: Tensor applicable: true compatibility.js:650:25
+DEBUG: Cut mode enabled: true compatibility.js:651:25
+DEBUG: Should show dots: true compatibility.js:652:25
+DEBUG: Cut mode active - last comma should show dot for cut rule compatibility.js:656:29
+DEBUG: Last comma set to dot for cut mode compatibility.js:665:29
+DEBUG: Last comma final classes: comma tensor-applicable cut-applicable compatibility.js:666:29
+DEBUG: Last comma computed styles: 
+CSS2Properties(370) { "accent-color" → "auto", "align-content" → "normal", "align-items" → "normal", "align-self" → "auto", "animation-composition" → "replace", "animation-delay" → "0s", "animation-direction" → "normal", "animation-duration" → "0s", "animation-fill-mode" → "none", "animation-iteration-count" → "1", … }
+compatibility.js:667:29
+DEBUG: Processing comma 0 isLastFormula: false classes: comma compatibility.js:681:21
+DEBUG: Cut mode - adding cut-applicable to comma 0 compatibility.js:684:25
+DEBUG: Non-last comma remains empty but cut-applicable compatibility.js:697:29
+DEBUG: Comma 0 final classes: comma cut-applicable compatibility.js:703:25
+DEBUG: Processing comma 1 isLastFormula: true classes: comma tensor-applicable cut-applicable compatibility.js:681:21
+DEBUG: Cut mode - adding cut-applicable to comma 1 compatibility.js:684:25
+DEBUG: Setting last comma to show dot compatibility.js:691:29
+DEBUG: Comma 1 final classes: comma tensor-applicable cut-applicable compatibility.js:703:25
+=== DEBUG: toggleCutMode finished === compatibility.js:584:13
+=== DEBUG: toggleCutMode called === compatibility.js:554:13
+DEBUG: cutMode: false compatibility.js:555:13
+DEBUG: $container: 
+Object { 0: div#main-proof-container.proof-container, length: 1 }
+compatibility.js:556:13
+DEBUG: $mainDiv: 
+Object { 0: div.proof.intuitionistic-mode, length: 1, prevObject: {…} }
+compatibility.js:559:13
+DEBUG: $mainDiv classes before: proof intuitionistic-mode cut-mode compatibility.js:560:13
+DEBUG: Removing cut-mode class compatibility.js:566:17
+DEBUG: $mainDiv classes after: proof intuitionistic-mode compatibility.js:570:13
+DEBUG: Cut mode enabled check: false compatibility.js:571:13
+DEBUG: ruleEngine: 
+Object { ruleSymbols: {…}, modeName: "intuitionistic" }
+compatibility.js:575:13
+DEBUG: ruleEngine mode: intuitionistic compatibility.js:576:13
+DEBUG: Calling refreshILLTensorDotVisibility compatibility.js:579:17
+=== DEBUG: refreshILLTensorDotVisibility called === compatibility.js:592:13
+DEBUG: ruleEngine: 
+Object { ruleSymbols: {…}, modeName: "intuitionistic" }
+compatibility.js:594:13
+DEBUG: ruleEngine mode: intuitionistic compatibility.js:595:13
+DEBUG: Cut mode enabled: false compatibility.js:604:13
+DEBUG: $proofDiv classes: proof intuitionistic-mode compatibility.js:605:13
+DEBUG: Looking for sequent tables in container compatibility.js:608:13
+DEBUG: Processing sequent table: 
+Object { 0: table, length: 1 }
+compatibility.js:611:17
+DEBUG: Sequent data: 
+Object { hyp: (2) […], cons: (1) […] }
+compatibility.js:615:17
+DEBUG: Tensor applicable: true compatibility.js:618:17
+DEBUG: Has multiple formulas: true hyp length: 2 compatibility.js:621:17
+DEBUG: Should show dots: true (tensor: true || cut: false ) compatibility.js:624:17
+DEBUG: Found first-point elements: 1 compatibility.js:628:17
+DEBUG: Processing first-point element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+ current HTML: . compatibility.js:631:21
+=== DEBUG: updateDotVisibility called === compatibility.js:747:13
+DEBUG: Element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+ classes: first-point tensor-applicable cut-applicable compatibility.js:748:13
+DEBUG: shouldShowDots: true isCutMode: false compatibility.js:749:13
+DEBUG: Element current HTML: . compatibility.js:750:13
+DEBUG: Original content already stored: <empty string> compatibility.js:771:21
+DEBUG: Setting tensor-applicable class and dot content compatibility.js:780:21
+DEBUG: Setting element HTML to dot compatibility.js:786:17
+DEBUG: Element HTML after setting dot: . compatibility.js:788:17
+=== DEBUG: updateDotVisibility finished === compatibility.js:805:13
+DEBUG: Found context formulas: 2 compatibility.js:640:17
+DEBUG: Last formula: 
+Object { 0: li, length: 1, prevObject: {…} }
+ has comma: true compatibility.js:645:21
+DEBUG: Processing last comma element: 
+Object { 0: span.comma.tensor-applicable, length: 1, prevObject: {…} }
+ current HTML: . compatibility.js:648:25
+DEBUG: Last comma classes: comma tensor-applicable cut-applicable compatibility.js:649:25
+DEBUG: Tensor applicable: true compatibility.js:650:25
+DEBUG: Cut mode enabled: false compatibility.js:651:25
+DEBUG: Should show dots: true compatibility.js:652:25
+DEBUG: Last comma - will be handled by general comma loop below compatibility.js:669:29
+DEBUG: Processing comma 0 isLastFormula: false classes: comma cut-applicable compatibility.js:681:21
+DEBUG: Not cut mode - cleaning up comma 0 compatibility.js:705:25
+DEBUG: Non-last comma or no tensor - removing all classes compatibility.js:723:29
+DEBUG: Comma 0 after cleanup classes: comma compatibility.js:734:25
+DEBUG: Processing comma 1 isLastFormula: true classes: comma tensor-applicable cut-applicable compatibility.js:681:21
+DEBUG: Not cut mode - cleaning up comma 1 compatibility.js:705:25
+DEBUG: Last comma should be handled by tensor mode - keeping tensor-applicable compatibility.js:711:29
+DEBUG: Triggering ILL mode re-evaluation for last comma compatibility.js:717:29
+=== DEBUG: ILL updateCommaVisibility called === ill-mode.js:506:17
+DEBUG: Comma span: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+ classes: comma tensor-applicable ill-mode.js:507:17
+DEBUG: Current comma HTML: . ill-mode.js:508:17
+DEBUG: Comma 1 after cleanup classes: comma tensor-applicable compatibility.js:734:25
+=== DEBUG: toggleCutMode finished === compatibility.js:584:13
+DEBUG: ILL updateCommaVisibility timeout executing ill-mode.js:523:21
+DEBUG: ILL mode - tensorApplicable: true hasMultipleHyp: true canSplit: true ill-mode.js:529:21
+DEBUG: ILL mode - cut mode enabled: false ill-mode.js:534:21
+DEBUG: ILL mode - currentIndex: 1 total li: 2 isLastComma: true ill-mode.js:546:21
+DEBUG: ILL tensor mode - can split context ill-mode.js:555:25
+DEBUG: ILL tensor mode - processing last comma for dot ill-mode.js:560:29
+DEBUG: ILL tensor - last comma current content: . ill-mode.js:563:29
+DEBUG: ILL tensor - last comma already has dot ill-mode.js:576:33
+DEBUG: Mouse enter on cut element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+interaction.js:42:17
+DEBUG: Element classes on hover: first-point tensor-applicable cut-applicable interaction.js:43:17
+DEBUG: Element HTML on hover: . interaction.js:44:17
+DEBUG: Cut mode enabled on hover: false interaction.js:47:17
+DEBUG: Mouse leave on cut element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+interaction.js:51:17
+DEBUG: Mouse enter on cut element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+interaction.js:42:17
+DEBUG: Element classes on hover: first-point tensor-applicable cut-applicable interaction.js:43:17
+DEBUG: Element HTML on hover: . interaction.js:44:17
+DEBUG: Cut mode enabled on hover: false interaction.js:47:17
+DEBUG: Mouse leave on cut element: 
+Object { 0: span.first-point.tensor-applicable.cut-applicable, length: 1 }
+interaction.js:51:17
+DEBUG: Mouse enter on cut element: 
+Object { 0: span.comma, length: 1 }
+interaction.js:42:17
+DEBUG: Element classes on hover: comma interaction.js:43:17
+DEBUG: Element HTML on hover: <empty string> interaction.js:44:17
+DEBUG: Cut mode enabled on hover: false interaction.js:47:17
+DEBUG: Mouse leave on cut element: 
+Object { 0: span.comma, length: 1 }
+interaction.js:51:17
+DEBUG: Mouse enter on cut element: 
+Object { 0: span.comma, length: 1 }
+interaction.js:42:17
+DEBUG: Element classes on hover: comma interaction.js:43:17
+DEBUG: Element HTML on hover: <empty string> interaction.js:44:17
+DEBUG: Cut mode enabled on hover: false interaction.js:47:17
+DEBUG: Mouse leave on cut element: 
+Object { 0: span.comma, length: 1 }
+interaction.js:51:17
+DEBUG: Mouse enter on cut element: 
+Object { 0: span.comma, length: 1 }
+interaction.js:42:17
+DEBUG: Element classes on hover: comma interaction.js:43:17
+DEBUG: Element HTML on hover: <empty string> interaction.js:44:17
+DEBUG: Cut mode enabled on hover: false interaction.js:47:17
+DEBUG: Mouse leave on cut element: 
+Object { 0: span.comma, length: 1 }
+interaction.js:51:17
+DEBUG: Mouse enter on cut element: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+interaction.js:42:17
+DEBUG: Element classes on hover: comma tensor-applicable interaction.js:43:17
+DEBUG: Element HTML on hover: . interaction.js:44:17
+DEBUG: Cut mode enabled on hover: false interaction.js:47:17
+DEBUG: Mouse leave on cut element: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+interaction.js:51:17
+DEBUG: Mouse enter on cut element: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+interaction.js:42:17
+DEBUG: Element classes on hover: comma tensor-applicable interaction.js:43:17
+DEBUG: Element HTML on hover: . interaction.js:44:17
+DEBUG: Cut mode enabled on hover: false interaction.js:47:17
+DEBUG: Mouse leave on cut element: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+interaction.js:51:17
+DEBUG: Mouse enter on cut element: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+interaction.js:42:17
+DEBUG: Element classes on hover: comma tensor-applicable interaction.js:43:17
+DEBUG: Element HTML on hover: . interaction.js:44:17
+DEBUG: Cut mode enabled on hover: false interaction.js:47:17
+DEBUG: Mouse leave on cut element: 
+Object { 0: span.comma.tensor-applicable, length: 1 }
+interaction.js:51:17
