@@ -153,7 +153,8 @@ function onAjaxError(jqXHR, textStatus, errorThrown) {
  * @return {Object} Appropriate transformation options object
  */
 function getTransformOptions(isIllMode) {
-    return isIllMode ? ILL_TRANSFORM_OPTIONS : TRANSFORM_OPTIONS;
+    let options = isIllMode ? ILL_TRANSFORM_OPTIONS : TRANSFORM_OPTIONS;
+    return options;
 }
 
 /**
@@ -417,7 +418,6 @@ function applyTransformation($sequentTable, transformRequest) {
 
     // Use appropriate endpoint based on mode
     let transformationUrl = isIllMode ? '/apply_ill_transformation' : '/apply_transformation';
-
     $.ajax({
         type: 'POST',
         url: transformationUrl,
@@ -439,8 +439,13 @@ function applyTransformation($sequentTable, transformRequest) {
             // Get the rule engine from container
             let ruleEngine = $container.data('ruleEngine');
             
-            // Rebuild the proof
-            createSubProof(data['proof'], $sequentContainer, options, ruleEngine);
+            // Rebuild the proof - handle both LL and ILL response formats
+            let proofData = data['proof'] || data['illProof'];
+            if (!proofData) {
+                console.error('[ERROR] No proof data found in response:', data);
+                return;
+            }
+            createSubProof(proofData, $sequentContainer, options, ruleEngine);
             
             // Re-enable transformation mode and reload with options
             if (wasTransformationMode && options.proofTransformation) {
@@ -851,7 +856,6 @@ function reloadProofWithTransformationOptions($container, options) {
         contentType: 'application/json; charset=utf-8',
         data: compressJson(JSON.stringify({ proof, notations })),
         success: function(data) {
-            
             // Disable interaction mode for transformation mode
             options.withInteraction = false;
             
@@ -859,7 +863,6 @@ function reloadProofWithTransformationOptions($container, options) {
             let proofWithOptions = isIllMode ? 
                 data['illProofWithTransformationOptions'] : 
                 data['proofWithTransformationOptions'];
-            
             
             // Reload the proof with transformation options
             reloadProof($container, proofWithOptions, options);

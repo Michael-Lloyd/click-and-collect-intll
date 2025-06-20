@@ -15,45 +15,47 @@ exception ILL_Pedagogic_exception of string
    @param cut_formula_position - Position of cut formula in context  
    @param proof - Left premise proof
    @return (bool * string) - (can_commute, reason) *)
-let can_commute_with_cut_left cut_formula_position = function
-    | ILL_Axiom_proof _ -> true, "Eliminate ax-cut"
+let can_commute_with_cut_left _cut_formula_position = function
+    | ILL_Axiom_proof _ -> 
+        true, "Eliminate ax-cut"
+    | ILL_Hypothesis_proof _ ->
+        true, "Eliminate hypothesis-cut"
     | ILL_One_proof -> true, "Eliminate 1-cut"
-    | ILL_Top_proof context when cut_formula_position <> List.length context -> 
+    | ILL_Top_proof _ -> 
         true, "Commute with ⊤ rule"
-    | ILL_Tensor_proof (context, formula1, formula2, left_premise, right_premise) when cut_formula_position <> List.length context -> 
+    | ILL_Tensor_proof (_, formula1, formula2, left_premise, right_premise) -> 
         let _ = (formula1, formula2, left_premise, right_premise) in  (* TODO: Use for advanced commutation *)
         true, "Commute with ⊗ rule"
-    | ILL_Tensor_left_proof (context, formula1, formula2, premise) when cut_formula_position <> List.length context -> 
+    | ILL_Tensor_left_proof (_, formula1, formula2, premise) -> 
         let _ = (formula1, formula2, premise) in  (* TODO: Use for advanced commutation *)
         true, "Commute with ⊗L rule"
-    | ILL_With_left_1_proof (context, with_formula, premise) when cut_formula_position <> List.length context -> 
+    | ILL_With_left_1_proof (_, with_formula, premise) -> 
         let _ = (with_formula, premise) in  (* TODO: Use for advanced commutation *)
         true, "Commute with &L₁ rule"
-    | ILL_With_left_2_proof (context, with_formula, premise) when cut_formula_position <> List.length context -> 
+    | ILL_With_left_2_proof (_, with_formula, premise) -> 
         let _ = (with_formula, premise) in  (* TODO: Use for advanced commutation *)
         true, "Commute with &L₂ rule"
-    | ILL_With_right_proof (context, formula1, formula2, left_premise, right_premise) when cut_formula_position <> List.length context -> 
+    | ILL_With_right_proof (_, formula1, formula2, left_premise, right_premise) -> 
         let _ = (formula1, formula2, left_premise, right_premise) in  (* TODO: Use for advanced commutation *)
         true, "Commute with &R rule"
-    | ILL_Plus_left_proof (context, formula1, formula2, left_premise, right_premise) when cut_formula_position <> List.length context -> 
+    | ILL_Plus_left_proof (_, formula1, formula2, left_premise, right_premise) -> 
         let _ = (formula1, formula2, left_premise, right_premise) in  (* TODO: Use for advanced commutation *)
         true, "Commute with ⊕L rule"
-    | ILL_Plus_right_1_proof (context, formula1, formula2, premise) when cut_formula_position <> List.length context -> 
+    | ILL_Plus_right_1_proof (_, formula1, formula2, premise) -> 
         let _ = (formula1, formula2, premise) in  (* TODO: Use for advanced commutation *)
         true, "Commute with ⊕₁ rule"
-    | ILL_Plus_right_2_proof (context, formula1, formula2, premise) when cut_formula_position <> List.length context -> 
+    | ILL_Plus_right_2_proof (_, formula1, formula2, premise) -> 
         let _ = (formula1, formula2, premise) in  (* TODO: Use for advanced commutation *)
         true, "Commute with ⊕₂ rule"
-    | ILL_Lollipop_proof (context, antecedent, consequent, premise) when cut_formula_position <> List.length context -> 
+    | ILL_Lollipop_proof (_, antecedent, consequent, premise) -> 
         let _ = (antecedent, consequent, premise) in  (* TODO: Use for advanced commutation *)
         true, "Commute with ⊸ rule"
-    | ILL_Lollipop_left_proof (context, antecedent, consequent, left_premise, right_premise) when cut_formula_position <> List.length context -> 
+    | ILL_Lollipop_left_proof (_, antecedent, consequent, left_premise, right_premise) -> 
         let _ = (antecedent, consequent, left_premise, right_premise) in  (* TODO: Use for advanced commutation *)
         true, "Commute with ⊸L rule"
     | ILL_Cut_proof (head_context, cut_formula, tail_context, left_premise, right_premise) -> 
         let _ = (head_context, cut_formula, tail_context, left_premise, right_premise) in  (* TODO: Use for advanced cut commutation *)
         true, "Commute with cut rule"
-    | _ -> false, "Cannot commute with rule"
 
 (* Check if we can commute a cut with the right premise in ILL.
    @param cut_context - Context where cut formula is inserted
@@ -61,21 +63,46 @@ let can_commute_with_cut_left cut_formula_position = function
    @return (bool * string) - (can_commute, reason) *)
 let can_commute_with_cut_right cut_context = function
     | ILL_Axiom_proof _ -> true, "Eliminate ax-cut"
+    | ILL_Hypothesis_proof _ -> true, "Eliminate hypothesis-cut"
     | ILL_One_proof -> true, "Eliminate 1-cut"
     | ILL_Top_proof _ -> true, "Commute with ⊤ rule"
-    | ILL_Tensor_left_proof (context, _, _, _) when not (List.mem (List.hd cut_context) context) -> 
+    | ILL_Tensor_left_proof (context, _, _, _) when 
+        (match cut_context with [] -> true | cut_formula :: _ -> not (List.mem cut_formula context)) -> 
         true, "Commute with ⊗L rule"
-    | ILL_With_left_1_proof (context, _, _) when not (List.mem (List.hd cut_context) context) -> 
+    | ILL_With_left_1_proof (context, _, _) when 
+        (match cut_context with [] -> true | cut_formula :: _ -> not (List.mem cut_formula context)) -> 
         true, "Commute with &L₁ rule"
-    | ILL_With_left_2_proof (context, _, _) when not (List.mem (List.hd cut_context) context) -> 
+    | ILL_With_left_2_proof (context, _, _) when 
+        (match cut_context with [] -> true | cut_formula :: _ -> not (List.mem cut_formula context)) -> 
         true, "Commute with &L₂ rule"
-    | ILL_Plus_left_proof (context, _, _, _, _) when not (List.mem (List.hd cut_context) context) -> 
+    | ILL_Plus_left_proof (context, _, _, _, _) when 
+        (match cut_context with [] -> true | cut_formula :: _ -> not (List.mem cut_formula context)) -> 
         true, "Commute with ⊕L rule"
-    | ILL_Lollipop_left_proof (context, _, _, _, _) when not (List.mem (List.hd cut_context) context) -> 
+    | ILL_Lollipop_left_proof (context, _, _, _, _) when 
+        (match cut_context with [] -> true | cut_formula :: _ -> not (List.mem cut_formula context)) -> 
         true, "Commute with ⊸L rule"
     | ILL_Cut_proof (_, _, _, _, _) -> 
         true, "Commute with cut rule"
-    | _ -> false, "Cannot commute with rule"
+    | ILL_Tensor_left_proof (_, _, _, _) -> 
+        false, "Cannot commute with ⊗L rule due to context conflict"
+    | ILL_With_left_1_proof (_, _, _) -> 
+        false, "Cannot commute with &L₁ rule due to context conflict"
+    | ILL_With_left_2_proof (_, _, _) -> 
+        false, "Cannot commute with &L₂ rule due to context conflict"
+    | ILL_Plus_left_proof (_, _, _, _, _) -> 
+        false, "Cannot commute with ⊕L rule due to context conflict"
+    | ILL_Lollipop_left_proof (_, _, _, _, _) -> 
+        false, "Cannot commute with ⊸L rule due to context conflict"
+    | ILL_Tensor_proof (_, _, _, _, _) -> 
+        false, "Cannot commute with ⊗R rule on right side"
+    | ILL_With_right_proof (_, _, _, _, _) -> 
+        false, "Cannot commute with &R rule on right side"
+    | ILL_Plus_right_1_proof (_, _, _, _) -> 
+        false, "Cannot commute with ⊕₁ rule on right side"
+    | ILL_Plus_right_2_proof (_, _, _, _) -> 
+        false, "Cannot commute with ⊕₂ rule on right side"
+    | ILL_Lollipop_proof (_, _, _, _) -> 
+        false, "Cannot commute with ⊸R rule on right side"
 
 (* Check if we can eliminate a key case in ILL cut elimination.
    Key cases occur when the cut formula is the principal formula of both premises.
@@ -109,6 +136,14 @@ let can_cut_key_case left_proof right_proof = match left_proof, right_proof with
         when f1 = g1 && f2 = g2 -> 
         true, "Eliminate ⊸/⊸L key-case"
     
+    (* Axiom key-case: when cut formula matches axiom on both sides *)
+    | ILL_Axiom_proof atom1, ILL_Axiom_proof atom2 when atom1 = atom2 ->
+        true, "Eliminate axiom-axiom key-case"
+    
+    (* Hypothesis key-case: when both sides are hypothesis proofs *)
+    | ILL_Hypothesis_proof _, ILL_Hypothesis_proof _ ->
+        true, "Eliminate hypothesis-hypothesis key-case"
+    
     | _ -> false, "No key-case available"
 
 (* Get available transformation options for an ILL proof node.
@@ -132,7 +167,8 @@ let get_transform_options = function
          ILL_Eliminate_cut_right, (commute_right, commute_right_msg ^ " on the right");
          ILL_Eliminate_cut_full, (cut_full, "Fully eliminate this cut")]
     
-    | _ -> []
+    | _ -> 
+        []
 
 (* Convert transformation options to JSON format for frontend.
    @param proof - ILL proof to analyze
@@ -241,6 +277,10 @@ let rec expand_axiom_full proof =
 let eliminate_cut_left = function
     | ILL_Cut_proof (head_ctx, cut_formula, tail_ctx, left_proof, right_proof) ->
         (match left_proof with
+         | ILL_Hypothesis_proof left_sequent when left_sequent.goal = cut_formula ->
+             (* Hypothesis-cut elimination: left proves cut formula, return right proof *)
+             right_proof
+         
          | ILL_Axiom_proof atom when cut_formula = Litt atom ->
              (* Axiom-cut elimination: just return the right proof with context *)
              right_proof
@@ -294,6 +334,16 @@ let eliminate_cut_left = function
 let eliminate_cut_right = function
     | ILL_Cut_proof (head_ctx, cut_formula, tail_ctx, left_proof, right_proof) ->
         (match right_proof with
+         | ILL_Hypothesis_proof right_sequent when List.mem cut_formula right_sequent.context ->
+             (* Hypothesis-cut elimination on right: right uses cut formula in context *)
+             (* Create new hypothesis with cut formula removed from context and left context added *)
+             let new_context = List.filter (fun f -> f <> cut_formula) right_sequent.context in
+             let left_context = match left_proof with
+                 | ILL_Hypothesis_proof left_seq -> left_seq.context
+                 | _ -> [] in
+             let final_context = head_ctx @ left_context @ new_context @ tail_ctx in
+             ILL_Hypothesis_proof { context = final_context; goal = right_sequent.goal }
+         
          | ILL_Tensor_left_proof (tensor_left_context, f1, f2, premise) when cut_formula = Tensor (f1, f2) ->
              let _ = tensor_left_context in  (* TODO: Use context for more precise cut elimination *)
              (* Tensor-left commutation with cut *)
@@ -625,6 +675,19 @@ let eliminate_cut_key_case = function
              (* Connect lollipop premises *)
              let cut1 = ILL_Cut_proof (head_ctx, f1, [], premise1, p1) in
              ILL_Cut_proof (head_ctx, f2, tail_ctx, cut1, premise2)
+         
+         (* Hypothesis-hypothesis key case: both sides are incomplete proofs *)
+         | ILL_Hypothesis_proof left_seq, ILL_Hypothesis_proof right_seq 
+             when left_seq.goal = cut_formula && List.mem cut_formula right_seq.context ->
+             (* Replace ONE occurrence of cut_formula in right context with left context *)
+             let rec substitute_first target replacement = function
+                 | [] -> []
+                 | h :: t when h = target -> replacement @ t
+                 | h :: t -> h :: substitute_first target replacement t
+             in
+             (* The right context already includes the cut formula, so just substitute within it *)
+             let final_context = substitute_first cut_formula left_seq.context right_seq.context in
+             ILL_Hypothesis_proof { context = final_context; goal = right_seq.goal }
          
          | _ -> 
              raise (ILL_Transform_exception "No key-case available for this cut"))
