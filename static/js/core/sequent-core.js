@@ -90,14 +90,33 @@ function createFormulaList(sequent, sequentPart, $sequentDiv, options, ruleEngin
             start: function(e, ui) {
                 ui.placeholder.width(ui.item.width());
             },
+            update: function(e, ui) {
+                // Immediate refresh on position change for better responsiveness
+                let isILLMode = ruleEngine && ruleEngine.getModeName() === 'intuitionistic';
+                if (isILLMode && sequentPart === 'hyp') {
+                    let $container = $ul.closest('.proof-container');
+                    let ruleEngineInstance = $container.data('ruleEngine');
+                    if (ruleEngineInstance && typeof ruleEngineInstance.refreshAllCommaVisibility === 'function') {
+                        // Small delay to let DOM settle
+                        setTimeout(() => {
+                            ruleEngineInstance.refreshAllCommaVisibility($ul);
+                        }, 50);
+                    }
+                }
+            },
             stop: function(e, ui) {
                 // Check if we're in ILL mode and this is the context side
                 let isILLMode = ruleEngine && ruleEngine.getModeName() === 'intuitionistic';
                 if (isILLMode && sequentPart === 'hyp') {
                     let $container = $ul.closest('.proof-container');
+                    // Call our enhanced comma refresh first, then the general refresh
+                    let ruleEngineInstance = $container.data('ruleEngine');
+                    if (ruleEngineInstance && typeof ruleEngineInstance.refreshAllCommaVisibility === 'function') {
+                        ruleEngineInstance.refreshAllCommaVisibility($ul);
+                    }
                     setTimeout(() => {
                         refreshILLTensorDotVisibility($container);
-                    }, 100);
+                    }, 150); // Slightly longer delay to let our refresh complete first
                 }
             }
         });
@@ -125,7 +144,9 @@ function createFormulaList(sequent, sequentPart, $sequentDiv, options, ruleEngin
                 let $sequentTable = $firstPoint.closest('table');
                 
                 // Check if tensor rule is applicable
-                if (ruleEngine && ruleEngine.isTensorRuleApplicable && ruleEngine.isTensorRuleApplicable($sequentTable)) {
+                let tensorApplicable = ruleEngine && ruleEngine.isTensorRuleApplicable && ruleEngine.isTensorRuleApplicable($sequentTable);
+                
+                if (tensorApplicable) {
                     // Enter comma selection mode with empty Gamma (position 0)
                     ruleEngine.enterCommaSelectionMode($sequentTable, 0);
                 }

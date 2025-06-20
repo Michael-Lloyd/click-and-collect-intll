@@ -49,9 +49,11 @@ function addCutOnClick($element, isFirst) {
                     let $formulaItems = $ul.children('li');
                     formulaPosition = $formulaItems.index($li) + 1;
                 }
+                
                 let ruleRequest = { rule: 'cut', formula, formulaPosition };
                 
                 let ruleEngine = $container.data('ruleEngine');
+                
                 if (ruleEngine) {
                     ruleEngine.applyRuleToSequent(ruleRequest, $sequentTable);
                 } else {

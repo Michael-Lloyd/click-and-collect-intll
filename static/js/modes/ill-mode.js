@@ -442,11 +442,9 @@ class ILLRuleEngine extends RuleEngine {
      * @param {Object} options - Display options
      */
     setupCommaInteraction($commaSpan, $li, options) {
-        
         // Check if this comma is in the context (left side)
         let $formulaList = $li.closest('ul');
         let isLeftSide = $formulaList.hasClass('hyp');
-        
         
         if (!isLeftSide) {
             return; // Comma selection only applies to context formulas
@@ -454,7 +452,11 @@ class ILLRuleEngine extends RuleEngine {
         
         // Set up dynamic comma visibility based on tensor rule applicability
         let $sequentTable = $li.closest('table');
-        this.updateCommaVisibility($commaSpan, $sequentTable, options);
+        
+        // Only proceed if we found a valid table
+        if ($sequentTable.length > 0) {
+            this.updateCommaVisibility($commaSpan, $sequentTable, options);
+        }
         
         // Also trigger refresh for immediate visibility
         setTimeout(() => {
@@ -480,7 +482,9 @@ class ILLRuleEngine extends RuleEngine {
             let $currentSequentTable = $li.closest('table');
             
             // Check if tensor rule is applicable (goal must be A⊗B)
-            if (!this.isTensorRuleApplicable($currentSequentTable)) {
+            let tensorApplicable = this.isTensorRuleApplicable($currentSequentTable);
+            
+            if (!tensorApplicable) {
                 return; // Only available when tensor rule can be applied
             }
             
@@ -499,51 +503,85 @@ class ILLRuleEngine extends RuleEngine {
      * @param {jQuery} $sequentTable - The sequent table element
      */
     updateCommaVisibility($commaSpan, $sequentTable, options = {}) {
-        
         // Skip interaction setup if withInteraction is false
         if (options.withInteraction === false) {
             return;
         }
         
+        // Clear any existing timeout to prevent race conditions
+        if ($commaSpan.data('visibility-timeout')) {
+            clearTimeout($commaSpan.data('visibility-timeout'));
+        }
+        
         // Always check for tensor rule applicability dynamically
-        setTimeout(() => {
+        let timeoutId = setTimeout(() => {
             let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
-            let canSplit = this.isTensorRuleApplicable($sequentTable) && sequent && sequent.hyp && sequent.hyp.length > 1;
             
+            let tensorApplicable = this.isTensorRuleApplicable($sequentTable);
+            let hasMultipleHyp = sequent && sequent.hyp && sequent.hyp.length > 1;
+            let canSplit = tensorApplicable && hasMultipleHyp;
+            
+            // CRITICAL FIX: Recalculate isLastComma each time to handle rearrangement
+            let $allContextLi = $sequentTable.find('.hyp li');
+            let $currentLi = $commaSpan.closest('li');
+            let currentIndex = $allContextLi.index($currentLi);
+            let isLastComma = (currentIndex === $allContextLi.length - 1);
+            
+            // Edge case: If we can't find the current li or get invalid index, abort safely
+            if (currentIndex < 0 || $allContextLi.length === 0) {
+                $commaSpan.removeData('visibility-timeout');
+                return;
+            }
             
             if (canSplit) {
                 $commaSpan.addClass('tensor-applicable');
                 $commaSpan.attr('title', 'Click to select context split for tensor rule');
                 
-                // Only add dots to elements that don't show CSS commas
-                // This includes the last comma element in the list (pre-space no longer used)
-                let isLastComma = $commaSpan.closest('li').is(':last-child');
-                
                 if (isLastComma) {
-                    // Store original content if not already stored
-                    if (!$commaSpan.data('original-content')) {
-                        $commaSpan.data('original-content', $commaSpan.html());
+                    // Store original content if not already stored or if it changed
+                    let currentContent = $commaSpan.html();
+                    
+                    // Always store the current content before modifying (even if empty string)
+                    if ($commaSpan.data('original-content') === undefined) {
+                        $commaSpan.data('original-content', currentContent);
                     }
                     
-                    // Replace content with just the dot
-                    $commaSpan.html('.');
+                    // Replace content with just the dot only if not already a dot
+                    if (currentContent !== '.') {
+                        $commaSpan.html('.');
+                    }
+                } else {
+                    // Non-last commas should not have dots - restore any dot content
+                    let currentContent = $commaSpan.html();
+                    let storedContent = $commaSpan.data('original-content');
+                    
+                    if (currentContent === '.') {
+                        if (storedContent !== undefined) {
+                            $commaSpan.html(storedContent);
+                        } else {
+                            $commaSpan.html('');
+                        }
+                    }
                 }
             } else {
                 $commaSpan.removeClass('tensor-applicable');
                 $commaSpan.removeAttr('title');
                 
-                // Restore original content for elements that had dots
-                let isLastComma = $commaSpan.closest('li').is(':last-child');
-                
-                if (isLastComma) {
-                    let originalContent = $commaSpan.data('original-content');
-                    if (originalContent !== undefined) {
-                        $commaSpan.html(originalContent);
-                    }
+                // Restore original content for any element that had dots
+                let originalContent = $commaSpan.data('original-content');
+                if (originalContent !== undefined && $commaSpan.html() === '.') {
+                    $commaSpan.html(originalContent);
+                    $commaSpan.removeData('original-content');
                 }
             }
             
+            // Clear the timeout reference
+            $commaSpan.removeData('visibility-timeout');
+            
         }, 100); // Small delay to ensure sequent data is available
+        
+        // Store timeout reference to prevent race conditions
+        $commaSpan.data('visibility-timeout', timeoutId);
     }
 
     /**
@@ -600,6 +638,68 @@ class ILLRuleEngine extends RuleEngine {
         
         let goalFormula = sequent.cons[0];
         return goalFormula.type === 'tensor';
+    }
+
+    /**
+     * Refresh all comma visibility after DOM rearrangement
+     * @param {jQuery} $formulaList - The sortable formula list that was rearranged
+     */
+    refreshAllCommaVisibility($formulaList) {
+        // Edge case: Prevent recursion by checking if we're already in a refresh cycle
+        if ($formulaList.data('refreshing-commas')) {
+            return;
+        }
+        
+        // Mark as refreshing to prevent recursion
+        $formulaList.data('refreshing-commas', true);
+        
+        try {
+            // Edge case: Check if the formula list exists and has formulas
+            if (!$formulaList.length || $formulaList.find('li').length === 0) {
+                return;
+            }
+            
+            // Clear all stored original-content data and reset content since positions changed
+            $formulaList.find('span.comma').each(function() {
+                let $commaSpan = $(this);
+                
+                $commaSpan.removeData('original-content');
+                
+                // CRITICAL FIX: Reset all comma content to empty after rearrangement
+                // This ensures no comma retains stale dot content from previous positions
+                if ($commaSpan.html() === '.') {
+                    $commaSpan.html('');
+                }
+                
+                // Clear any pending timeouts
+                if ($commaSpan.data('visibility-timeout')) {
+                    clearTimeout($commaSpan.data('visibility-timeout'));
+                    $commaSpan.removeData('visibility-timeout');
+                }
+            });
+            
+            // Get the sequent table
+            let $sequentTable = $formulaList.closest('table');
+            
+            // Edge case: Verify we have a valid sequent table
+            if (!$sequentTable.length) {
+                return;
+            }
+            
+            // Refresh all comma visibility with fresh position calculation
+            let commasToUpdate = $formulaList.find('span.comma');
+            
+            commasToUpdate.each((index, element) => {
+                let $commaSpan = $(element);
+                this.updateCommaVisibility($commaSpan, $sequentTable, {withInteraction: true});
+            });
+            
+        } finally {
+            // Always clear the refreshing flag
+            setTimeout(() => {
+                $formulaList.removeData('refreshing-commas');
+            }, 200);
+        }
     }
 
     /**

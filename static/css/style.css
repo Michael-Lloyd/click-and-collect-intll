@@ -210,6 +210,31 @@ input:checked + .slider:before { -webkit-transform: translateX(1em); -ms-transfo
     padding: 0.3em 0.4em;
 }
 
+/* Cut mode styling for ILL mode elements */
+.proof.intuitionistic-mode .hyp li span.comma.cut-applicable,
+.proof.intuitionistic-mode .hyp span.first-point.cut-applicable {
+    /* Make commas and first-point clickable when cut mode is enabled */
+    cursor: pointer;
+    border-radius: 0.2em;
+    /* Subtle indication that element is clickable for cut */
+    background-color: rgba(255, 99, 132, 0.05);
+    margin-left: 0.3em;
+    margin-right: 0.3em;
+}
+
+.proof.intuitionistic-mode .hyp li span.comma.cut-applicable:hover,
+.proof.intuitionistic-mode .hyp span.first-point.cut-applicable:hover {
+    /* Enhanced hover effect for cut mode clickable elements */
+    background-color: #ff6384;
+    color: #fff;
+    border: 2px solid #ff6384;
+    border-radius: 0.3em;
+    box-shadow: 0 0 8px rgba(255, 99, 132, 0.8);
+    transform: scale(1.2);
+    font-weight: bold;
+    padding: 0.3em 0.4em;
+}
+
 /* Gamma range highlighting (formulas before selected comma) */
 .proof .formula-gamma {
     background-color: rgba(102, 163, 224, 0.2) !important;

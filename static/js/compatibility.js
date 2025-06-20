@@ -547,6 +547,7 @@ function createNotationBar($container, callback) {
  */
 function toggleCutMode($container, cutMode) {
     let $mainDiv = $container.children('div.proof');
+    
     if (cutMode) {
         $mainDiv.addClass('cut-mode');
     } else {
@@ -555,6 +556,7 @@ function toggleCutMode($container, cutMode) {
     
     // Refresh ILL tensor dot visibility when cut mode is toggled
     let ruleEngine = $container.data('ruleEngine');
+    
     if (ruleEngine && ruleEngine.getModeName() === 'intuitionistic') {
         refreshILLTensorDotVisibility($container);
     }
@@ -565,8 +567,8 @@ function toggleCutMode($container, cutMode) {
  * @param {jQuery} $container - Container element
  */
 function refreshILLTensorDotVisibility($container) {
-    
     let ruleEngine = $container.data('ruleEngine');
+    
     if (!ruleEngine || ruleEngine.getModeName() !== 'intuitionistic') {
         return;
     }
@@ -580,10 +582,12 @@ function refreshILLTensorDotVisibility($container) {
         
         // Check if dots should be shown (tensor applicable OR cut mode enabled)
         let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
-        let tensorApplicable = ruleEngine.isTensorRuleApplicable && ruleEngine.isTensorRuleApplicable($sequentTable);
-        let hasMultipleFormulas = sequent && sequent.hyp && sequent.hyp.length > 1;
-        let shouldShowDots = (tensorApplicable && hasMultipleFormulas) || isCutModeEnabled;
         
+        let tensorApplicable = ruleEngine.isTensorRuleApplicable && ruleEngine.isTensorRuleApplicable($sequentTable);
+        
+        let hasMultipleFormulas = sequent && sequent.hyp && sequent.hyp.length > 1;
+        
+        let shouldShowDots = (tensorApplicable && hasMultipleFormulas) || isCutModeEnabled;
         
         // Refresh first-point visibility
         $sequentTable.find('.hyp span.first-point').each(function() {
@@ -593,27 +597,37 @@ function refreshILLTensorDotVisibility($container) {
         
         // Refresh comma visibility for last comma spans in the context
         let $contextFormulas = $sequentTable.find('.hyp li');
+        
         if ($contextFormulas.length > 0) {
             let $lastFormula = $contextFormulas.last();
             let $lastComma = $lastFormula.find('span.comma');
+            
             if ($lastComma.length > 0) {
                 updateDotVisibility($lastComma, shouldShowDots, isCutModeEnabled);
             }
         }
         
-        // Reset all comma spans that are NOT the last one to ensure they show nothing (CSS handles commas)
+        // Reset comma spans, but preserve tensor-applicable and cut-applicable classes
         $sequentTable.find('.hyp li span.comma').each(function(index) {
             let $commaSpan = $(this);
             let $parentLi = $commaSpan.closest('li');
             let isLastFormula = $parentLi.is(':last-child');
             
+            // Check if this comma should show dots (has tensor-applicable or cut-applicable)
+            let hasApplicableClass = $commaSpan.hasClass('tensor-applicable') || $commaSpan.hasClass('cut-applicable');
             
-            // If this is NOT the last formula's comma, ensure it's reset to empty
-            if (!isLastFormula) {
+            // IMPORTANT: Commas should NEVER have their content changed to dots!
+            // Dots should be separate elements, not replacing comma content
+            if (!isLastFormula && !hasApplicableClass) {
                 $commaSpan.removeClass('tensor-applicable cut-applicable');
                 $commaSpan.removeAttr('title');
-                $commaSpan.html(''); // CSS will handle showing commas between formulas
+                // Do NOT change comma content - commas should remain as commas
                 $commaSpan.removeData('original-content');
+            } else if (!isLastFormula && hasApplicableClass) {
+                // Non-last commas should never have dot content, even if they have applicable classes
+                if ($commaSpan.html() === '.') {
+                    $commaSpan.html('');
+                }
             }
         });
     });
@@ -627,6 +641,17 @@ function refreshILLTensorDotVisibility($container) {
  */
 function updateDotVisibility($element, shouldShowDots, isCutMode) {
     if (shouldShowDots) {
+        // CRITICAL: Check if this is a comma element - commas should NOT become dots!
+        if ($element.hasClass('comma')) {
+            return; // Exit early - let ill-mode.js handle comma elements
+        }
+        
+        // Additional protection: Skip if ill-mode.js is actively refreshing commas
+        let $formulaList = $element.closest('ul.commaList');
+        if ($formulaList.length && $formulaList.data('refreshing-commas')) {
+            return;
+        }
+        
         // Store original content only if not already stored
         if ($element.data('original-content') === undefined) {
             $element.data('original-content', $element.html());
@@ -641,7 +666,7 @@ function updateDotVisibility($element, shouldShowDots, isCutMode) {
             $element.attr('title', 'Click to select context split for tensor rule');
         }
         
-        // Replace content with just the dot
+        // Replace content with just the dot (only for non-comma elements)
         $element.html('.');
     } else {
         // Remove classes and titles
@@ -656,7 +681,6 @@ function updateDotVisibility($element, shouldShowDots, isCutMode) {
             $element.removeData('original-content');
         }
     }
-    
 }
 
 /**
