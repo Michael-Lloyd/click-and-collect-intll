@@ -86,6 +86,7 @@ function createFormulaList(sequent, sequentPart, $sequentDiv, options, ruleEngin
             helper: 'clone',
             axis: 'x',
             opacity: 0.2,
+            items: 'li', // Only li elements (formulas) are sortable, not spans like first-point
             start: function(e, ui) {
                 ui.placeholder.width(ui.item.width());
             },
