@@ -15,46 +15,81 @@ exception ILL_Pedagogic_exception of string
    @param cut_formula_position - Position of cut formula in context  
    @param proof - Left premise proof
    @return (bool * string) - (can_commute, reason) *)
-let can_commute_with_cut_left _cut_formula_position = function
-    | ILL_Axiom_proof _ -> 
+let can_commute_with_cut_left _cut_formula_position cut_formula = function
+    | ILL_Axiom_proof atom when cut_formula = Litt atom -> 
+        Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: Axiom %s matches cut formula Litt %s - VALID\n%!" atom atom;
         true, "Eliminate ax-cut"
-    | ILL_Hypothesis_proof _ ->
-        true, "Eliminate hypothesis-cut"
-    | ILL_One_proof -> true, "Eliminate 1-cut"
-    | ILL_Top_proof _ -> 
+    | ILL_Axiom_proof atom -> 
+        Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: Axiom %s doesn't match cut formula - INVALID\n%!" atom;
+        false, "Axiom doesn't match cut formula"
+    | ILL_Hypothesis_proof sequent when sequent.goal = cut_formula ->
+        (* Check if this is actually an axiom case: goal appears in context *)
+        if List.mem cut_formula sequent.context then (
+            Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: Hypothesis is actually an axiom case - VALID\n%!";
+            true, "Eliminate ax-cut (from hypothesis)"
+        ) else (
+            Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: Hypothesis goal matches cut formula but it's incomplete!\n%!";
+            Printf.eprintf "[ILL-TRANSFORM] ERROR: Goal not in context, this is an open goal\n%!";
+            false, "Cannot eliminate cut: left side is an incomplete hypothesis"
+        )
+    | ILL_Hypothesis_proof sequent ->
+        Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: Hypothesis goal doesn't match cut formula - INVALID\n%!";
+        Printf.eprintf "[ILL-TRANSFORM] Hypothesis context: %d formulas, goal: (formula), cut formula: (formula)\n%!" (List.length sequent.context);
+        false, "Hypothesis doesn't prove cut formula"
+    | ILL_One_proof when cut_formula = One -> 
+        Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: One proof matches cut formula One - VALID\n%!";
+        true, "Eliminate 1-cut"
+    | ILL_One_proof -> 
+        Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: One proof doesn't match cut formula - INVALID\n%!";
+        false, "One rule doesn't match cut formula"
+    | ILL_Top_proof _ when cut_formula = Top -> 
+        Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: Top proof matches cut formula Top - VALID\n%!";
         true, "Commute with ⊤ rule"
-    | ILL_Tensor_proof (_, formula1, formula2, left_premise, right_premise) -> 
-        let _ = (formula1, formula2, left_premise, right_premise) in  (* TODO: Use for advanced commutation *)
+    | ILL_Top_proof _ -> 
+        Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: Top proof doesn't match cut formula - INVALID\n%!";
+        false, "Top rule doesn't match cut formula"
+    | ILL_Tensor_proof (_, f1, f2, left_premise, right_premise) when cut_formula = Tensor (f1, f2) -> 
+        let _ = (left_premise, right_premise) in  (* TODO: Use for advanced commutation *)
         true, "Commute with ⊗ rule"
+    | ILL_Tensor_proof (_, _, _, _, _) -> 
+        false, "Tensor ⊗ doesn't match cut formula"
     | ILL_Tensor_left_proof (_, formula1, formula2, premise) -> 
-        let _ = (formula1, formula2, premise) in  (* TODO: Use for advanced commutation *)
+        let _ = (formula1, formula2, premise) in  (* TODO: Validate commutation logic *)
         true, "Commute with ⊗L rule"
     | ILL_With_left_1_proof (_, with_formula, premise) -> 
-        let _ = (with_formula, premise) in  (* TODO: Use for advanced commutation *)
+        let _ = (with_formula, premise) in  (* TODO: Validate commutation logic *)
         true, "Commute with &L₁ rule"
     | ILL_With_left_2_proof (_, with_formula, premise) -> 
-        let _ = (with_formula, premise) in  (* TODO: Use for advanced commutation *)
+        let _ = (with_formula, premise) in  (* TODO: Validate commutation logic *)
         true, "Commute with &L₂ rule"
-    | ILL_With_right_proof (_, formula1, formula2, left_premise, right_premise) -> 
-        let _ = (formula1, formula2, left_premise, right_premise) in  (* TODO: Use for advanced commutation *)
+    | ILL_With_right_proof (_, f1, f2, left_premise, right_premise) when cut_formula = With (f1, f2) -> 
+        let _ = (left_premise, right_premise) in  (* TODO: Use for advanced commutation *)
         true, "Commute with &R rule"
+    | ILL_With_right_proof (_, _, _, _, _) -> 
+        false, "With & doesn't match cut formula"
     | ILL_Plus_left_proof (_, formula1, formula2, left_premise, right_premise) -> 
-        let _ = (formula1, formula2, left_premise, right_premise) in  (* TODO: Use for advanced commutation *)
+        let _ = (formula1, formula2, left_premise, right_premise) in  (* TODO: Validate commutation logic *)
         true, "Commute with ⊕L rule"
-    | ILL_Plus_right_1_proof (_, formula1, formula2, premise) -> 
-        let _ = (formula1, formula2, premise) in  (* TODO: Use for advanced commutation *)
+    | ILL_Plus_right_1_proof (_, f1, f2, premise) when cut_formula = Plus (f1, f2) -> 
+        let _ = premise in  (* TODO: Use for advanced commutation *)
         true, "Commute with ⊕₁ rule"
-    | ILL_Plus_right_2_proof (_, formula1, formula2, premise) -> 
-        let _ = (formula1, formula2, premise) in  (* TODO: Use for advanced commutation *)
+    | ILL_Plus_right_1_proof (_, _, _, _) -> 
+        false, "Plus ⊕₁ doesn't match cut formula"
+    | ILL_Plus_right_2_proof (_, f1, f2, premise) when cut_formula = Plus (f1, f2) -> 
+        let _ = premise in  (* TODO: Use for advanced commutation *)
         true, "Commute with ⊕₂ rule"
-    | ILL_Lollipop_proof (_, antecedent, consequent, premise) -> 
-        let _ = (antecedent, consequent, premise) in  (* TODO: Use for advanced commutation *)
+    | ILL_Plus_right_2_proof (_, _, _, _) -> 
+        false, "Plus ⊕₂ doesn't match cut formula"
+    | ILL_Lollipop_proof (_, f1, f2, premise) when cut_formula = Lollipop (f1, f2) -> 
+        let _ = premise in  (* TODO: Use for advanced commutation *)
         true, "Commute with ⊸ rule"
+    | ILL_Lollipop_proof (_, _, _, _) -> 
+        false, "Lollipop ⊸ doesn't match cut formula"
     | ILL_Lollipop_left_proof (_, antecedent, consequent, left_premise, right_premise) -> 
-        let _ = (antecedent, consequent, left_premise, right_premise) in  (* TODO: Use for advanced commutation *)
+        let _ = (antecedent, consequent, left_premise, right_premise) in  (* TODO: Validate commutation logic *)
         true, "Commute with ⊸L rule"
-    | ILL_Cut_proof (head_context, cut_formula, tail_context, left_premise, right_premise) -> 
-        let _ = (head_context, cut_formula, tail_context, left_premise, right_premise) in  (* TODO: Use for advanced cut commutation *)
+    | ILL_Cut_proof (head_context, cut_f, tail_context, left_premise, right_premise) -> 
+        let _ = (head_context, cut_f, tail_context, left_premise, right_premise) in  (* TODO: Use for advanced cut commutation *)
         true, "Commute with cut rule"
 
 (* Check if we can commute a cut with the right premise in ILL.
@@ -62,10 +97,27 @@ let can_commute_with_cut_left _cut_formula_position = function
    @param proof - Right premise proof
    @return (bool * string) - (can_commute, reason) *)
 let can_commute_with_cut_right cut_context = function
-    | ILL_Axiom_proof _ -> true, "Eliminate ax-cut"
-    | ILL_Hypothesis_proof _ -> true, "Eliminate hypothesis-cut"
-    | ILL_One_proof -> true, "Eliminate 1-cut"
-    | ILL_Top_proof _ -> true, "Commute with ⊤ rule"
+    | ILL_Axiom_proof atom -> 
+        (match cut_context with 
+         | [Litt atom_cut] when atom = atom_cut -> true, "Eliminate ax-cut"
+         | _ -> false, "Axiom doesn't match cut context")
+    | ILL_Hypothesis_proof sequent -> 
+        (* Check if this is actually an axiom case: cut formula appears in context and goal *)
+        (match cut_context with
+         | [cut_formula] when sequent.goal = cut_formula && List.mem cut_formula sequent.context ->
+             Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_right: Hypothesis is actually an axiom case - VALID\n%!";
+             true, "Eliminate ax-cut (from hypothesis)"
+         | _ ->
+             Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_right: Hypothesis proof is incomplete\n%!";
+             false, "Cannot eliminate cut: right side is an incomplete hypothesis")
+    | ILL_One_proof -> 
+        (match cut_context with 
+         | [One] -> true, "Eliminate 1-cut"
+         | _ -> false, "One rule doesn't match cut context")
+    | ILL_Top_proof _ -> 
+        (match cut_context with 
+         | [Top] -> true, "Commute with ⊤ rule"
+         | _ -> false, "Top rule doesn't match cut context")
     | ILL_Tensor_left_proof (context, _, _, _) when 
         (match cut_context with [] -> true | cut_formula :: _ -> not (List.mem cut_formula context)) -> 
         true, "Commute with ⊗L rule"
@@ -141,8 +193,23 @@ let can_cut_key_case left_proof right_proof = match left_proof, right_proof with
         true, "Eliminate axiom-axiom key-case"
     
     (* Hypothesis key-case: when both sides are hypothesis proofs *)
-    | ILL_Hypothesis_proof _, ILL_Hypothesis_proof _ ->
-        true, "Eliminate hypothesis-hypothesis key-case"
+    | ILL_Hypothesis_proof left_seq, ILL_Hypothesis_proof right_seq ->
+        Printf.eprintf "[ILL-TRANSFORM] can_cut_key_case: Found hypothesis-hypothesis case\n%!";
+        Printf.eprintf "[ILL-TRANSFORM] Left sequent: %d context formulas, goal: (formula)\n%!" (List.length left_seq.context);
+        Printf.eprintf "[ILL-TRANSFORM] Right sequent: %d context formulas, goal: (formula)\n%!" (List.length right_seq.context);
+        
+        (* Check if either side is actually an axiom case *)
+        let left_is_axiom = List.mem left_seq.goal left_seq.context in
+        let right_is_axiom = List.mem right_seq.goal right_seq.context in
+        
+        if left_is_axiom || right_is_axiom then (
+            Printf.eprintf "[ILL-TRANSFORM] At least one side is an axiom case - VALID\n%!";
+            true, "Eliminate hypothesis-axiom key-case"
+        ) else (
+            Printf.eprintf "[ILL-TRANSFORM] ERROR: Both sides are open hypotheses - no actual proof exists!\n%!";
+            Printf.eprintf "[ILL-TRANSFORM] Cut elimination requires at least one side to be a complete proof\n%!";
+            false, "Cannot eliminate cut: both sides are incomplete hypotheses"
+        )
     
     | _ -> false, "No key-case available"
 
@@ -155,17 +222,36 @@ let get_transform_options = function
          ILL_Expand_axiom_full, (true, "Full axiom expansion")]
     
     | ILL_Cut_proof (head_ctx, cut_formula, tail_ctx, left_proof, right_proof) ->
+        Printf.eprintf "[ILL-TRANSFORM] get_transform_options: Analyzing cut proof\n%!";
+        Printf.eprintf "[ILL-TRANSFORM] Head context: %d formulas, tail context: %d formulas\n%!" (List.length head_ctx) (List.length tail_ctx);
+        Printf.eprintf "[ILL-TRANSFORM] Cut formula: (formula type), Left proof type: %s, Right proof type: %s\n%!" 
+            (match left_proof with | ILL_Axiom_proof _ -> "Axiom" | ILL_Hypothesis_proof _ -> "Hypothesis" | ILL_One_proof -> "One" | ILL_Top_proof _ -> "Top" | ILL_Tensor_proof _ -> "Tensor" | ILL_Tensor_left_proof _ -> "TensorLeft" | ILL_With_left_1_proof _ -> "WithLeft1" | ILL_With_left_2_proof _ -> "WithLeft2" | ILL_With_right_proof _ -> "WithRight" | ILL_Plus_left_proof _ -> "PlusLeft" | ILL_Plus_right_1_proof _ -> "PlusRight1" | ILL_Plus_right_2_proof _ -> "PlusRight2" | ILL_Lollipop_proof _ -> "Lollipop" | ILL_Lollipop_left_proof _ -> "LollipopLeft" | ILL_Cut_proof _ -> "Cut")
+            (match right_proof with | ILL_Axiom_proof _ -> "Axiom" | ILL_Hypothesis_proof _ -> "Hypothesis" | ILL_One_proof -> "One" | ILL_Top_proof _ -> "Top" | ILL_Tensor_proof _ -> "Tensor" | ILL_Tensor_left_proof _ -> "TensorLeft" | ILL_With_left_1_proof _ -> "WithLeft1" | ILL_With_left_2_proof _ -> "WithLeft2" | ILL_With_right_proof _ -> "WithRight" | ILL_Plus_left_proof _ -> "PlusLeft" | ILL_Plus_right_1_proof _ -> "PlusRight1" | ILL_Plus_right_2_proof _ -> "PlusRight2" | ILL_Lollipop_proof _ -> "Lollipop" | ILL_Lollipop_left_proof _ -> "LollipopLeft" | ILL_Cut_proof _ -> "Cut");
+        
         let cut_position = List.length head_ctx in
         let _ = tail_ctx in  (* TODO: Use tail_ctx for more sophisticated transformation options *)
-        let commute_left, commute_left_msg = can_commute_with_cut_left cut_position left_proof in
-        let commute_right, commute_right_msg = can_commute_with_cut_right [cut_formula] right_proof in
-        let key_case, key_case_msg = can_cut_key_case left_proof right_proof in
-        let cut_full = commute_left || commute_right || key_case in
         
-        [ILL_Eliminate_cut_left, (commute_left, commute_left_msg ^ " on the left");
+        Printf.eprintf "[ILL-TRANSFORM] Checking left commutation at position %d...\n%!" cut_position;
+        let commute_left, commute_left_msg = can_commute_with_cut_left cut_position cut_formula left_proof in
+        Printf.eprintf "[ILL-TRANSFORM] Left commutation result: %b (%s)\n%!" commute_left commute_left_msg;
+        
+        Printf.eprintf "[ILL-TRANSFORM] Checking right commutation...\n%!";
+        let commute_right, commute_right_msg = can_commute_with_cut_right [cut_formula] right_proof in
+        Printf.eprintf "[ILL-TRANSFORM] Right commutation result: %b (%s)\n%!" commute_right commute_right_msg;
+        
+        Printf.eprintf "[ILL-TRANSFORM] Checking key-case elimination...\n%!";
+        let key_case, key_case_msg = can_cut_key_case left_proof right_proof in
+        Printf.eprintf "[ILL-TRANSFORM] Key-case result: %b (%s)\n%!" key_case key_case_msg;
+        
+        let cut_full = commute_left || commute_right || key_case in
+        Printf.eprintf "[ILL-TRANSFORM] Full cut elimination possible: %b\n%!" cut_full;
+        
+        let options = [ILL_Eliminate_cut_left, (commute_left, commute_left_msg ^ " on the left");
          ILL_Eliminate_cut_key_case, (key_case, key_case_msg);
          ILL_Eliminate_cut_right, (commute_right, commute_right_msg ^ " on the right");
-         ILL_Eliminate_cut_full, (cut_full, "Fully eliminate this cut")]
+         ILL_Eliminate_cut_full, (cut_full, "Fully eliminate this cut")] in
+        Printf.eprintf "[ILL-TRANSFORM] Returning %d transformation options\n%!" (List.length options);
+        options
     
     | _ -> 
         []
@@ -730,62 +816,109 @@ let rec eliminate_all_cuts proof =
    @param proof - Proof tree to transform
    @return ill_proof - Transformed proof tree *)
 let apply_transformation transform_req proof =
+    Printf.eprintf "[ILL-TRANSFORM] Applying ILL transformation: %s\n%!" (Ill_transform_request.to_string transform_req);
     match transform_req with
-    | ILL_Expand_axiom -> expand_axiom_on_proof proof
-    | ILL_Expand_axiom_full -> expand_axiom_full proof
-    | ILL_Eliminate_cut_left -> eliminate_cut_left proof
-    | ILL_Eliminate_cut_key_case -> eliminate_cut_key_case proof
-    | ILL_Eliminate_cut_right -> eliminate_cut_right proof
-    | ILL_Eliminate_cut_full -> eliminate_cut_full proof
-    | ILL_Eliminate_all_cuts -> eliminate_all_cuts proof
+    | ILL_Expand_axiom -> 
+        Printf.eprintf "[ILL-TRANSFORM] Processing expand_axiom\n%!";
+        let result = expand_axiom_on_proof proof in
+        Printf.eprintf "[ILL-TRANSFORM] Expand_axiom completed successfully\n%!";
+        result
+    | ILL_Expand_axiom_full -> 
+        Printf.eprintf "[ILL-TRANSFORM] Processing expand_axiom_full\n%!";
+        let result = expand_axiom_full proof in
+        Printf.eprintf "[ILL-TRANSFORM] Expand_axiom_full completed successfully\n%!";
+        result
+    | ILL_Eliminate_cut_left -> 
+        Printf.eprintf "[ILL-TRANSFORM] Processing eliminate_cut_left\n%!";
+        let result = eliminate_cut_left proof in
+        Printf.eprintf "[ILL-TRANSFORM] Eliminate_cut_left completed successfully\n%!";
+        result
+    | ILL_Eliminate_cut_key_case -> 
+        Printf.eprintf "[ILL-TRANSFORM] Processing eliminate_cut_key_case\n%!";
+        let result = eliminate_cut_key_case proof in
+        Printf.eprintf "[ILL-TRANSFORM] Eliminate_cut_key_case completed successfully\n%!";
+        result
+    | ILL_Eliminate_cut_right -> 
+        Printf.eprintf "[ILL-TRANSFORM] Processing eliminate_cut_right\n%!";
+        let result = eliminate_cut_right proof in
+        Printf.eprintf "[ILL-TRANSFORM] Eliminate_cut_right completed successfully\n%!";
+        result
+    | ILL_Eliminate_cut_full -> 
+        Printf.eprintf "[ILL-TRANSFORM] Processing eliminate_cut_full\n%!";
+        let result = eliminate_cut_full proof in
+        Printf.eprintf "[ILL-TRANSFORM] Eliminate_cut_full completed successfully\n%!";
+        result
+    | ILL_Eliminate_all_cuts -> 
+        Printf.eprintf "[ILL-TRANSFORM] Processing eliminate_all_cuts\n%!";
+        let result = eliminate_all_cuts proof in
+        Printf.eprintf "[ILL-TRANSFORM] Eliminate_all_cuts completed successfully\n%!";
+        result
     | ILL_Simplify -> 
+        Printf.eprintf "[ILL-TRANSFORM] Processing simplify\n%!";
         (* Implement proof simplification: remove redundant rules and normalize structure *)
         let rec simplify_proof proof =
+            Printf.eprintf "[ILL-TRANSFORM] Simplifying proof node\n%!";
             match proof with
             (* Remove redundant cut-axiom combinations *)
             | ILL_Cut_proof (_, cut_formula, _, ILL_Axiom_proof atom, right_proof) 
                 when cut_formula = Litt atom ->
+                Printf.eprintf "[ILL-TRANSFORM] Removing redundant cut-axiom for atom: %s\n%!" atom;
                 simplify_proof right_proof
             
             (* Remove redundant cut-one combinations *)
             | ILL_Cut_proof (_, One, _, ILL_One_proof, right_proof) ->
+                Printf.eprintf "[ILL-TRANSFORM] Removing redundant cut-one combination\n%!";
                 simplify_proof right_proof
             
             (* Simplify nested cuts with same formula *)
             | ILL_Cut_proof (head_ctx1, f1, tail_ctx1, 
                 ILL_Cut_proof (head_ctx2, f2, tail_ctx2, p1, p2), p3) 
                 when f1 = f2 && head_ctx1 = head_ctx2 && tail_ctx1 = tail_ctx2 ->
+                Printf.eprintf "[ILL-TRANSFORM] Flattening nested cuts with same formula\n%!";
                 (* Flatten nested cuts *)
                 let simplified_inner = ILL_Cut_proof (head_ctx2, f2, tail_ctx2, simplify_proof p1, simplify_proof p2) in
                 simplify_proof (ILL_Cut_proof (head_ctx1, f1, tail_ctx1, simplified_inner, simplify_proof p3))
             
             (* Recursively simplify all premises *)
             | _ -> 
-                let simplified_premises = List.map simplify_proof (get_premises proof) in
+                let premises = get_premises proof in
+                Printf.eprintf "[ILL-TRANSFORM] Recursively simplifying %d premises\n%!" (List.length premises);
+                let simplified_premises = List.map simplify_proof premises in
                 set_premises proof simplified_premises
         in
-        simplify_proof proof
+        let result = simplify_proof proof in
+        Printf.eprintf "[ILL-TRANSFORM] Simplify completed successfully\n%!";
+        result
     | ILL_Substitute (alias, replacement_formula) -> 
+        Printf.eprintf "[ILL-TRANSFORM] Processing substitute for alias: %s\n%!" alias;
         (* Implement formula substitution: replace all occurrences of alias with replacement_formula *)
         let source_formula = Litt alias in
-        substitute_formula_in_proof source_formula replacement_formula proof
+        let result = substitute_formula_in_proof source_formula replacement_formula proof in
+        Printf.eprintf "[ILL-TRANSFORM] Substitute completed successfully\n%!";
+        result
     | ILL_Apply_reversible_first _ -> 
+        Printf.eprintf "[ILL-TRANSFORM] Processing apply_reversible_first\n%!";
         (* Implement reversible rule application: apply deterministic rules first *)
         let rec apply_reversible_rules proof =
+            Printf.eprintf "[ILL-TRANSFORM] Applying reversible rules to proof node\n%!";
             match proof with
             | ILL_Hypothesis_proof sequent ->
                 (* Try to apply reversible rules based on the goal and context *)
                 (match sequent.goal with
                 | One -> 
+                    Printf.eprintf "[ILL-TRANSFORM] Applying reversible One rule\n%!";
                     (* One rule is always reversible *)
                     ILL_One_proof
                 | Top ->
+                    Printf.eprintf "[ILL-TRANSFORM] Applying reversible Top rule\n%!";
                     (* Top rule is always reversible *)
                     ILL_Top_proof sequent.context
                 | Litt atom when List.mem (Litt atom) sequent.context ->
+                    Printf.eprintf "[ILL-TRANSFORM] Applying reversible Axiom rule for atom: %s\n%!" atom;
                     (* Axiom rule is reversible when goal appears in context *)
                     ILL_Axiom_proof atom
                 | Lollipop (f1, f2) ->
+                    Printf.eprintf "[ILL-TRANSFORM] Applying reversible Lollipop rule\n%!";
                     (* Lollipop right rule is reversible *)
                     let new_context = f1 :: sequent.context in
                     let new_sequent = { context = new_context; goal = f2 } in
@@ -797,6 +930,7 @@ let apply_transformation transform_req proof =
                         match ctx with
                         | [] -> ILL_Hypothesis_proof sequent  (* No reversible rules found *)
                         | Tensor (f1, f2) :: rest ->
+                            Printf.eprintf "[ILL-TRANSFORM] Applying reversible Tensor left rule\n%!";
                             (* Tensor left is reversible *)
                             let new_context = acc @ [f1; f2] @ rest in
                             let new_sequent = { context = new_context; goal = sequent.goal } in
@@ -814,7 +948,9 @@ let apply_transformation transform_req proof =
                 let simplified_premises = List.map apply_reversible_rules (get_premises proof) in
                 set_premises proof simplified_premises
         in
-        apply_reversible_rules proof
+        let result = apply_reversible_rules proof in
+        Printf.eprintf "[ILL-TRANSFORM] Apply_reversible_first completed successfully\n%!";
+        result
 
 (* Check if any cuts in the proof tree can be eliminated.
    @param proof - Proof tree to check
@@ -923,15 +1059,21 @@ let replace_formula_in_context old_formula new_formula ctx =
    @param request_as_json - JSON request from frontend
    @return (bool * Yojson.Basic.t) - (success, response) *)
 let get_ill_proof_transformation_options request_as_json =
+    Printf.eprintf "[ILL-TRANSFORM] Getting ILL proof transformation options\n%!";
     try 
         (* Parse ILL proof from JSON request - same format as classical LL *)
         let proof_json = Request_utils.get_key request_as_json "proof" in
+        Printf.eprintf "[ILL-TRANSFORM] Extracted proof JSON from request\n%!";
         let ill_proof = Ill_proof.from_json proof_json in
+        Printf.eprintf "[ILL-TRANSFORM] Parsed ILL proof successfully\n%!";
         
         (* Generate transformation options for the real proof *)
         let transform_options_json = get_transform_options_as_json ill_proof in
+        Printf.eprintf "[ILL-TRANSFORM] Generated transformation options\n%!";
         let can_eliminate_all_cuts = has_cut_that_can_be_eliminated ill_proof in
+        Printf.eprintf "[ILL-TRANSFORM] Can eliminate all cuts: %b\n%!" can_eliminate_all_cuts;
         let can_simplify = true in (* Basic simplification is always available for now *)
+        Printf.eprintf "[ILL-TRANSFORM] Can simplify: %b\n%!" can_simplify;
         
         (* Include the original proof along with transformation options *)
         let proof_json = Ill_proof.to_json ill_proof in
@@ -942,45 +1084,78 @@ let get_ill_proof_transformation_options request_as_json =
                 `Assoc (["proof", proof_json] @ transform_options_json)
         in
         
+        Printf.eprintf "[ILL-TRANSFORM] Returning successful ILL transformation options\n%!";
         true, `Assoc [
             "illProofWithTransformationOptions", proof_with_options;
             "canSimplify", `Bool can_simplify;
             "canEliminateAllCuts", `Bool can_eliminate_all_cuts]
     with 
-    | Request_utils.Bad_request_exception m -> false, `String ("Bad request: " ^ m)
-    | ILL_Transform_exception m -> false, `String ("ILL Transform exception: " ^ m)
-    | ILL_Proof_Exception (_, m) -> false, `String ("ILL Proof exception: " ^ m)
-    | Yojson.Basic.Util.Type_error (msg, _) -> false, `String ("JSON parsing error: " ^ msg)
-    | _ -> false, `String "Unknown error in ILL transformation options"
+    | Request_utils.Bad_request_exception m -> 
+        Printf.eprintf "[ILL-TRANSFORM ERROR] Bad request: %s\n%!" m;
+        false, `String ("Bad request: " ^ m)
+    | ILL_Transform_exception m -> 
+        Printf.eprintf "[ILL-TRANSFORM ERROR] ILL Transform exception: %s\n%!" m;
+        false, `String ("ILL Transform exception: " ^ m)
+    | ILL_Proof_Exception (_, m) -> 
+        Printf.eprintf "[ILL-TRANSFORM ERROR] ILL Proof exception: %s\n%!" m;
+        false, `String ("ILL Proof exception: " ^ m)
+    | Yojson.Basic.Util.Type_error (msg, _) -> 
+        Printf.eprintf "[ILL-TRANSFORM ERROR] JSON parsing error: %s\n%!" msg;
+        false, `String ("JSON parsing error: " ^ msg)
+    | _ -> 
+        Printf.eprintf "[ILL-TRANSFORM ERROR] Unknown error in ILL transformation options\n%!";
+        false, `String "Unknown error in ILL transformation options"
 
 (* Apply ILL transformation from JSON request.
    This is the main API endpoint for applying transformations to ILL proofs.
    @param request_as_json - JSON request from frontend with transformation details
    @return (bool * Yojson.Basic.t) - (success, response) *)
 let apply_ill_transformation request_as_json =
+    Printf.eprintf "[ILL-TRANSFORM] Applying ILL transformation from request\n%!";
     try
         (* Parse ILL proof and transformation request from JSON *)
         let transform_request_as_json = Request_utils.get_key request_as_json "transformRequest" in
+        Printf.eprintf "[ILL-TRANSFORM] Extracted transform request from JSON\n%!";
         let transform_request = Ill_transform_request.from_json transform_request_as_json in
+        Printf.eprintf "[ILL-TRANSFORM] Parsed transformation request: %s\n%!" (Ill_transform_request.to_string transform_request);
         
         (* Parse the actual ILL proof from the request - same format as classical LL *)
         let proof_json = Request_utils.get_key request_as_json "proof" in
+        Printf.eprintf "[ILL-TRANSFORM] Extracted proof JSON from request\n%!";
         let original_proof = Ill_proof.from_json proof_json in
+        Printf.eprintf "[ILL-TRANSFORM] Parsed original ILL proof successfully\n%!";
         
         (* Apply the transformation *)
         let transformed_proof = apply_transformation transform_request original_proof in
+        Printf.eprintf "[ILL-TRANSFORM] Applied transformation successfully\n%!";
         
         (* Convert ILL proof back to JSON format *)
         let transformed_proof_json = Ill_proof.to_json transformed_proof in
+        Printf.eprintf "[ILL-TRANSFORM] Converted transformed proof to JSON\n%!";
         
+        Printf.eprintf "[ILL-TRANSFORM] Returning successful transformation result\n%!";
         true, `Assoc [
             "illProof", transformed_proof_json;
             "transformationApplied", `String (Ill_transform_request.to_string transform_request)]
     with
-    | Request_utils.Bad_request_exception m -> false, `String ("Bad request: " ^ m)
-    | Ill_transform_request.ILL_Transform_Json_Exception m -> false, `String ("Bad ILL transformation request: " ^ m)
-    | ILL_Transform_exception m -> false, `String ("ILL Transform exception: " ^ m)
-    | ILL_Proof_Exception (_, m) -> false, `String ("ILL Proof exception: " ^ m)
-    | ILL_Pedagogic_exception m -> true, `Assoc ["error_message", `String m]
-    | Yojson.Basic.Util.Type_error (msg, _) -> false, `String ("JSON parsing error: " ^ msg)
-    | _ -> false, `String "Unknown error in ILL transformation options"
+    | Request_utils.Bad_request_exception m -> 
+        Printf.eprintf "[ILL-TRANSFORM ERROR] Bad request: %s\n%!" m;
+        false, `String ("Bad request: " ^ m)
+    | Ill_transform_request.ILL_Transform_Json_Exception m -> 
+        Printf.eprintf "[ILL-TRANSFORM ERROR] Bad ILL transformation request: %s\n%!" m;
+        false, `String ("Bad ILL transformation request: " ^ m)
+    | ILL_Transform_exception m -> 
+        Printf.eprintf "[ILL-TRANSFORM ERROR] ILL Transform exception: %s\n%!" m;
+        false, `String ("ILL Transform exception: " ^ m)
+    | ILL_Proof_Exception (_, m) -> 
+        Printf.eprintf "[ILL-TRANSFORM ERROR] ILL Proof exception: %s\n%!" m;
+        false, `String ("ILL Proof exception: " ^ m)
+    | ILL_Pedagogic_exception m -> 
+        Printf.eprintf "[ILL-TRANSFORM ERROR] ILL Pedagogic exception: %s\n%!" m;
+        true, `Assoc ["error_message", `String m]
+    | Yojson.Basic.Util.Type_error (msg, _) -> 
+        Printf.eprintf "[ILL-TRANSFORM ERROR] JSON parsing error: %s\n%!" msg;
+        false, `String ("JSON parsing error: " ^ msg)
+    | _ -> 
+        Printf.eprintf "[ILL-TRANSFORM ERROR] Unknown error in ILL transformation\n%!";
+        false, `String "Unknown error in ILL transformation options"

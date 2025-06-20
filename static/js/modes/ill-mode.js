@@ -133,26 +133,33 @@ class ILLRuleEngine extends RuleEngine {
      * @return {Array} Array of rule event configurations
      */
     getTransformationRules(formulaAsJson) {
+        console.log('[ILL-MODE] Getting transformation rules for formula type:', formulaAsJson.type);
         switch (formulaAsJson.type) {
             case 'tensor':
+                console.log('[ILL-MODE] Returning tensor transformation rule');
                 return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_tensor_right', 'needPosition': true, 'transformation': 'apply_reversible_first'}]}];
                 
             case 'with':
+                console.log('[ILL-MODE] Returning with transformation rule');
                 return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_with_right', 'needPosition': true, 'transformation': 'apply_reversible_first'}]}];
 
             case 'plus':
+                console.log('[ILL-MODE] Returning plus transformation rules');
                 return [
                     {'element': 'left-formula', 'onclick': [{'rule': 'ill_plus_right_1', 'needPosition': true, 'transformation': 'apply_reversible_first'}]},
                     {'element': 'right-formula', 'onclick': [{'rule': 'ill_plus_right_2', 'needPosition': true, 'transformation': 'apply_reversible_first'}]}
                 ];
 
             case 'lollipop':
+                console.log('[ILL-MODE] Returning lollipop transformation rule');
                 return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_lollipop_right', 'needPosition': true, 'transformation': 'apply_reversible_first'}]}];
 
             case 'top':
+                console.log('[ILL-MODE] Returning top transformation rule');
                 return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_top', 'needPosition': true, 'transformation': 'apply_reversible_first'}]}];
 
             default:
+                console.log('[ILL-MODE] No transformation rules available for formula type:', formulaAsJson.type);
                 return [];
         }
     }
@@ -267,25 +274,32 @@ class ILLRuleEngine extends RuleEngine {
      * @return {Object} Complete rule request object
      */
     buildRuleRequest(ruleConfig, $li, options) {
+        console.log('[ILL-MODE] Building rule request for config:', ruleConfig);
+        console.log('[ILL-MODE] Options:', options);
         let ruleConfigCopy = JSON.parse(JSON.stringify(ruleConfig)); // deep copy
         
         // Handle ILL cut rule - transform to ILL-specific version
         if (ruleConfigCopy.rule === 'cut') {
+            console.log('[ILL-MODE] Transforming cut rule to ill_cut');
             ruleConfigCopy.rule = 'ill_cut';
         }
         
         // Handle ILL axiom rule with applicability check
         if (ruleConfigCopy.rule === 'ill_axiom') {
+            console.log('[ILL-MODE] Processing axiom rule');
             if ($li) {
                 let formula = $li.data('formula');
                 let $sequentTable = $li.closest('table');
                 let $formulaList = $li.closest('ul');
                 let isLeftSide = $formulaList.hasClass('hyp');
+                console.log('[ILL-MODE] Checking axiom applicability for formula:', formula, 'on side:', isLeftSide ? 'left' : 'right');
                 
                 // Check if axiom rule is actually applicable now
                 if (!this.isAxiomRuleApplicable($sequentTable, formula, isLeftSide)) {
+                    console.log('[ILL-MODE] Axiom rule not applicable, returning null');
                     return null; // Don't apply the rule
                 }
+                console.log('[ILL-MODE] Axiom rule is applicable');
             }
         }
         
@@ -324,10 +338,12 @@ class ILLRuleEngine extends RuleEngine {
             let isLeftSide = $formulaList.hasClass('hyp');
             let sequentSide = isLeftSide ? 'left' : 'right';
             ruleRequest['sequentSide'] = sequentSide;
+            console.log('[ILL-MODE] Added sequent side:', sequentSide);
             
             // Special handling for ILL tensor_right rule: default to empty Gamma
             if (ruleConfigCopy.rule === 'ill_tensor_right' && sequentSide === 'right') {
                 ruleRequest['contextSplit'] = [0]; // Empty Gamma, all context goes to Delta
+                console.log('[ILL-MODE] Set default context split for tensor_right:', ruleRequest['contextSplit']);
             }
         }
 
@@ -336,8 +352,10 @@ class ILLRuleEngine extends RuleEngine {
             // Use position among formula items only, not all children
             let $formulaItems = $li.parent().children('li');
             ruleRequest['formulaPosition'] = $formulaItems.index($li);
+            console.log('[ILL-MODE] Added formula position:', ruleRequest['formulaPosition']);
         }
 
+        console.log('[ILL-MODE] Final rule request:', ruleRequest);
         return ruleRequest;
     }
 
@@ -356,21 +374,26 @@ class ILLRuleEngine extends RuleEngine {
      * @param {jQuery} $sequentTable - Sequent table element
      */
     applyRuleToSequent(ruleRequest, $sequentTable) {
+        console.log('[ILL-MODE] Applying rule to sequent:', ruleRequest);
         // Transform cut rule to ill_cut if needed
         if (ruleRequest.rule === 'cut') {
+            console.log('[ILL-MODE] Transforming cut rule for ILL');
             // Create a new rule request with ILL-specific parameters
             let illRuleRequest = {
                 rule: 'ill_cut',
                 cutFormula: ruleRequest.formula,
                 cutPosition: ruleRequest.formulaPosition
             };
+            console.log('[ILL-MODE] Transformed to ILL cut request:', illRuleRequest);
             
             // Apply the transformed rule
             super.applyRuleToSequent(illRuleRequest, $sequentTable);
         } else {
+            console.log('[ILL-MODE] Applying rule normally:', ruleRequest.rule);
             // For non-cut rules, use normal processing
             super.applyRuleToSequent(ruleRequest, $sequentTable);
         }
+        console.log('[ILL-MODE] Rule application completed');
     }
 
     /**
@@ -804,16 +827,19 @@ class ILLRuleEngine extends RuleEngine {
      * @param {number} commaPosition - Position where Gamma ends
      */
     applyTensorRuleWithSplit($sequentTable, commaPosition) {
+        console.log('[ILL-MODE] Applying tensor rule with split at position:', commaPosition);
         let ruleRequest = {
             rule: 'ill_tensor_right',
             sequentSide: 'right',
             contextSplit: [commaPosition]
         };
+        console.log('[ILL-MODE] Tensor rule request:', ruleRequest);
         
         // Apply the rule
         this.applyRuleToSequent(ruleRequest, $sequentTable);
         
         // Clear selection mode after rule application
+        console.log('[ILL-MODE] Clearing comma selection mode after tensor rule');
         this.clearCommaSelectionMode($sequentTable);
     }
 }

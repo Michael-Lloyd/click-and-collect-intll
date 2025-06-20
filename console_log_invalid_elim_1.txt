@@ -1,0 +1,159 @@
+This page is in Almost Standards Mode. Page layout may be impacted. For Standards Mode use “<!DOCTYPE html>”. localhost:3000
+Loading failed for the <script> with source “https://www.googletagmanager.com/gtag/js?id=G-6M0JK9PWN1”. localhost:3000:51:109
+[ILL-MODE] Applying rule to sequent: 
+Object { rule: "cut", formula: {…}, formulaPosition: 1 }
+ill-mode.js:377:17
+[ILL-MODE] Transforming cut rule for ILL ill-mode.js:380:21
+[ILL-MODE] Transformed to ILL cut request: 
+Object { rule: "ill_cut", cutFormula: {…}, cutPosition: 1 }
+ill-mode.js:387:21
+[ILL-MODE] Rule application completed ill-mode.js:396:17
+[TRANSFORM-FRONTEND] Starting reloadProofWithTransformationOptions compatibility.js:949:13
+[TRANSFORM-FRONTEND] Container: 
+Object { 0: div#main-proof-container.proof-container, length: 1 }
+compatibility.js:950:13
+[TRANSFORM-FRONTEND] Options: 
+Object { withInteraction: false, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+compatibility.js:951:13
+[TRANSFORM-FRONTEND] Extracted proof from container: 
+Object { sequent: {…}, appliedRule: {…} }
+compatibility.js:957:13
+[TRANSFORM-FRONTEND] Extracted notations: 
+Array []
+compatibility.js:958:13
+[TRANSFORM-FRONTEND] ILL mode detected: true compatibility.js:964:13
+[TRANSFORM-FRONTEND] Using endpoint: /get_ill_proof_transformation_options compatibility.js:965:13
+[TRANSFORM-FRONTEND] Request data before compression: 
+Object { proof: {…}, notations: [] }
+compatibility.js:970:13
+[TRANSFORM-FRONTEND] Compressed request data: {"proof":{"s":{"hyp":[{"t":"litt","v":"A"},{"t":"litt","v":"B"}],"cons":[{"t":"litt","v":"C"}]},"ar":{"rr":{"cutFormula":{"t":"litt","v":"X"},"r":"ill_cut"},"p":[{"s":{"hyp":[{"t":"litt","v":"A"}],"cons":[{"t":"litt","v":"X"}]},"ar":null},{"s":{"hyp":[{"t":"litt","v":"B"},{"t":"litt","v":"X"}],"cons":[{"t":"litt","v":"C"}]},"ar":null}]}},"notations":[]} compatibility.js:971:13
+[TRANSFORM-FRONTEND] AJAX success - received response: 
+Object { illProofWithTransformationOptions: {…}, canSimplify: true, canEliminateAllCuts: true }
+compatibility.js:979:21
+[TRANSFORM-FRONTEND] Disabled interaction mode, updated options: 
+Object { withInteraction: false, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+compatibility.js:983:21
+[TRANSFORM-FRONTEND] Extracted proof with options: 
+Object { sequent: {…}, appliedRule: {…}, transformOptions: (4) […] }
+compatibility.js:990:21
+[TRANSFORM-FRONTEND] Available transformation options in proof: 
+Array(4) [ {…}, {…}, {…}, {…} ]
+compatibility.js:991:21
+[TRANSFORM-FRONTEND] Calling reloadProof with proof and options compatibility.js:994:21
+[TRANSFORM-FRONTEND] Processing transformation options: 
+Array(4) [ {…}, {…}, {…}, {…} ]
+proof-core.js:214:17
+[TRANSFORM-FRONTEND] Active transform options config: 
+Object { ill_expand_axiom: {…}, ill_expand_axiom_full: {…}, ill_eliminate_cut_left: {…}, ill_eliminate_cut_right: {…}, ill_eliminate_cut_key_case: {…}, ill_eliminate_cut_full: {…}, ill_eliminate_all_cuts: {…}, ill_simplify: {…} }
+proof-core.js:215:17
+[TRANSFORM-FRONTEND] Processing transform option: 
+Object { transformation: "ill_eliminate_cut_left", enabled: true, title: "Eliminate hypothesis-cut on the left" }
+proof-core.js:221:21
+[TRANSFORM-FRONTEND] Transform config for ill_eliminate_cut_left : 
+Object { button: "←", title: "Eliminate cut or commute it on left hand-side (ILL)", singleClick: "ill_eliminate_cut_left", doubleClick: null }
+proof-core.js:222:21
+[TRANSFORM-FRONTEND] Created transform button - enabled: true button text: ← proof-core.js:239:21
+[TRANSFORM-FRONTEND] Adding single click handler for: ill_eliminate_cut_left proof-core.js:256:29
+[TRANSFORM-FRONTEND] Processing transform option: 
+Object { transformation: "ill_eliminate_cut_key_case", enabled: true, title: "Eliminate hypothesis-hypothesis key-case" }
+proof-core.js:221:21
+[TRANSFORM-FRONTEND] Transform config for ill_eliminate_cut_key_case : 
+Object { button: "↑", title: "Eliminate cut key-case (ILL)", singleClick: "ill_eliminate_cut_key_case", doubleClick: null }
+proof-core.js:222:21
+[TRANSFORM-FRONTEND] Created transform button - enabled: true button text: ↑ proof-core.js:239:21
+[TRANSFORM-FRONTEND] Adding single click handler for: ill_eliminate_cut_key_case proof-core.js:256:29
+[TRANSFORM-FRONTEND] Processing transform option: 
+Object { transformation: "ill_eliminate_cut_right", enabled: true, title: "Eliminate hypothesis-cut on the right" }
+proof-core.js:221:21
+[TRANSFORM-FRONTEND] Transform config for ill_eliminate_cut_right : 
+Object { button: "→", title: "Eliminate cut or commute it on right hand-side (ILL)", singleClick: "ill_eliminate_cut_right", doubleClick: null }
+proof-core.js:222:21
+[TRANSFORM-FRONTEND] Created transform button - enabled: true button text: → proof-core.js:239:21
+[TRANSFORM-FRONTEND] Adding single click handler for: ill_eliminate_cut_right proof-core.js:256:29
+[TRANSFORM-FRONTEND] Processing transform option: 
+Object { transformation: "ill_eliminate_cut_full", enabled: true, title: "Fully eliminate this cut" }
+proof-core.js:221:21
+[TRANSFORM-FRONTEND] Transform config for ill_eliminate_cut_full : 
+Object { button: "✄", title: "Fully eliminate this cut (ILL)", singleClick: "ill_eliminate_cut_full", doubleClick: null }
+proof-core.js:222:21
+[TRANSFORM-FRONTEND] Created transform button - enabled: true button text: ✄ proof-core.js:239:21
+[TRANSFORM-FRONTEND] Adding single click handler for: ill_eliminate_cut_full proof-core.js:256:29
+[TRANSFORM-FRONTEND] Adding to transformation stack compatibility.js:998:21
+[TRANSFORM-FRONTEND] Transformation options reload completed successfully compatibility.js:1001:21
+[TRANSFORM-FRONTEND] Clicked transform button for: ill_eliminate_cut_full proof-core.js:258:33
+[TRANSFORM-FRONTEND] Starting applyTransformation compatibility.js:402:13
+[TRANSFORM-FRONTEND] Sequent table: 
+Object { 0: table.binary-rule, length: 1 }
+compatibility.js:403:13
+[TRANSFORM-FRONTEND] Transform request: 
+Object { transformation: "ill_eliminate_cut_full" }
+compatibility.js:404:13
+[TRANSFORM-FRONTEND] Container: 
+Object { 0: div#main-proof-container.proof-container, length: 1, prevObject: {…} }
+compatibility.js:409:13
+[TRANSFORM-FRONTEND] Options: 
+Object { withInteraction: false, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+compatibility.js:410:13
+[TRANSFORM-FRONTEND] ILL mode detected: true compatibility.js:414:13
+[TRANSFORM-FRONTEND] Extracted proof from sequent: 
+Object { sequent: {…}, appliedRule: {…} }
+compatibility.js:420:13
+[TRANSFORM-FRONTEND] Extracted notations: 
+Array []
+compatibility.js:421:13
+[TRANSFORM-FRONTEND] Prepared request data: 
+Object { proof: {…}, notations: [], transformRequest: {…} }
+compatibility.js:430:13
+[TRANSFORM-FRONTEND] Using transformation URL: /apply_ill_transformation compatibility.js:434:13
+[TRANSFORM-FRONTEND] Compressed request data: {"proof":{"s":{"hyp":[{"t":"litt","v":"A"},{"t":"litt","v":"B"}],"cons":[{"t":"litt","v":"C"}]},"ar":{"rr":{"cutFormula":{"t":"litt","v":"X"},"r":"ill_cut"},"p":[{"s":{"hyp":[{"t":"litt","v":"A"}],"cons":[{"t":"litt","v":"X"}]},"ar":null},{"s":{"hyp":[{"t":"litt","v":"B"},{"t":"litt","v":"X"}],"cons":[{"t":"litt","v":"C"}]},"ar":null}],"transformOptions":[{"transformation":"ill_eliminate_cut_left","enabled":true,"title":"Eliminate hypothesis-cut on the left"},{"transformation":"ill_eliminate_cut_key_case","enabled":true,"title":"Eliminate hypothesis-hypothesis key-case"},{"transformation":"ill_eliminate_cut_right","enabled":true,"title":"Eliminate hypothesis-cut on the right"},{"transformation":"ill_eliminate_cut_full","enabled":true,"title":"Fully eliminate this cut"}]}},"notations":[],"transformRequest":{"transformation":"ill_eliminate_cut_full"}} compatibility.js:437:13
+[TRANSFORM-FRONTEND] AJAX success - received transformation response: 
+Object { illProof: {…}, transformationApplied: "ill_eliminate_cut_full" }
+compatibility.js:444:21
+[TRANSFORM-FRONTEND] Removed sequent table, container: 
+Object { 0: div.proof.intuitionistic-mode.proof-transformation, length: 1, prevObject: {…} }
+compatibility.js:451:21
+[TRANSFORM-FRONTEND] Was transformation mode enabled: true compatibility.js:455:21
+[TRANSFORM-FRONTEND] Rule engine: 
+Object { ruleSymbols: {…}, modeName: "intuitionistic" }
+compatibility.js:463:21
+[TRANSFORM-FRONTEND] Extracted proof data for rebuild: 
+Object { sequent: {…}, appliedRule: null }
+compatibility.js:472:21
+[TRANSFORM-FRONTEND] Transformation applied field: ill_eliminate_cut_full compatibility.js:473:21
+[TRANSFORM-FRONTEND] Rebuilt proof with transformed data compatibility.js:476:21
+[TRANSFORM-FRONTEND] Re-enabling transformation mode compatibility.js:480:25
+[TRANSFORM-FRONTEND] Starting reloadProofWithTransformationOptions compatibility.js:949:13
+[TRANSFORM-FRONTEND] Container: 
+Object { 0: div#main-proof-container.proof-container, length: 1, prevObject: {…} }
+compatibility.js:950:13
+[TRANSFORM-FRONTEND] Options: 
+Object { withInteraction: false, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+compatibility.js:951:13
+[TRANSFORM-FRONTEND] Extracted proof from container: 
+Object { sequent: {…}, appliedRule: null }
+compatibility.js:957:13
+[TRANSFORM-FRONTEND] Extracted notations: 
+Array []
+compatibility.js:958:13
+[TRANSFORM-FRONTEND] ILL mode detected: true compatibility.js:964:13
+[TRANSFORM-FRONTEND] Using endpoint: /get_ill_proof_transformation_options compatibility.js:965:13
+[TRANSFORM-FRONTEND] Request data before compression: 
+Object { proof: {…}, notations: [] }
+compatibility.js:970:13
+[TRANSFORM-FRONTEND] Compressed request data: {"proof":{"s":{"hyp":[{"t":"litt","v":"B"},{"t":"litt","v":"A"}],"cons":[{"t":"litt","v":"C"}]},"ar":null},"notations":[]} compatibility.js:971:13
+[TRANSFORM-FRONTEND] Transformation application completed successfully compatibility.js:485:21
+[TRANSFORM-FRONTEND] AJAX success - received response: 
+Object { illProofWithTransformationOptions: {…}, canSimplify: true, canEliminateAllCuts: false }
+compatibility.js:979:21
+[TRANSFORM-FRONTEND] Disabled interaction mode, updated options: 
+Object { withInteraction: false, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+compatibility.js:983:21
+[TRANSFORM-FRONTEND] Extracted proof with options: 
+Object { sequent: {…}, appliedRule: null, transformOptions: [] }
+compatibility.js:990:21
+[TRANSFORM-FRONTEND] Available transformation options in proof: 
+Array []
+compatibility.js:991:21
+[TRANSFORM-FRONTEND] Calling reloadProof with proof and options compatibility.js:994:21
+[TRANSFORM-FRONTEND] Adding to transformation stack compatibility.js:998:21
+[TRANSFORM-FRONTEND] Transformation options reload completed successfully compatibility.js:1001:21

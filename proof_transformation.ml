@@ -168,10 +168,15 @@ let expand_axiom notations = function
     ;;
 
 let rec expand_axiom_on_proof notations = function
-    | Axiom_proof f -> expand_axiom notations f
+    | Axiom_proof f -> 
+        Printf.eprintf "[TRANSFORM] Expanding axiom for formula\n%!";
+        expand_axiom notations f
     | Exchange_proof (s, display_permutation, exchange_permutation, p) ->
+        Printf.eprintf "[TRANSFORM] Expanding axiom through exchange proof\n%!";
         merge_exchange (Exchange_proof (s, display_permutation, exchange_permutation, expand_axiom_on_proof notations p))
-    | _ -> raise (Transform_exception ("Can only expand axiom on Axiom_proof or Exchange_proof"))
+    | _ -> 
+        Printf.eprintf "[TRANSFORM ERROR] Cannot expand axiom on this proof type\n%!";
+        raise (Transform_exception ("Can only expand axiom on Axiom_proof or Exchange_proof"))
 
 let rec expand_axiom_full notations proof =
     let new_proof =
@@ -556,13 +561,17 @@ let rec cut_elimination_with_permutation cut_head cut_formula cut_tail other_pro
 
 let rec cut_elimination is_left notations cut_trans = function
     | Cut_proof (cut_head, cut_formula, cut_tail, cut_p1, cut_p2) -> begin
+        Printf.eprintf "[TRANSFORM] Eliminating cut on %s side\n%!" (if is_left then "left" else "right");
         if is_left
         then cut_elimination_with_permutation cut_head cut_formula cut_tail cut_p2 is_left (identity (List.length cut_head + 1)) notations cut_trans cut_p1
         else cut_elimination_with_permutation cut_head cut_formula cut_tail cut_p1 is_left (identity (List.length cut_tail + 1)) notations cut_trans cut_p2
     end
     | Exchange_proof (s, display_permutation, exchange_permutation, p) ->
+        Printf.eprintf "[TRANSFORM] Eliminating cut through exchange proof\n%!";
         merge_exchange (Exchange_proof (s, display_permutation, exchange_permutation, cut_elimination is_left notations cut_trans p))
-    | _-> raise (Transform_exception "Can only eliminate cut on Cut_proof or Exchange_proof")
+    | _-> 
+        Printf.eprintf "[TRANSFORM ERROR] Cannot eliminate cut on this proof type\n%!";
+        raise (Transform_exception "Can only eliminate cut on Cut_proof or Exchange_proof")
 
 
 (* CUT ELIMINATION KEY CASE *)
@@ -672,22 +681,39 @@ let rec eliminate_cut_key_case cut_head cut_formula cut_tail cut_p1 cut_p2 perm1
 
 let rec cut_elimination_key_case notations cut_trans = function
     | Cut_proof (cut_head, cut_formula, cut_tail, cut_p1, cut_p2) ->
+        Printf.eprintf "[TRANSFORM] Eliminating cut key-case\n%!";
         eliminate_cut_key_case cut_head cut_formula cut_tail cut_p1 cut_p2 (identity (List.length cut_head + 1)) (identity (List.length cut_tail + 1)) notations cut_trans
     | Exchange_proof (s, display_permutation, exchange_permutation, p) ->
+        Printf.eprintf "[TRANSFORM] Eliminating cut key-case through exchange proof\n%!";
         merge_exchange (Exchange_proof (s, display_permutation, exchange_permutation, cut_elimination_key_case notations cut_trans p))
-    | _-> raise (Transform_exception "Can only eliminate cut key-case on Cut_proof or Exchange_proof")
+    | _-> 
+        Printf.eprintf "[TRANSFORM ERROR] Cannot eliminate cut key-case on this proof type\n%!";
+        raise (Transform_exception "Can only eliminate cut key-case on Cut_proof or Exchange_proof")
 
 (* ELIMINATE CUT FULL *)
 
 let eliminate_cut notations cut_head cut_formula cut_tail cut_p1 cut_p2 cut_trans =
+    Printf.eprintf "[TRANSFORM] Analyzing cut elimination strategy\n%!";
     let cut_proof = Cut_proof (cut_head, cut_formula, cut_tail, cut_p1, cut_p2) in
     if can_commute_on_left notations cut_proof
-    then cut_elimination true notations cut_trans cut_proof
+    then (
+        Printf.eprintf "[TRANSFORM] Using left commutation strategy\n%!";
+        cut_elimination true notations cut_trans cut_proof
+    )
     else if can_commute_on_right notations cut_proof
-    then cut_elimination false notations cut_trans cut_proof
+    then (
+        Printf.eprintf "[TRANSFORM] Using right commutation strategy\n%!";
+        cut_elimination false notations cut_trans cut_proof
+    )
     else if can_eliminate_key_case notations cut_proof
-    then cut_elimination_key_case notations cut_trans cut_proof
-    else cut_proof
+    then (
+        Printf.eprintf "[TRANSFORM] Using key-case elimination strategy\n%!";
+        cut_elimination_key_case notations cut_trans cut_proof
+    )
+    else (
+        Printf.eprintf "[TRANSFORM] No elimination strategy available, returning unchanged\n%!";
+        cut_proof
+    )
 
 let rec eliminate_cut_full acyclic_notations = function
     | Cut_proof (cut_head, cut_formula, cut_tail, cut_p1, cut_p2) ->
@@ -838,16 +864,56 @@ let check_simplification proof =
     proof <> Proof_simplification.simplify proof
 
 let apply_transformation_with_exceptions proof cyclic_notations acyclic_notations = function
-    | Expand_axiom -> expand_axiom_on_proof (cyclic_notations @ acyclic_notations) proof
-    | Expand_axiom_full -> expand_axiom_full acyclic_notations proof
-    | Eliminate_cut_left -> cut_elimination true (cyclic_notations @ acyclic_notations) (fun p -> p) proof
-    | Eliminate_cut_right -> cut_elimination false (cyclic_notations @ acyclic_notations) (fun p -> p) proof
-    | Eliminate_cut_key_case -> cut_elimination_key_case (cyclic_notations @ acyclic_notations) (fun p -> p) proof
-    | Eliminate_cut_full -> eliminate_cut_full acyclic_notations proof
-    | Eliminate_all_cuts -> eliminate_all_cuts_in_proof acyclic_notations proof
-    | Simplify -> Proof_simplification.simplify proof
-    | Substitute (alias, raw_formula) -> Proof.replace_in_proof alias (Raw_sequent.to_formula raw_formula) proof
-    | Apply_reversible_first rule_request -> apply_reversible_first (cyclic_notations @ acyclic_notations) rule_request proof
+    | Expand_axiom -> 
+        Printf.eprintf "[TRANSFORM] Applying expand_axiom transformation\n%!";
+        let result = expand_axiom_on_proof (cyclic_notations @ acyclic_notations) proof in
+        Printf.eprintf "[TRANSFORM] Expand_axiom transformation completed\n%!";
+        result
+    | Expand_axiom_full -> 
+        Printf.eprintf "[TRANSFORM] Applying expand_axiom_full transformation\n%!";
+        let result = expand_axiom_full acyclic_notations proof in
+        Printf.eprintf "[TRANSFORM] Expand_axiom_full transformation completed\n%!";
+        result
+    | Eliminate_cut_left -> 
+        Printf.eprintf "[TRANSFORM] Applying eliminate_cut_left transformation\n%!";
+        let result = cut_elimination true (cyclic_notations @ acyclic_notations) (fun p -> p) proof in
+        Printf.eprintf "[TRANSFORM] Eliminate_cut_left transformation completed\n%!";
+        result
+    | Eliminate_cut_right -> 
+        Printf.eprintf "[TRANSFORM] Applying eliminate_cut_right transformation\n%!";
+        let result = cut_elimination false (cyclic_notations @ acyclic_notations) (fun p -> p) proof in
+        Printf.eprintf "[TRANSFORM] Eliminate_cut_right transformation completed\n%!";
+        result
+    | Eliminate_cut_key_case -> 
+        Printf.eprintf "[TRANSFORM] Applying eliminate_cut_key_case transformation\n%!";
+        let result = cut_elimination_key_case (cyclic_notations @ acyclic_notations) (fun p -> p) proof in
+        Printf.eprintf "[TRANSFORM] Eliminate_cut_key_case transformation completed\n%!";
+        result
+    | Eliminate_cut_full -> 
+        Printf.eprintf "[TRANSFORM] Applying eliminate_cut_full transformation\n%!";
+        let result = eliminate_cut_full acyclic_notations proof in
+        Printf.eprintf "[TRANSFORM] Eliminate_cut_full transformation completed\n%!";
+        result
+    | Eliminate_all_cuts -> 
+        Printf.eprintf "[TRANSFORM] Applying eliminate_all_cuts transformation\n%!";
+        let result = eliminate_all_cuts_in_proof acyclic_notations proof in
+        Printf.eprintf "[TRANSFORM] Eliminate_all_cuts transformation completed\n%!";
+        result
+    | Simplify -> 
+        Printf.eprintf "[TRANSFORM] Applying simplify transformation\n%!";
+        let result = Proof_simplification.simplify proof in
+        Printf.eprintf "[TRANSFORM] Simplify transformation completed\n%!";
+        result
+    | Substitute (alias, raw_formula) -> 
+        Printf.eprintf "[TRANSFORM] Applying substitute transformation for alias: %s\n%!" alias;
+        let result = Proof.replace_in_proof alias (Raw_sequent.to_formula raw_formula) proof in
+        Printf.eprintf "[TRANSFORM] Substitute transformation completed\n%!";
+        result
+    | Apply_reversible_first rule_request -> 
+        Printf.eprintf "[TRANSFORM] Applying apply_reversible_first transformation\n%!";
+        let result = apply_reversible_first (cyclic_notations @ acyclic_notations) rule_request proof in
+        Printf.eprintf "[TRANSFORM] Apply_reversible_first transformation completed\n%!";
+        result
     ;;
 
 let apply_transformation_on_notations notations = function
@@ -858,31 +924,59 @@ let apply_transformation_on_notations notations = function
 (* HANDLERS *)
 
 let get_proof_transformation_options request_as_json =
+    Printf.eprintf "[TRANSFORM] Getting proof transformation options\n%!";
     try let proof_with_notations = Proof_with_notations.from_json request_as_json in
+        Printf.eprintf "[TRANSFORM] Parsed proof with notations successfully\n%!";
         let proof_variables = Proof.get_unique_variable_names proof_with_notations.proof in
+        Printf.eprintf "[TRANSFORM] Found %d unique variables in proof\n%!" (List.length proof_variables);
         let cyclic_notations, _ = Notations.split_cyclic_acyclic proof_with_notations.notations (Some proof_variables) in
         let not_cyclic = (List.length cyclic_notations = 0) in
+        Printf.eprintf "[TRANSFORM] Notation analysis - cyclic: %d, not_cyclic: %b\n%!" (List.length cyclic_notations) not_cyclic;
         let proof_with_transformation_options = get_transformation_options_json proof_with_notations.proof proof_with_notations.notations not_cyclic in
+        Printf.eprintf "[TRANSFORM] Generated transformation options for proof\n%!";
         let can_eliminate_all_cuts = check_all_cuts_elimination proof_with_notations.notations not_cyclic proof_with_notations.proof in
+        Printf.eprintf "[TRANSFORM] Can eliminate all cuts: %b\n%!" can_eliminate_all_cuts;
         let can_simplify = check_simplification proof_with_notations.proof in
+        Printf.eprintf "[TRANSFORM] Can simplify: %b\n%!" can_simplify;
         let notations_as_string = Notations.to_json ~stringify:true proof_with_notations.notations in
+        Printf.eprintf "[TRANSFORM] Returning successful transformation options response\n%!";
         true, `Assoc [
             "proofWithTransformationOptions", proof_with_transformation_options;
             "canSimplify", `Bool can_simplify;
             "canEliminateAllCuts", `Bool can_eliminate_all_cuts;
             "notationsAsString", notations_as_string]
-    with Proof_with_notations.Json_exception m -> false, `String ("Bad request: " ^ m);;
+    with Proof_with_notations.Json_exception m -> 
+        Printf.eprintf "[TRANSFORM ERROR] Failed to parse proof with notations: %s\n%!" m;
+        false, `String ("Bad request: " ^ m);;
 
 let apply_transformation request_as_json =
+    Printf.eprintf "[TRANSFORM] Applying transformation from request\n%!";
     try let proof_with_notations = Proof_with_notations.from_json request_as_json in
+        Printf.eprintf "[TRANSFORM] Parsed proof with notations successfully\n%!";
         let transform_request_as_json = Request_utils.get_key request_as_json "transformRequest" in
+        Printf.eprintf "[TRANSFORM] Extracted transform request from JSON\n%!";
         let transform_request = Transform_request.from_json transform_request_as_json in
+        Printf.eprintf "[TRANSFORM] Parsed transformation request: %s\n%!" (Transform_request.to_string transform_request);
         let cyclic_notations, acyclic_notations = Notations.split_cyclic_acyclic proof_with_notations.notations None in
+        Printf.eprintf "[TRANSFORM] Split notations - cyclic: %d, acyclic: %d\n%!" (List.length cyclic_notations) (List.length acyclic_notations);
         let proof = apply_transformation_with_exceptions proof_with_notations.proof cyclic_notations acyclic_notations transform_request in
+        Printf.eprintf "[TRANSFORM] Applied transformation successfully\n%!";
         let notations = apply_transformation_on_notations proof_with_notations.notations transform_request in
+        Printf.eprintf "[TRANSFORM] Updated notations after transformation\n%!";
+        Printf.eprintf "[TRANSFORM] Returning successful transformation result\n%!";
         true, `Assoc ["proof", Proof.to_json proof; "notations", Notations.to_json notations]
-    with Proof_with_notations.Json_exception m -> false, `String ("Bad proof with notations: " ^ m)
-        | Request_utils.Bad_request_exception m -> false, `String ("Bad request: " ^ m)
-        | Transform_request.Json_exception m -> false, `String ("Bad transformation request: " ^ m)
-        | Transform_exception m -> false, `String ("Transform exception: " ^ m)
-        | Pedagogic_exception m -> true, `Assoc ["error_message", `String m];;
+    with Proof_with_notations.Json_exception m -> 
+        Printf.eprintf "[TRANSFORM ERROR] Bad proof with notations: %s\n%!" m;
+        false, `String ("Bad proof with notations: " ^ m)
+        | Request_utils.Bad_request_exception m -> 
+        Printf.eprintf "[TRANSFORM ERROR] Bad request: %s\n%!" m;
+        false, `String ("Bad request: " ^ m)
+        | Transform_request.Json_exception m -> 
+        Printf.eprintf "[TRANSFORM ERROR] Bad transformation request: %s\n%!" m;
+        false, `String ("Bad transformation request: " ^ m)
+        | Transform_exception m -> 
+        Printf.eprintf "[TRANSFORM ERROR] Transform exception: %s\n%!" m;
+        false, `String ("Transform exception: " ^ m)
+        | Pedagogic_exception m -> 
+        Printf.eprintf "[TRANSFORM ERROR] Pedagogic exception: %s\n%!" m;
+        true, `Assoc ["error_message", `String m];;

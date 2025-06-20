@@ -399,15 +399,26 @@ function autoReverseSequentPremises($sequentTable) {
  * @param {Object} transformRequest - Transformation request
  */
 function applyTransformation($sequentTable, transformRequest) {
+    console.log('[TRANSFORM-FRONTEND] Starting applyTransformation');
+    console.log('[TRANSFORM-FRONTEND] Sequent table:', $sequentTable);
+    console.log('[TRANSFORM-FRONTEND] Transform request:', transformRequest);
+    
     let $container = $sequentTable.closest('.proof-container');
     let options = $container.data('options');
+    
+    console.log('[TRANSFORM-FRONTEND] Container:', $container);
+    console.log('[TRANSFORM-FRONTEND] Options:', options);
 
     // Check if we're in ILL mode
     let isIllMode = options.intuitionisticMode?.value || false;
+    console.log('[TRANSFORM-FRONTEND] ILL mode detected:', isIllMode);
     
     // Get the proof data from the sequent table
     let proof = recGetProofAsJson($sequentTable);
     let notations = getNotations($container);
+    
+    console.log('[TRANSFORM-FRONTEND] Extracted proof from sequent:', proof);
+    console.log('[TRANSFORM-FRONTEND] Extracted notations:', notations);
     
     // Prepare the transformation request
     let requestData = {
@@ -415,46 +426,78 @@ function applyTransformation($sequentTable, transformRequest) {
         notations: notations,
         transformRequest: transformRequest
     };
+    
+    console.log('[TRANSFORM-FRONTEND] Prepared request data:', requestData);
 
     // Use appropriate endpoint based on mode
     let transformationUrl = isIllMode ? '/apply_ill_transformation' : '/apply_transformation';
+    console.log('[TRANSFORM-FRONTEND] Using transformation URL:', transformationUrl);
+    
+    let compressedData = compressJson(JSON.stringify(requestData));
+    console.log('[TRANSFORM-FRONTEND] Compressed request data:', compressedData);
     $.ajax({
         type: 'POST',
         url: transformationUrl,
         contentType: 'application/json; charset=utf-8',
-        data: compressJson(JSON.stringify(requestData)),
+        data: compressedData,
         success: function(data) {
+            console.log('[TRANSFORM-FRONTEND] AJAX success - received transformation response:', data);
+            
             clearSavedProof();
             cleanPedagogicMessage($container);
             
             // Remove the current sequent table and rebuild
             let $sequentContainer = removeSequentTable($sequentTable);
+            console.log('[TRANSFORM-FRONTEND] Removed sequent table, container:', $sequentContainer);
             
             // Temporarily disable transformation mode to rebuild proof
             let wasTransformationMode = options.proofTransformation?.value || false;
+            console.log('[TRANSFORM-FRONTEND] Was transformation mode enabled:', wasTransformationMode);
+            
             if (options.proofTransformation) {
                 options.proofTransformation.value = false;
             }
             
             // Get the rule engine from container
             let ruleEngine = $container.data('ruleEngine');
+            console.log('[TRANSFORM-FRONTEND] Rule engine:', ruleEngine);
             
             // Rebuild the proof - handle both LL and ILL response formats
             let proofData = data['proof'] || data['illProof'];
             if (!proofData) {
-                console.error('[ERROR] No proof data found in response:', data);
+                console.error('[TRANSFORM-FRONTEND ERROR] No proof data found in response:', data);
                 return;
             }
+            
+            console.log('[TRANSFORM-FRONTEND] Extracted proof data for rebuild:', proofData);
+            console.log('[TRANSFORM-FRONTEND] Transformation applied field:', data['transformationApplied']);
+            
             createSubProof(proofData, $sequentContainer, options, ruleEngine);
+            console.log('[TRANSFORM-FRONTEND] Rebuilt proof with transformed data');
             
             // Re-enable transformation mode and reload with options
             if (wasTransformationMode && options.proofTransformation) {
+                console.log('[TRANSFORM-FRONTEND] Re-enabling transformation mode');
                 options.proofTransformation.value = true;
                 reloadProofWithTransformationOptions($container, options);
             }
+            
+            console.log('[TRANSFORM-FRONTEND] Transformation application completed successfully');
         },
         error: function(jqXHR, textStatus, errorThrown) {
+            console.error('[TRANSFORM-FRONTEND ERROR] Transformation failed:', {
+                status: jqXHR.status,
+                statusText: jqXHR.statusText,
+                responseText: jqXHR.responseText,
+                responseJSON: jqXHR.responseJSON,
+                textStatus: textStatus,
+                errorThrown: errorThrown,
+                transformationUrl: transformationUrl,
+                requestData: compressedData
+            });
+            
             if (jqXHR.responseJSON && jqXHR.responseJSON.error_message) {
+                console.log('[TRANSFORM-FRONTEND] Displaying pedagogic error:', jqXHR.responseJSON.error_message);
                 displayPedagogicError(jqXHR.responseJSON.error_message, $container);
             } else {
                 onAjaxError(jqXHR, textStatus, errorThrown);
@@ -903,35 +946,71 @@ function markParentSequentsAsProvable($sequentTable) {
  * @param {Object} options - Options object
  */
 function reloadProofWithTransformationOptions($container, options) {
+    console.log('[TRANSFORM-FRONTEND] Starting reloadProofWithTransformationOptions');
+    console.log('[TRANSFORM-FRONTEND] Container:', $container);
+    console.log('[TRANSFORM-FRONTEND] Options:', options);
+    
     // Get the current proof stored in the container
     let proof = getProofAsJson($container);
     let notations = getNotations($container);
+    
+    console.log('[TRANSFORM-FRONTEND] Extracted proof from container:', proof);
+    console.log('[TRANSFORM-FRONTEND] Extracted notations:', notations);
 
     // Check if we're in ILL mode
     let isIllMode = options.intuitionisticMode?.value || false;
     let optionsUrl = isIllMode ? '/get_ill_proof_transformation_options' : '/get_proof_transformation_options';
+    
+    console.log('[TRANSFORM-FRONTEND] ILL mode detected:', isIllMode);
+    console.log('[TRANSFORM-FRONTEND] Using endpoint:', optionsUrl);
+
+    let requestData = { proof, notations };
+    let compressedData = compressJson(JSON.stringify(requestData));
+    
+    console.log('[TRANSFORM-FRONTEND] Request data before compression:', requestData);
+    console.log('[TRANSFORM-FRONTEND] Compressed request data:', compressedData);
 
     $.ajax({
         type: 'POST',
         url: optionsUrl,
         contentType: 'application/json; charset=utf-8',
-        data: compressJson(JSON.stringify({ proof, notations })),
+        data: compressedData,
         success: function(data) {
+            console.log('[TRANSFORM-FRONTEND] AJAX success - received response:', data);
+            
             // Disable interaction mode for transformation mode
             options.withInteraction = false;
+            console.log('[TRANSFORM-FRONTEND] Disabled interaction mode, updated options:', options);
             
             // Use appropriate response field based on mode
             let proofWithOptions = isIllMode ? 
                 data['illProofWithTransformationOptions'] : 
                 data['proofWithTransformationOptions'];
+                
+            console.log('[TRANSFORM-FRONTEND] Extracted proof with options:', proofWithOptions);
+            console.log('[TRANSFORM-FRONTEND] Available transformation options in proof:', proofWithOptions?.transformOptions);
             
             // Reload the proof with transformation options
+            console.log('[TRANSFORM-FRONTEND] Calling reloadProof with proof and options');
             reloadProof($container, proofWithOptions, options);
             
             // Add to transformation stack for undo/redo
+            console.log('[TRANSFORM-FRONTEND] Adding to transformation stack');
             stackProofTransformation($container);
+            
+            console.log('[TRANSFORM-FRONTEND] Transformation options reload completed successfully');
         },
         error: function(jqXHR, textStatus, errorThrown) {
+            console.error('[TRANSFORM-FRONTEND ERROR] Failed to get transformation options:', {
+                status: jqXHR.status,
+                statusText: jqXHR.statusText,
+                responseText: jqXHR.responseText,
+                responseJSON: jqXHR.responseJSON,
+                textStatus: textStatus,
+                errorThrown: errorThrown,
+                requestUrl: optionsUrl,
+                requestData: compressedData
+            });
             onAjaxError(jqXHR, textStatus, errorThrown);
         }
     });

@@ -211,9 +211,15 @@ function addPremises($sequentTable, proofAsJson, permutationBeforeRule, options,
             return;
         }
         
+        console.log('[TRANSFORM-FRONTEND] Processing transformation options:', transformOptions);
+        console.log('[TRANSFORM-FRONTEND] Active transform options config:', activeTransformOptions);
+        
         for (let transformOption of transformOptions) {
             let transformation = transformOption.transformation;
             let transformConfig = activeTransformOptions[transformation];
+            
+            console.log('[TRANSFORM-FRONTEND] Processing transform option:', transformOption);
+            console.log('[TRANSFORM-FRONTEND] Transform config for', transformation, ':', transformConfig);
             
             if (!transformConfig) {
                 // Fallback for unknown transformation types
@@ -223,31 +229,40 @@ function addPremises($sequentTable, proofAsJson, permutationBeforeRule, options,
                     'singleClick': transformation,
                     'doubleClick': null
                 };
+                console.log('[TRANSFORM-FRONTEND] Using fallback config:', transformConfig);
             }
             
             let $transformSpan = $('<span>', {'class': 'transform-button'})
                 .addClass(transformOption.enabled ? 'enabled' : 'disabled')
                 .text(transformConfig.button);
             
+            console.log('[TRANSFORM-FRONTEND] Created transform button - enabled:', transformOption.enabled, 'button text:', transformConfig.button);
+            
             if (transformOption.enabled) {
                 $transformSpan.attr('title', transformConfig.title);
                 
                 if (transformConfig.doubleClick) {
                     // Add both single and double click handlers
+                    console.log('[TRANSFORM-FRONTEND] Adding single/double click handlers for:', transformation);
                     addClickAndDoubleClickEvent($transformSpan, function () {
+                        console.log('[TRANSFORM-FRONTEND] Single click transform button for:', transformConfig.singleClick);
                         applyTransformation($sequentTable, { transformation: transformConfig.singleClick });
                     }, function () {
+                        console.log('[TRANSFORM-FRONTEND] Double click transform button for:', transformConfig.doubleClick);
                         applyTransformation($sequentTable, { transformation: transformConfig.doubleClick });
                     });
                 } else {
                     // Single click only
+                    console.log('[TRANSFORM-FRONTEND] Adding single click handler for:', transformation);
                     $transformSpan.on('click', function () {
+                        console.log('[TRANSFORM-FRONTEND] Clicked transform button for:', transformConfig.singleClick);
                         applyTransformation($sequentTable, { transformation: transformConfig.singleClick });
                     });
                 }
             } else {
                 // Disabled transformations get a title explaining why they're disabled
                 $transformSpan.attr('title', transformOption.title || 'Transformation not available');
+                console.log('[TRANSFORM-FRONTEND] Created disabled transform button:', transformOption.title);
             }
             
             transformDiv.append($transformSpan);
