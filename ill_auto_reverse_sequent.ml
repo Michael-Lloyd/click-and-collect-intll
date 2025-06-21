@@ -259,6 +259,10 @@ let is_reversible_rule = function
     | ILL_Plus_right_1 -> false (* Plus right 1 requires choice *)
     | ILL_Plus_right_2 -> false (* Plus right 2 requires choice *)
     | ILL_Cut -> false          (* Cut requires user input (cut formula and position) *)
+    | ILL_Weakening -> true      (* Weakening is reversible *)
+    | ILL_Contraction -> true    (* Contraction is reversible *)
+    | ILL_Dereliction -> true    (* Dereliction is reversible *)
+    | ILL_Promotion -> true      (* Promotion is reversible *)
 
 (* Check if a sequent has a unique reversible rule that applies.
    @param ill_seq - ILL sequent

@@ -91,6 +91,18 @@ let can_commute_with_cut_left _cut_formula_position cut_formula = function
     | ILL_Cut_proof (head_context, cut_f, tail_context, left_premise, right_premise) -> 
         let _ = (head_context, cut_f, tail_context, left_premise, right_premise) in  (* TODO: Use for advanced cut commutation *)
         true, "Commute with cut rule"
+    | ILL_Weakening_proof (_, _, _, _) -> 
+        (* TODO: Implement proper cut commutation with weakening rule *)
+        true, "Commute with weakening rule"
+    | ILL_Contraction_proof (_, _, _, _) -> 
+        (* TODO: Implement proper cut commutation with contraction rule *)
+        true, "Commute with contraction rule"
+    | ILL_Dereliction_proof (_, _, _, _) -> 
+        (* TODO: Implement proper cut commutation with dereliction rule *)
+        true, "Commute with dereliction rule"
+    | ILL_Promotion_proof (_, _, _) -> 
+        (* TODO: Implement proper cut commutation with promotion rule *)
+        true, "Commute with promotion rule"
 
 (* Check if we can commute a cut with the right premise in ILL.
    @param cut_context - Context where cut formula is inserted
@@ -155,6 +167,18 @@ let can_commute_with_cut_right cut_context = function
         false, "Cannot commute with ⊕₂ rule on right side"
     | ILL_Lollipop_proof (_, _, _, _) -> 
         false, "Cannot commute with ⊸R rule on right side"
+    | ILL_Weakening_proof (_, _, _, _) -> 
+        (* TODO: Implement proper cut commutation with weakening rule on right side *)
+        false, "Cannot commute with weakening rule on right side"
+    | ILL_Contraction_proof (_, _, _, _) -> 
+        (* TODO: Implement proper cut commutation with contraction rule on right side *)
+        false, "Cannot commute with contraction rule on right side"
+    | ILL_Dereliction_proof (_, _, _, _) -> 
+        (* TODO: Implement proper cut commutation with dereliction rule on right side *)
+        false, "Cannot commute with dereliction rule on right side"
+    | ILL_Promotion_proof (_, _, _) -> 
+        (* TODO: Implement proper cut commutation with promotion rule on right side *)
+        false, "Cannot commute with promotion rule on right side"
 
 (* Check if we can eliminate a key case in ILL cut elimination.
    Key cases occur when the cut formula is the principal formula of both premises.
@@ -225,8 +249,8 @@ let get_transform_options = function
         Printf.eprintf "[ILL-TRANSFORM] get_transform_options: Analyzing cut proof\n%!";
         Printf.eprintf "[ILL-TRANSFORM] Head context: %d formulas, tail context: %d formulas\n%!" (List.length head_ctx) (List.length tail_ctx);
         Printf.eprintf "[ILL-TRANSFORM] Cut formula: (formula type), Left proof type: %s, Right proof type: %s\n%!" 
-            (match left_proof with | ILL_Axiom_proof _ -> "Axiom" | ILL_Hypothesis_proof _ -> "Hypothesis" | ILL_One_proof -> "One" | ILL_Top_proof _ -> "Top" | ILL_Tensor_proof _ -> "Tensor" | ILL_Tensor_left_proof _ -> "TensorLeft" | ILL_With_left_1_proof _ -> "WithLeft1" | ILL_With_left_2_proof _ -> "WithLeft2" | ILL_With_right_proof _ -> "WithRight" | ILL_Plus_left_proof _ -> "PlusLeft" | ILL_Plus_right_1_proof _ -> "PlusRight1" | ILL_Plus_right_2_proof _ -> "PlusRight2" | ILL_Lollipop_proof _ -> "Lollipop" | ILL_Lollipop_left_proof _ -> "LollipopLeft" | ILL_Cut_proof _ -> "Cut")
-            (match right_proof with | ILL_Axiom_proof _ -> "Axiom" | ILL_Hypothesis_proof _ -> "Hypothesis" | ILL_One_proof -> "One" | ILL_Top_proof _ -> "Top" | ILL_Tensor_proof _ -> "Tensor" | ILL_Tensor_left_proof _ -> "TensorLeft" | ILL_With_left_1_proof _ -> "WithLeft1" | ILL_With_left_2_proof _ -> "WithLeft2" | ILL_With_right_proof _ -> "WithRight" | ILL_Plus_left_proof _ -> "PlusLeft" | ILL_Plus_right_1_proof _ -> "PlusRight1" | ILL_Plus_right_2_proof _ -> "PlusRight2" | ILL_Lollipop_proof _ -> "Lollipop" | ILL_Lollipop_left_proof _ -> "LollipopLeft" | ILL_Cut_proof _ -> "Cut");
+            (match left_proof with | ILL_Axiom_proof _ -> "Axiom" | ILL_Hypothesis_proof _ -> "Hypothesis" | ILL_One_proof -> "One" | ILL_Top_proof _ -> "Top" | ILL_Tensor_proof _ -> "Tensor" | ILL_Tensor_left_proof _ -> "TensorLeft" | ILL_With_left_1_proof _ -> "WithLeft1" | ILL_With_left_2_proof _ -> "WithLeft2" | ILL_With_right_proof _ -> "WithRight" | ILL_Plus_left_proof _ -> "PlusLeft" | ILL_Plus_right_1_proof _ -> "PlusRight1" | ILL_Plus_right_2_proof _ -> "PlusRight2" | ILL_Lollipop_proof _ -> "Lollipop" | ILL_Lollipop_left_proof _ -> "LollipopLeft" | ILL_Cut_proof _ -> "Cut" | ILL_Weakening_proof _ -> "Weakening" | ILL_Contraction_proof _ -> "Contraction" | ILL_Dereliction_proof _ -> "Dereliction" | ILL_Promotion_proof _ -> "Promotion")
+            (match right_proof with | ILL_Axiom_proof _ -> "Axiom" | ILL_Hypothesis_proof _ -> "Hypothesis" | ILL_One_proof -> "One" | ILL_Top_proof _ -> "Top" | ILL_Tensor_proof _ -> "Tensor" | ILL_Tensor_left_proof _ -> "TensorLeft" | ILL_With_left_1_proof _ -> "WithLeft1" | ILL_With_left_2_proof _ -> "WithLeft2" | ILL_With_right_proof _ -> "WithRight" | ILL_Plus_left_proof _ -> "PlusLeft" | ILL_Plus_right_1_proof _ -> "PlusRight1" | ILL_Plus_right_2_proof _ -> "PlusRight2" | ILL_Lollipop_proof _ -> "Lollipop" | ILL_Lollipop_left_proof _ -> "LollipopLeft" | ILL_Cut_proof _ -> "Cut" | ILL_Weakening_proof _ -> "Weakening" | ILL_Contraction_proof _ -> "Contraction" | ILL_Dereliction_proof _ -> "Dereliction" | ILL_Promotion_proof _ -> "Promotion");
         
         let cut_position = List.length head_ctx in
         let _ = tail_ctx in  (* TODO: Use tail_ctx for more sophisticated transformation options *)
@@ -334,6 +358,13 @@ let expand_axiom = function
         let axiom2 = ILL_Axiom_proof (match f2 with Litt s -> s | _ -> "B") in
         let lollipop_proof = ILL_Lollipop_proof ([f1], f1, f2, axiom2) in
         ILL_Lollipop_left_proof ([Lollipop (f1, f2)], f1, f2, axiom1, lollipop_proof)
+    
+    | Ofcourse f ->
+        (* TODO: Implement proper expansion for exponential formulas *)
+        (* For now, create a simple axiom for the inner formula *)
+        (match f with
+         | Litt s -> ILL_Axiom_proof s
+         | _ -> ILL_Axiom_proof "A")
 
 (* Apply axiom expansion to a proof tree recursively.
    @param proof - Proof tree to expand
@@ -568,6 +599,27 @@ let substitute_tensor_in_context tensor_left_proof tensor_right_proof target_pre
             let new_p1 = substitute_in_proof p1 in
             let new_p2 = substitute_in_proof p2 in
             ILL_Cut_proof (new_head_ctx, cut_f, new_tail_ctx, new_p1, new_p2)
+        
+        (* TODO: Implement proper tensor substitution for exponential rules *)
+        | ILL_Weakening_proof (ctx, exp_f, goal_f, p) ->
+            let new_ctx = substitute_tensor_in_formula_list ctx in
+            let new_p = substitute_in_proof p in
+            ILL_Weakening_proof (new_ctx, exp_f, goal_f, new_p)
+        
+        | ILL_Contraction_proof (ctx, exp_f, goal_f, p) ->
+            let new_ctx = substitute_tensor_in_formula_list ctx in
+            let new_p = substitute_in_proof p in
+            ILL_Contraction_proof (new_ctx, exp_f, goal_f, new_p)
+        
+        | ILL_Dereliction_proof (ctx, exp_f, goal_f, p) ->
+            let new_ctx = substitute_tensor_in_formula_list ctx in
+            let new_p = substitute_in_proof p in
+            ILL_Dereliction_proof (new_ctx, exp_f, goal_f, new_p)
+        
+        | ILL_Promotion_proof (ctx, goal_f, p) ->
+            let new_ctx = substitute_tensor_in_formula_list ctx in
+            let new_p = substitute_in_proof p in
+            ILL_Promotion_proof (new_ctx, goal_f, new_p)
     in
     
     substitute_in_proof target_premise
@@ -596,6 +648,9 @@ let substitute_formula_in_proof source_formula replacement_formula target_proof 
                 Plus (substitute_in_formula f1, substitute_in_formula f2)
             | Lollipop (f1, f2) -> 
                 Lollipop (substitute_in_formula f1, substitute_in_formula f2)
+            | Ofcourse f ->
+                (* TODO: Implement proper substitution for exponential formulas *)
+                Ofcourse (substitute_in_formula f)
     in
     
     (* Helper function to substitute in a list of formulas (context) *)
@@ -707,6 +762,34 @@ let substitute_formula_in_proof source_formula replacement_formula target_proof 
             let new_p1 = substitute_in_proof p1 in
             let new_p2 = substitute_in_proof p2 in
             ILL_Cut_proof (new_head_ctx, new_cut_f, new_tail_ctx, new_p1, new_p2)
+        
+        (* TODO: Implement proper substitution for exponential rules *)
+        | ILL_Weakening_proof (ctx, exp_f, goal_f, p) ->
+            let new_ctx = substitute_in_formula_list ctx in
+            let new_exp_f = substitute_in_formula exp_f in
+            let new_goal_f = substitute_in_formula goal_f in
+            let new_p = substitute_in_proof p in
+            ILL_Weakening_proof (new_ctx, new_exp_f, new_goal_f, new_p)
+        
+        | ILL_Contraction_proof (ctx, exp_f, goal_f, p) ->
+            let new_ctx = substitute_in_formula_list ctx in
+            let new_exp_f = substitute_in_formula exp_f in
+            let new_goal_f = substitute_in_formula goal_f in
+            let new_p = substitute_in_proof p in
+            ILL_Contraction_proof (new_ctx, new_exp_f, new_goal_f, new_p)
+        
+        | ILL_Dereliction_proof (ctx, exp_f, goal_f, p) ->
+            let new_ctx = substitute_in_formula_list ctx in
+            let new_exp_f = substitute_in_formula exp_f in
+            let new_goal_f = substitute_in_formula goal_f in
+            let new_p = substitute_in_proof p in
+            ILL_Dereliction_proof (new_ctx, new_exp_f, new_goal_f, new_p)
+        
+        | ILL_Promotion_proof (ctx, goal_f, p) ->
+            let new_ctx = substitute_in_formula_list ctx in
+            let new_goal_f = substitute_in_formula goal_f in
+            let new_p = substitute_in_proof p in
+            ILL_Promotion_proof (new_ctx, new_goal_f, new_p)
     in
     
     substitute_in_proof target_proof

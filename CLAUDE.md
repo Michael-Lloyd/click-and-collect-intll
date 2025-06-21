@@ -114,3 +114,34 @@ Gamma |- B <gap> B, Delta |- C
 Gamma, Delta |- C
 ```
 
+## Weakening 
+
+```
+Gamma |- B 
+---------------(!w)
+Gamma, !A |- B 
+```
+
+## Contraction 
+
+```
+Gamma, !A, !A |- B 
+-------------------(!c)
+Gamma, !A |- B
+```
+
+## Dereliction 
+
+```
+Gamma, A |- B
+---------------(!d)
+Gamma, !A |- B
+```
+
+## Promotion 
+
+```
+!Gamma |- A 
+---------------(!p)
+!Gamma |- !A 
+```

@@ -5,9 +5,10 @@
    where formulas can only appear on the right side of the turnstile.
    
    Key differences from Linear Logic:
-   - No exponentials (!A, ?A) - removed
    - No multiplicative disjunction (⅋) - removed  
-   - Only has: 1, ⊗, ⊤, &, ⊕, ⊸ (lollipop)
+   - No whynot (?A) - removed
+   - Has exponential modality (!A) for structural rules
+   - Only has: 1, ⊗, ⊤, &, ⊕, ⊸, ! (of course)
    
    The formula constructors represent:
    - One: multiplicative unit (1)
@@ -17,6 +18,7 @@
    - With: additive conjunction (A & B) - "both A and B, but choose one to use"
    - Plus: additive disjunction (A ⊕ B) - "A or B, choose one"
    - Lollipop: linear implication (A ⊸ B) - "A implies B linearly"
+   - Ofcourse: exponential modality (!A) - "unlimited copies of A"
 *)
 type formula =
   | One
@@ -25,7 +27,8 @@ type formula =
   | Tensor of formula * formula
   | With of formula * formula
   | Plus of formula * formula
-  | Lollipop of formula * formula;;
+  | Lollipop of formula * formula
+  | Ofcourse of formula;;
 
 (* A sequent in ILL is represented as Γ ⊢ A where:
    - Γ is a list of formulas (the context/assumptions)
@@ -76,7 +79,8 @@ let rec get_variable_names =
     | Tensor (e1, e2) -> get_variable_names e1 @ get_variable_names e2
     | With (e1, e2) -> get_variable_names e1 @ get_variable_names e2
     | Plus (e1, e2) -> get_variable_names e1 @ get_variable_names e2
-    | Lollipop (e1, e2) -> get_variable_names e1 @ get_variable_names e2;;
+    | Lollipop (e1, e2) -> get_variable_names e1 @ get_variable_names e2
+    | Ofcourse e -> get_variable_names e;;
 
 (* Get all unique variable names from an ILL sequent *)
 let get_unique_variable_names ill_seq =
@@ -90,6 +94,7 @@ let is_tensor = function | Tensor _ -> true | _ -> false;;
 let is_with = function | With _ -> true | _ -> false;;
 let is_plus = function | Plus _ -> true | _ -> false;;
 let is_lollipop = function | Lollipop _ -> true | _ -> false;;
+let is_ofcourse = function | Ofcourse _ -> true | _ -> false;;
 
 (* EXPORT FORMATS FOR ILL *)
 
@@ -102,6 +107,7 @@ let rec formula_to_ascii = function
   | With (e1, e2) -> "(" ^ formula_to_ascii e1 ^ " & " ^ formula_to_ascii e2 ^ ")"
   | Plus (e1, e2) -> "(" ^ formula_to_ascii e1 ^ " + " ^ formula_to_ascii e2 ^ ")"
   | Lollipop (e1, e2) -> "(" ^ formula_to_ascii e1 ^ " -o " ^ formula_to_ascii e2 ^ ")"
+  | Ofcourse e -> "!" ^ formula_to_ascii e
 
 (* Export ILL sequent to ASCII representation *)
 let ill_sequent_to_ascii ill_seq =
@@ -121,6 +127,7 @@ let rec formula_to_latex = function
   | With (e1, e2) -> formula_to_latex e1 ^ " \\& " ^ formula_to_latex e2
   | Plus (e1, e2) -> formula_to_latex e1 ^ " \\oplus " ^ formula_to_latex e2
   | Lollipop (e1, e2) -> formula_to_latex e1 ^ " \\multimap " ^ formula_to_latex e2
+  | Ofcourse e -> "!" ^ formula_to_latex e
 
 (* Export ILL sequent to LaTeX representation *)
 let ill_sequent_to_latex ill_seq =

@@ -14,11 +14,15 @@
    - Plus_left: Γ ⊢ A⊕B / Γ ⊢ A (additive disjunction left)
    - Plus_right: Γ ⊢ A⊕B / Γ ⊢ B (additive disjunction right)
    - Lollipop: Γ ⊢ A⊸B / Γ,A ⊢ B (linear implication introduction)
+   - Weakening: Γ ⊢ B / Γ,!A ⊢ B (weakening)
+   - Contraction: Γ,!A ⊢ B / Γ,!A,!A ⊢ B (contraction)
+   - Dereliction: Γ,!A ⊢ B / Γ,A ⊢ B (dereliction)
+   - Promotion: !Γ ⊢ !A / !Γ ⊢ A (promotion)
    
    Removed from classical LL:
    - Par rule (no ⅋ connective)
    - With rule has left and right rules
-   - All exponential rules (!, ?)
+   - Whynot (?) exponential
 *)
 
 open Ill_sequent
@@ -49,8 +53,8 @@ let rec convert_raw_formula_to_ill = function
         failwith "^ (dual) is not allowed in ILL"
     | Raw_sequent.Par (_, _) -> 
         failwith "⅋ (par) is not allowed in ILL"
-    | Raw_sequent.Ofcourse _ -> 
-        failwith "! (of course) is not allowed in ILL"
+    | Raw_sequent.Ofcourse f -> 
+        Ofcourse (convert_raw_formula_to_ill f)
     | Raw_sequent.Whynot _ -> 
         failwith "? (why not) is not allowed in ILL"
 
@@ -66,6 +70,7 @@ let rec ill_formula_to_raw = function
     | Plus (f1, f2) -> Raw_sequent.Plus (ill_formula_to_raw f1, ill_formula_to_raw f2)
     | Lollipop (f1, f2) -> Raw_sequent.Lollipop (ill_formula_to_raw f1, ill_formula_to_raw f2)
     | With (f1, f2) -> Raw_sequent.With (ill_formula_to_raw f1, ill_formula_to_raw f2)
+    | Ofcourse f -> Raw_sequent.Ofcourse (ill_formula_to_raw f)
 
 (* ILL inference rule types.
    Each rule corresponds to an introduction or elimination rule for the respective connective.
@@ -86,6 +91,10 @@ type ill_rule =
     | ILL_Lollipop
     | ILL_Lollipop_left
     | ILL_Cut            (* Cut: Γ,Δ ⊢ C / Γ ⊢ A & Δ,A ⊢ C *)
+    | ILL_Weakening      (* !w: Γ ⊢ B / Γ,!A ⊢ B *)
+    | ILL_Contraction    (* !c: Γ,!A ⊢ B / Γ,!A,!A ⊢ B *)
+    | ILL_Dereliction    (* !d: Γ,!A ⊢ B / Γ,A ⊢ B *)
+    | ILL_Promotion      (* !p: !Γ ⊢ !A / !Γ ⊢ A *)
 
 (* Rule request data structure.
    Contains the rule to apply and additional parameters like formula position.
@@ -181,6 +190,31 @@ let can_apply_rule rule ill_seq =
     | ILL_Cut ->
         (* Cut rule can always be applied *)
         (true, "")
+    
+    | ILL_Weakening ->
+        (* Weakening rule: Γ ⊢ B / Γ,!A ⊢ B - can always weaken with !A *)
+        (true, "")
+    
+    | ILL_Contraction ->
+        (* Contraction rule: Γ,!A ⊢ B / Γ,!A,!A ⊢ B - needs !A in context *)
+        let has_ofcourse = List.exists is_ofcourse ill_seq.context in
+        if has_ofcourse then (true, "")
+        else (false, "Contraction rule requires !A in context")
+    
+    | ILL_Dereliction ->
+        (* Dereliction rule: Γ,!A ⊢ B / Γ,A ⊢ B - needs !A in context *)
+        let has_ofcourse = List.exists is_ofcourse ill_seq.context in
+        if has_ofcourse then (true, "")
+        else (false, "Dereliction rule requires !A in context")
+    
+    | ILL_Promotion ->
+        (* Promotion rule: !Γ ⊢ !A / !Γ ⊢ A - needs goal !A and all context must be !-formulas *)
+        (match ill_seq.goal with
+         | Ofcourse _ ->
+             let all_exponential = List.for_all is_ofcourse ill_seq.context in
+             if all_exponential then (true, "")
+             else (false, "Promotion rule requires all context formulas to be exponential (!)")
+         | _ -> (false, "Promotion rule requires goal !A"))
 
 (* CONTEXT MANIPULATION HELPERS *)
 
@@ -257,6 +291,15 @@ let extract_with_from_context ctx =
         | f :: rest -> extract (acc @ [f]) rest
     in
     extract [] ctx
+
+(* Helper function to split list at specific position *)
+let split_list_at_position list pos =
+    let rec split acc n = function
+        | [] -> failwith ("Position " ^ string_of_int pos ^ " out of bounds")
+        | h :: t when n = 0 -> (List.rev acc, h, t)
+        | h :: t -> split (h :: acc) (n - 1) t
+    in
+    split [] pos list
 
 (* RULE APPLICATION *)
 
@@ -378,6 +421,41 @@ let apply_rule_to_sequent rule_req ill_seq =
              in
              [{ context = []; goal = cut_formula };
               { context = ill_seq.context @ [cut_formula]; goal = ill_seq.goal }])
+    
+    | ILL_Weakening ->
+        (* Weakening: Γ,!A ⊢ B becomes Γ ⊢ B *)
+        (match rule_req.formula_position with
+         | Some pos when pos >= 0 && pos < List.length ill_seq.context ->
+             let (gamma_before, _, gamma_after) = split_list_at_position ill_seq.context pos in
+             [{ context = gamma_before @ gamma_after; goal = ill_seq.goal }]
+         | _ -> [])
+    
+    | ILL_Contraction ->
+        (* Contraction: Γ,!A ⊢ B becomes Γ,!A,!A ⊢ B *)
+        (match rule_req.formula_position with
+         | Some pos when pos >= 0 && pos < List.length ill_seq.context ->
+             let (gamma_before, exp_formula, gamma_after) = split_list_at_position ill_seq.context pos in
+             [{ context = gamma_before @ [exp_formula; exp_formula] @ gamma_after; goal = ill_seq.goal }]
+         | _ -> [])
+    
+    | ILL_Dereliction ->
+        (* Dereliction: Γ,!A ⊢ B becomes Γ,A ⊢ B *)
+        (match rule_req.formula_position with
+         | Some pos when pos >= 0 && pos < List.length ill_seq.context ->
+             let (gamma_before, exp_formula, gamma_after) = split_list_at_position ill_seq.context pos in
+             (match exp_formula with
+              | Ofcourse inner_formula ->
+                  [{ context = gamma_before @ [inner_formula] @ gamma_after; goal = ill_seq.goal }]
+              | _ -> [])
+         | _ -> [])
+    
+    | ILL_Promotion ->
+        (* Promotion: !Γ ⊢ !A becomes !Γ ⊢ A *)
+        (match ill_seq.goal with
+         | Ofcourse inner_formula ->
+             [{ context = ill_seq.context; goal = inner_formula }]
+         | _ -> [])
+
 
 (* JSON PARSING *)
 
@@ -405,6 +483,10 @@ let rule_from_json json =
          | Some (`String "ill_lollipop_right") -> ILL_Lollipop
          | Some (`String "ill_lollipop_left") -> ILL_Lollipop_left
          | Some (`String "ill_cut") -> ILL_Cut
+         | Some (`String "ill_weakening") -> ILL_Weakening
+         | Some (`String "ill_contraction") -> ILL_Contraction
+         | Some (`String "ill_dereliction") -> ILL_Dereliction
+         | Some (`String "ill_promotion") -> ILL_Promotion
          | _ -> failwith "Unknown ILL rule")
     | _ -> failwith "Invalid rule JSON format"
 
@@ -493,6 +575,10 @@ let rule_to_json = function
     | ILL_Lollipop -> `String "ill_lollipop"
     | ILL_Lollipop_left -> `String "ill_lollipop_left"
     | ILL_Cut -> `String "ill_cut"
+    | ILL_Weakening -> `String "ill_weakening"
+    | ILL_Contraction -> `String "ill_contraction"
+    | ILL_Dereliction -> `String "ill_dereliction"
+    | ILL_Promotion -> `String "ill_promotion"
 
 
 (* RULE INFERENCE *)
@@ -545,6 +631,10 @@ and infer_left_rule rule_req ill_seq =
          | Litt _ ->
              (* Could be axiom if context has single atom matching goal *)
              { rule_req with rule = ILL_Axiom }
+         | Ofcourse _ ->
+             (* Exponential formula in context - could be weakening, contraction, or dereliction *)
+             (* Default to dereliction for now, frontend should specify exact rule *)
+             { rule_req with rule = ILL_Dereliction }
          | _ ->
              rule_req)  (* No applicable left rule *)
     | _ -> rule_req
@@ -563,6 +653,7 @@ and infer_right_rule rule_req ill_seq =
          | _ -> { rule_req with rule = ILL_Plus_right_1 }) (* Default for backward compatibility *)
     | Lollipop (_, _) -> { rule_req with rule = ILL_Lollipop }
     | Litt _ -> { rule_req with rule = ILL_Axiom }
+    | Ofcourse _ -> { rule_req with rule = ILL_Promotion }
 
 (* RULE DESCRIPTIONS *)
 
@@ -585,6 +676,10 @@ let rule_description = function
     | ILL_Lollipop -> "Lollipop introduction: Γ ⊢ A⊸B / Γ,A ⊢ B"
     | ILL_Lollipop_left -> "Lollipop elimination: Γ ⊢ A & Δ,B ⊢ C / Γ,A⊸B,Δ ⊢ C"
     | ILL_Cut -> "Cut rule: Γ,Δ ⊢ C / Γ ⊢ A & Δ,A ⊢ C"
+    | ILL_Weakening -> "Weakening: Γ ⊢ B / Γ,!A ⊢ B"
+    | ILL_Contraction -> "Contraction: Γ,!A ⊢ B / Γ,!A,!A ⊢ B"
+    | ILL_Dereliction -> "Dereliction: Γ,!A ⊢ B / Γ,A ⊢ B"
+    | ILL_Promotion -> "Promotion: !Γ ⊢ !A / !Γ ⊢ A"
 
 (* Get rule name for display in proof trees.
    @param rule - ILL rule
@@ -605,6 +700,10 @@ let rule_name = function
     | ILL_Lollipop -> "⊸"
     | ILL_Lollipop_left -> "⊸L"
     | ILL_Cut -> "cut"
+    | ILL_Weakening -> "!w"
+    | ILL_Contraction -> "!c"
+    | ILL_Dereliction -> "!d"
+    | ILL_Promotion -> "!p"
 
 (* JSON SERIALIZATION *)
 
@@ -627,6 +726,10 @@ let rule_to_json_string = function
     | ILL_Lollipop -> "ill_lollipop_right"
     | ILL_Lollipop_left -> "ill_lollipop_left"
     | ILL_Cut -> "ill_cut"
+    | ILL_Weakening -> "ill_weakening"
+    | ILL_Contraction -> "ill_contraction"
+    | ILL_Dereliction -> "ill_dereliction"
+    | ILL_Promotion -> "ill_promotion"
 
 (* Convert JSON string to ILL rule type.
    @param rule_str - Rule name from JSON
@@ -648,6 +751,10 @@ let rule_from_json_string = function
     | "ill_lollipop_right" -> ILL_Lollipop
     | "ill_lollipop_left" -> ILL_Lollipop_left
     | "ill_cut" -> ILL_Cut
+    | "ill_weakening" -> ILL_Weakening
+    | "ill_contraction" -> ILL_Contraction
+    | "ill_dereliction" -> ILL_Dereliction
+    | "ill_promotion" -> ILL_Promotion
     | unknown -> raise (ILL_Rule_Json_Exception ("Unknown ILL rule: " ^ unknown))
 
 (* Convert ILL rule request to JSON representation.

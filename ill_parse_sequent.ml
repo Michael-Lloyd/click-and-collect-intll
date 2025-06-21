@@ -86,6 +86,8 @@ let rec validate_ill_formula = function
     | Tensor (f1, f2) | With (f1, f2) | Plus (f1, f2) | Lollipop (f1, f2) ->
         validate_ill_formula f1;
         validate_ill_formula f2
+    | Ofcourse f ->
+        validate_ill_formula f
 
 (* Validate that an ILL sequent only uses valid ILL connectives.
    @param ill_seq - ILL sequent to validate
@@ -124,6 +126,10 @@ let rec ill_formula_to_json = function
         ("t", `String "lollipop");
         ("v1", ill_formula_to_json f1);
         ("v2", ill_formula_to_json f2)
+    ]
+    | Ofcourse f -> `Assoc [
+        ("t", `String "ofcourse");
+        ("v", ill_formula_to_json f)
     ]
 
 (* Convert ILL sequent to JSON representation.

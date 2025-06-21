@@ -139,6 +139,9 @@ and try_introduction_rules ill_seq config depth start_time =
     | Litt _ ->
         (* Atomic goal - try left rules for decomposing context *)
         try_atomic_goal ill_seq config depth start_time
+    | Ofcourse _ ->
+        (* Exponential goal - try promotion rule *)
+        try_promotion_rule ill_seq config depth start_time
 
 (* INDIVIDUAL RULE IMPLEMENTATIONS *)
 
@@ -238,6 +241,30 @@ and try_lollipop_rule ill_seq a b config depth start_time =
     | ILL_Proof_Found premise_proof ->
         ILL_Proof_Found (ILL_Lollipop_proof (ill_seq.context, a, b, premise_proof))
     | result -> result
+
+(* Try promotion rule: !Γ ⊢ !A / !Γ ⊢ A
+   @param ill_seq - Sequent with exponential goal
+   @param config - Prover configuration  
+   @param depth - Current depth
+   @param start_time - Start time
+   @return ill_proof_result - Proof result
+*)
+and try_promotion_rule ill_seq config depth start_time =
+    match ill_seq.goal with
+    | Ofcourse inner_formula ->
+        (* Check if all context formulas are exponentials *)
+        let all_exponential = List.for_all (function Ofcourse _ -> true | _ -> false) ill_seq.context in
+        if not all_exponential then
+            ILL_Search_Error "Promotion rule requires all context formulas to be exponential (!)"
+        else
+            (* Try to prove !Γ ⊢ A *)
+            let premise = { context = ill_seq.context; goal = inner_formula } in
+            (match search_proof premise config (depth + 1) start_time with
+             | ILL_Proof_Found premise_proof ->
+                 ILL_Proof_Found (ILL_Promotion_proof (ill_seq.context, ill_seq.goal, premise_proof))
+             | result -> result)
+    | _ ->
+        ILL_Search_Error "Promotion rule requires exponential goal (!A)"
 
 (* Try to prove atomic goal from context.
    @param ill_seq - Sequent with atomic goal

@@ -4,7 +4,7 @@
    ILL differs from classical Linear Logic in several key ways:
    
    1. Asymmetric sequents: Γ ⊢ A (single conclusion)
-   2. No exponentials: No !A or ?A connectives
+   2. Has exponential: !A connective for structural rules
    3. No multiplicative disjunction: No ⅋ connective  
    4. Has additive conjunction: & connective
    5. Has linear implication: A ⊸ B connective
@@ -19,7 +19,7 @@ open Ill_sequent
    
    Key differences from classical LL proofs:
    - No Par_proof (removed connective)
-   - No exponential proofs (Promotion_proof, Dereliction_proof, etc.)
+   - Has exponential proofs for structural rules (!w, !c, !d, !p)
    - Added Lollipop_proof for linear implication
    - All sequents have single conclusions
 *)
@@ -38,6 +38,10 @@ type ill_proof =
     | ILL_Lollipop_proof of formula list * formula * formula * ill_proof           (* ⊸: Γ ⊢ A⊸B / Γ,A ⊢ B *)
     | ILL_Lollipop_left_proof of formula list * formula * formula * ill_proof * ill_proof  (* ⊸L: Γ,A⊸B,Δ ⊢ C / Γ ⊢ A & Δ,B ⊢ C *)
     | ILL_Cut_proof of formula list * formula * formula list * ill_proof * ill_proof  (* cut: Γ,Δ ⊢ C / Γ ⊢ A & Δ,A ⊢ C *)
+    | ILL_Weakening_proof of formula list * formula * formula * ill_proof           (* !w: Γ,!A ⊢ B / Γ ⊢ B *)
+    | ILL_Contraction_proof of formula list * formula * formula * ill_proof         (* !c: Γ,!A ⊢ B / Γ,!A,!A ⊢ B *)
+    | ILL_Dereliction_proof of formula list * formula * formula * ill_proof         (* !d: Γ,!A ⊢ B / Γ,A ⊢ B *)
+    | ILL_Promotion_proof of formula list * formula * ill_proof                     (* !p: !Γ ⊢ !A / !Γ ⊢ A *)
     | ILL_Hypothesis_proof of ill_sequent;;                              (* open goal (leaf) *)
 
 (* Exception for invalid proof operations *)
@@ -82,6 +86,18 @@ let rec get_conclusion_sequent = function
     | ILL_Cut_proof (head_ctx, _, tail_ctx, _, proof2) ->
         (* The conclusion is the full context (head + tail) with the goal from second premise *)
         { context = head_ctx @ tail_ctx; goal = (get_conclusion_sequent proof2).goal }
+    | ILL_Weakening_proof (context, exp_formula, goal_formula, _) ->
+        (* Weakening adds !A to context: Γ,!A ⊢ B *)
+        { context = context @ [exp_formula]; goal = goal_formula }
+    | ILL_Contraction_proof (context, exp_formula, goal_formula, _) ->
+        (* Contraction removes one copy of !A: Γ,!A ⊢ B *)
+        { context = context @ [exp_formula]; goal = goal_formula }
+    | ILL_Dereliction_proof (context, exp_formula, goal_formula, _) ->
+        (* Dereliction removes ! from context: Γ,!A ⊢ B *)
+        { context = context @ [exp_formula]; goal = goal_formula }
+    | ILL_Promotion_proof (context, goal_formula, _) ->
+        (* Promotion adds ! to goal: !Γ ⊢ !A *)
+        { context = context; goal = goal_formula }
     | ILL_Hypothesis_proof sequent -> 
         sequent
 
@@ -104,6 +120,10 @@ let get_premises = function
     | ILL_Lollipop_proof (_, _, _, p) -> [p]
     | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> [p1; p2]
     | ILL_Cut_proof (_, _, _, p1, p2) -> [p1; p2]
+    | ILL_Weakening_proof (_, _, _, p) -> [p]
+    | ILL_Contraction_proof (_, _, _, p) -> [p]
+    | ILL_Dereliction_proof (_, _, _, p) -> [p]
+    | ILL_Promotion_proof (_, _, p) -> [p]
     | ILL_Hypothesis_proof _ -> []
 
 (* Replace the premises of a proof tree with new sub-proofs.
@@ -127,6 +147,10 @@ let set_premises proof new_premises = match proof, new_premises with
     | ILL_Lollipop_proof (ctx, f1, f2, _), [p] -> ILL_Lollipop_proof (ctx, f1, f2, p)
     | ILL_Lollipop_left_proof (ctx, f1, f2, _, _), [p1; p2] -> ILL_Lollipop_left_proof (ctx, f1, f2, p1, p2)
     | ILL_Cut_proof (head_ctx, f, tail_ctx, _, _), [p1; p2] -> ILL_Cut_proof (head_ctx, f, tail_ctx, p1, p2)
+    | ILL_Weakening_proof (ctx, exp_f, goal_f, _), [p] -> ILL_Weakening_proof (ctx, exp_f, goal_f, p)
+    | ILL_Contraction_proof (ctx, exp_f, goal_f, _), [p] -> ILL_Contraction_proof (ctx, exp_f, goal_f, p)
+    | ILL_Dereliction_proof (ctx, exp_f, goal_f, _), [p] -> ILL_Dereliction_proof (ctx, exp_f, goal_f, p)
+    | ILL_Promotion_proof (ctx, goal_f, _), [p] -> ILL_Promotion_proof (ctx, goal_f, p)
     | ILL_Hypothesis_proof _, [] -> proof
     | _ -> raise (ILL_Proof_Exception (false, "Invalid premise count for proof type"))
 
@@ -195,6 +219,22 @@ let get_rule_request proof =
     | ILL_Cut_proof (_, cut_f, _, _, _) -> 
         { rule = ILL_Cut; formula_position = None; side = None; 
           context_split = None; sequent_side = None; cut_formula = Some cut_f; cut_position = None }
+    
+    | ILL_Weakening_proof (_, _, _, _) -> 
+        { rule = ILL_Weakening; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_Contraction_proof (_, _, _, _) -> 
+        { rule = ILL_Contraction; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_Dereliction_proof (_, _, _, _) -> 
+        { rule = ILL_Dereliction; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_Promotion_proof (_, _, _) -> 
+        { rule = ILL_Promotion; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
     
     | ILL_Hypothesis_proof _ -> 
         raise (ILL_Proof_Exception (false, "Cannot get rule request from hypothesis proof"))
@@ -370,6 +410,10 @@ let rec is_complete_proof = function
     | ILL_Lollipop_proof (_, _, _, p) -> is_complete_proof p
     | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> is_complete_proof p1 && is_complete_proof p2
     | ILL_Cut_proof (_, _, _, p1, p2) -> is_complete_proof p1 && is_complete_proof p2
+    | ILL_Weakening_proof (_, _, _, p) -> is_complete_proof p
+    | ILL_Contraction_proof (_, _, _, p) -> is_complete_proof p
+    | ILL_Dereliction_proof (_, _, _, p) -> is_complete_proof p
+    | ILL_Promotion_proof (_, _, p) -> is_complete_proof p
 
 (* Check if a proof tree is valid (rules correctly applied).
    @param proof - ILL proof tree to validate
@@ -394,6 +438,10 @@ let rec is_valid_proof proof =
     | ILL_Lollipop_proof (_, _, _, p) -> is_valid_proof p
     | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> is_valid_proof p1 && is_valid_proof p2
     | ILL_Cut_proof (_, _, _, p1, p2) -> is_valid_proof p1 && is_valid_proof p2
+    | ILL_Weakening_proof (_, _, _, p) -> is_valid_proof p
+    | ILL_Contraction_proof (_, _, _, p) -> is_valid_proof p
+    | ILL_Dereliction_proof (_, _, _, p) -> is_valid_proof p
+    | ILL_Promotion_proof (_, _, p) -> is_valid_proof p
 
 (* JSON SERIALIZATION *)
 
@@ -410,6 +458,7 @@ let ill_sequent_to_raw_sequent ill_seq =
         | With (f1, f2) -> Raw_sequent.With (ill_formula_to_raw f1, ill_formula_to_raw f2)
         | Plus (f1, f2) -> Raw_sequent.Plus (ill_formula_to_raw f1, ill_formula_to_raw f2)
         | Lollipop (f1, f2) -> Raw_sequent.Lollipop (ill_formula_to_raw f1, ill_formula_to_raw f2)
+        | Ofcourse f -> Raw_sequent.Ofcourse (ill_formula_to_raw f)
     in
     let raw_context = List.map ill_formula_to_raw ill_seq.context in
     let raw_goal = ill_formula_to_raw ill_seq.goal in
@@ -512,6 +561,10 @@ let rec count_inference_rules = function
     | ILL_Lollipop_proof (_, _, _, p) -> 1 + count_inference_rules p
     | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> 1 + count_inference_rules p1 + count_inference_rules p2
     | ILL_Cut_proof (_, _, _, p1, p2) -> 1 + count_inference_rules p1 + count_inference_rules p2
+    | ILL_Weakening_proof (_, _, _, p) -> 1 + count_inference_rules p
+    | ILL_Contraction_proof (_, _, _, p) -> 1 + count_inference_rules p
+    | ILL_Dereliction_proof (_, _, _, p) -> 1 + count_inference_rules p
+    | ILL_Promotion_proof (_, _, p) -> 1 + count_inference_rules p
 
 (* Count the number of open hypotheses in a proof.
    @param proof - ILL proof tree  
@@ -533,3 +586,7 @@ let rec count_open_hypotheses = function
     | ILL_Lollipop_proof (_, _, _, p) -> count_open_hypotheses p
     | ILL_Lollipop_left_proof (_, _, _, p1, p2) -> count_open_hypotheses p1 + count_open_hypotheses p2
     | ILL_Cut_proof (_, _, _, p1, p2) -> count_open_hypotheses p1 + count_open_hypotheses p2
+    | ILL_Weakening_proof (_, _, _, p) -> count_open_hypotheses p
+    | ILL_Contraction_proof (_, _, _, p) -> count_open_hypotheses p
+    | ILL_Dereliction_proof (_, _, _, p) -> count_open_hypotheses p
+    | ILL_Promotion_proof (_, _, p) -> count_open_hypotheses p

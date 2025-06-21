@@ -74,8 +74,8 @@ and convert_raw_formula_to_ill = function
         raise (ILL_Rule_Application_Exception (true, "⅋ (par) is not allowed in ILL"))
     | Raw_sequent.With (f1, f2) ->
         With (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
-    | Raw_sequent.Ofcourse _ -> 
-        raise (ILL_Rule_Application_Exception (true, "! (of course) is not allowed in ILL"))
+    | Raw_sequent.Ofcourse f -> 
+        Ofcourse (convert_raw_formula_to_ill f)
     | Raw_sequent.Whynot _ -> 
         raise (ILL_Rule_Application_Exception (true, "? (why not) is not allowed in ILL"))
 
@@ -109,6 +109,8 @@ and validate_ill_formulas_only ill_seq =
         | Tensor (f1, f2) | With (f1, f2) | Plus (f1, f2) | Lollipop (f1, f2) ->
             validate_formula f1;
             validate_formula f2
+        | Ofcourse f ->
+            validate_formula f
     in
     List.iter validate_formula ill_seq.context;
     validate_formula ill_seq.goal
@@ -210,6 +212,14 @@ and apply_ill_rule_internal rule_req ill_seq _notations =
         apply_lollipop_left_rule rule_req ill_seq
     | ILL_Cut ->
         apply_cut_rule rule_req ill_seq
+    | ILL_Weakening ->
+        apply_weakening_rule rule_req ill_seq
+    | ILL_Contraction ->
+        apply_contraction_rule rule_req ill_seq
+    | ILL_Dereliction ->
+        apply_dereliction_rule rule_req ill_seq
+    | ILL_Promotion ->
+        apply_promotion_rule rule_req ill_seq
 
 (* INDIVIDUAL RULE IMPLEMENTATIONS *)
 
@@ -635,6 +645,154 @@ and apply_cut_rule rule_req ill_seq =
     
     (* Return cut proof *)
     ILL_Cut_proof (gamma, cut_formula, delta, subproof1, subproof2)
+
+(* Apply ILL weakening rule: Γ ⊢ B / Γ,!A ⊢ B
+   @param rule_req - Rule request (contains position and exponential formula)
+   @param ill_seq - Sequent with form Γ,!A ⊢ B
+   @return ill_proof - Weakening proof
+*)
+and apply_weakening_rule rule_req ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
+    (* Extract formula position from rule request *)
+    let formula_pos = match rule_req.formula_position with
+        | Some pos -> pos
+        | None -> raise (ILL_Rule_Application_Exception (true, "Weakening rule requires formula position"))
+    in
+    
+    (* Split context to find the !A formula *)
+    if formula_pos < 0 || formula_pos >= List.length ill_seq.context then
+        raise (ILL_Rule_Application_Exception (true, "Invalid formula position for weakening rule"));
+    
+    let (gamma_before, exp_formula, gamma_after) = split_list_at_position ill_seq.context formula_pos in
+    
+    (* Validate that the formula at position is exponential *)
+    (match exp_formula with
+     | Ofcourse _ ->
+         (* Construct premise sequent: Γ ⊢ B (without !A) *)
+         let premise_context = gamma_before @ gamma_after in
+         let premise = { context = premise_context; goal = ill_seq.goal } in
+         
+         (* Validate premise is well-formed *)
+         validate_ill_sequent_constraints premise;
+         
+         (* Create hypothesis proof for premise *)
+         let subproof = ILL_Hypothesis_proof premise in
+         
+         (* Return weakening proof *)
+         ILL_Weakening_proof (gamma_before @ gamma_after, exp_formula, ill_seq.goal, subproof)
+         
+     | _ -> raise (ILL_Rule_Application_Exception (true, "Weakening rule requires !A formula at specified position")))
+
+(* Apply ILL contraction rule: Γ,!A ⊢ B / Γ,!A,!A ⊢ B
+   @param rule_req - Rule request (contains position of !A formula)
+   @param ill_seq - Sequent with form Γ,!A ⊢ B
+   @return ill_proof - Contraction proof
+*)
+and apply_contraction_rule rule_req ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
+    (* Extract formula position from rule request *)
+    let formula_pos = match rule_req.formula_position with
+        | Some pos -> pos
+        | None -> raise (ILL_Rule_Application_Exception (true, "Contraction rule requires formula position"))
+    in
+    
+    (* Split context to find the !A formula *)
+    if formula_pos < 0 || formula_pos >= List.length ill_seq.context then
+        raise (ILL_Rule_Application_Exception (true, "Invalid formula position for contraction rule"));
+    
+    let (gamma_before, exp_formula, gamma_after) = split_list_at_position ill_seq.context formula_pos in
+    
+    (* Validate that the formula at position is exponential *)
+    (match exp_formula with
+     | Ofcourse _ ->
+         (* Construct premise sequent: Γ,!A,!A ⊢ B (with duplicated !A) *)
+         let premise_context = gamma_before @ [exp_formula; exp_formula] @ gamma_after in
+         let premise = { context = premise_context; goal = ill_seq.goal } in
+         
+         (* Validate premise is well-formed *)
+         validate_ill_sequent_constraints premise;
+         
+         (* Create hypothesis proof for premise *)
+         let subproof = ILL_Hypothesis_proof premise in
+         
+         (* Return contraction proof *)
+         ILL_Contraction_proof (gamma_before @ gamma_after, exp_formula, ill_seq.goal, subproof)
+         
+     | _ -> raise (ILL_Rule_Application_Exception (true, "Contraction rule requires !A formula at specified position")))
+
+(* Apply ILL dereliction rule: Γ,!A ⊢ B / Γ,A ⊢ B
+   @param rule_req - Rule request (contains position of !A formula)
+   @param ill_seq - Sequent with form Γ,!A ⊢ B
+   @return ill_proof - Dereliction proof
+*)
+and apply_dereliction_rule rule_req ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
+    (* Extract formula position from rule request *)
+    let formula_pos = match rule_req.formula_position with
+        | Some pos -> pos
+        | None -> raise (ILL_Rule_Application_Exception (true, "Dereliction rule requires formula position"))
+    in
+    
+    (* Split context to find the !A formula *)
+    if formula_pos < 0 || formula_pos >= List.length ill_seq.context then
+        raise (ILL_Rule_Application_Exception (true, "Invalid formula position for dereliction rule"));
+    
+    let (gamma_before, exp_formula, gamma_after) = split_list_at_position ill_seq.context formula_pos in
+    
+    (* Validate that the formula at position is exponential *)
+    (match exp_formula with
+     | Ofcourse inner_formula ->
+         (* Construct premise sequent: Γ,A ⊢ B (with A instead of !A) *)
+         let premise_context = gamma_before @ [inner_formula] @ gamma_after in
+         let premise = { context = premise_context; goal = ill_seq.goal } in
+         
+         (* Validate premise is well-formed *)
+         validate_ill_sequent_constraints premise;
+         
+         (* Create hypothesis proof for premise *)
+         let subproof = ILL_Hypothesis_proof premise in
+         
+         (* Return dereliction proof *)
+         ILL_Dereliction_proof (gamma_before @ gamma_after, exp_formula, ill_seq.goal, subproof)
+         
+     | _ -> raise (ILL_Rule_Application_Exception (true, "Dereliction rule requires !A formula at specified position")))
+
+(* Apply ILL promotion rule: !Γ ⊢ !A / !Γ ⊢ A
+   @param rule_req - Rule request
+   @param ill_seq - Sequent with form !Γ ⊢ !A
+   @return ill_proof - Promotion proof
+*)
+and apply_promotion_rule _rule_req ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
+    (* Validate that goal is exponential !A *)
+    (match ill_seq.goal with
+     | Ofcourse inner_formula ->
+         (* Validate that all context formulas are exponential *)
+         let all_exponential = List.for_all is_ofcourse ill_seq.context in
+         if not all_exponential then
+             raise (ILL_Rule_Application_Exception (true, "Promotion rule requires all context formulas to be exponential (!)"));
+         
+         (* Construct premise sequent: !Γ ⊢ A (without ! on goal) *)
+         let premise = { context = ill_seq.context; goal = inner_formula } in
+         
+         (* Validate premise is well-formed *)
+         validate_ill_sequent_constraints premise;
+         
+         (* Create hypothesis proof for premise *)
+         let subproof = ILL_Hypothesis_proof premise in
+         
+         (* Return promotion proof *)
+         ILL_Promotion_proof (ill_seq.context, ill_seq.goal, subproof)
+         
+     | _ -> raise (ILL_Rule_Application_Exception (true, "Promotion rule requires goal !A")))
 
 (* CONTEXT MANAGEMENT *)
 
