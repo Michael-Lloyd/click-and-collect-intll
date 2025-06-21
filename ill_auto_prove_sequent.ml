@@ -31,6 +31,8 @@ let rec convert_raw_formula_to_ill = function
         Lollipop (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
     | Raw_sequent.With (f1, f2) ->
         With (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
+    | Raw_sequent.Ofcourse f ->
+        Ofcourse (convert_raw_formula_to_ill f)
     | _ -> failwith "Non-ILL connective not allowed in auto-prove"
 
 (* Configuration for proof search *)
@@ -305,6 +307,44 @@ and try_left_rules ill_seq config depth start_time =
    @param start_time - Start time
    @return ill_proof_result - Proof result
 *)
+and try_exponential_left_at_position ill_seq inner_formula pos config depth start_time =
+    let () = Printf.printf "DEBUG-EXP: Trying exponential rules at position %d\n" pos in
+    let () = Printf.printf "DEBUG-EXP: Input sequent context: [" in
+    let () = List.iteri (fun i _ -> Printf.printf "%s%d:!A" (if i > 0 then ", " else "") i) ill_seq.context in
+    let () = Printf.printf "]\n" in
+    let (before, ofcourse_formula, after) = split_context_at_position ill_seq.context pos in
+    let () = Printf.printf "DEBUG-EXP: Original context has %d formulas\n" (List.length ill_seq.context) in
+    
+    (* Try weakening: Γ,!A,Δ ⊢ B becomes Γ,Δ ⊢ B *)
+    let () = Printf.printf "DEBUG-EXP: Trying weakening rule\n" in
+    (match (
+        let weakening_context = before @ after in
+        let () = Printf.printf "DEBUG-EXP: Weakening context has %d formulas\n" (List.length weakening_context) in
+        let weakening_premise = { context = weakening_context; goal = ill_seq.goal } in
+        search_proof weakening_premise config (depth + 1) start_time
+    ) with
+    | ILL_Proof_Found weakening_proof ->
+        let () = Printf.printf "DEBUG-EXP: Weakening succeeded, creating proof with original context of %d formulas\n" (List.length ill_seq.context) in
+        ILL_Proof_Found (ILL_Weakening_proof (ill_seq.context, ofcourse_formula, ill_seq.goal, weakening_proof))
+    | _ ->
+        (* Try dereliction: Γ,!A,Δ ⊢ B becomes Γ,A,Δ ⊢ B *)
+        let () = Printf.printf "DEBUG-EXP: Weakening failed, trying dereliction rule\n" in
+        (match (
+            let dereliction_context = before @ [inner_formula] @ after in
+            let () = Printf.printf "DEBUG-EXP: Dereliction context has %d formulas\n" (List.length dereliction_context) in
+            let dereliction_premise = { context = dereliction_context; goal = ill_seq.goal } in
+            search_proof dereliction_premise config (depth + 1) start_time
+        ) with
+        | ILL_Proof_Found dereliction_proof ->
+            let () = Printf.printf "DEBUG-EXP: Dereliction succeeded, creating proof with original context of %d formulas\n" (List.length ill_seq.context) in
+            ILL_Proof_Found (ILL_Dereliction_proof (ill_seq.context, ofcourse_formula, ill_seq.goal, dereliction_proof))
+        | _ ->
+            (* For single !A formulas, contraction is not applicable *)
+            (* Contraction only applies when we already have duplicates *)
+            ILL_Not_Provable
+        )
+    )
+
 and try_left_rule_at_position ill_seq formula pos config depth start_time =
     match formula with
     | Tensor (a, b) ->
@@ -346,6 +386,10 @@ and try_left_rule_at_position ill_seq formula pos config depth start_time =
                   ILL_Proof_Found (ILL_Lollipop_left_proof (ill_seq.context, a, b, proof1, proof2))
               | result -> result)
          | result -> result)
+    
+    | Ofcourse inner_formula ->
+        (* Try exponential rules: weakening, dereliction, contraction *)
+        try_exponential_left_at_position ill_seq inner_formula pos config depth start_time
     
     | _ -> ILL_Not_Provable
 
@@ -462,11 +506,14 @@ let auto_prove_sequent request_as_json =
     try
         (* Extract sequent from request *)
         let sequent_json = Request_utils.get_key request_as_json "sequent" in
+        let () = Printf.printf "DEBUG-AUTO: Input sequent JSON: %s\n" (Yojson.Basic.to_string sequent_json) in
         let raw_sequent = Raw_sequent.from_json sequent_json in
         
         (* Convert raw sequent to ILL sequent *)
         let context_formulas = List.map convert_raw_formula_to_ill raw_sequent.Raw_sequent.hyp in
         let conclusion_formulas = List.map convert_raw_formula_to_ill raw_sequent.Raw_sequent.cons in
+        let () = Printf.printf "DEBUG-AUTO: Original sequent - context: %d formulas, conclusion: %d formulas\n" 
+            (List.length context_formulas) (List.length conclusion_formulas) in
         
         let ill_sequent = match conclusion_formulas with
             | [goal] -> { context = context_formulas; goal = goal }
@@ -478,14 +525,18 @@ let auto_prove_sequent request_as_json =
         let config = default_config in  (* TODO: Parse config from JSON *)
         
         (* Attempt proof search *)
+        let () = Printf.printf "DEBUG-AUTO: Starting proof search for sequent\n" in
         let result = prove_ill_sequent_internal ill_sequent config in
         
         (* Convert result to JSON response *)
         match result with
         | ILL_Proof_Found proof ->
+            let () = Printf.printf "DEBUG-AUTO: Proof found! Converting to JSON\n" in
+            let proof_json = Ill_proof.to_json proof in
+            let () = Printf.printf "DEBUG-AUTO: Proof JSON created, returning success\n" in
             (true, `Assoc [
                 ("success", `Bool true);
-                ("proof", Ill_proof.to_json proof);
+                ("proof", proof_json);
                 ("provable", `Bool true)
             ])
         | ILL_Not_Provable ->

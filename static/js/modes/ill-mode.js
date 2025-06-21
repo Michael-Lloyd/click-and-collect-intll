@@ -118,8 +118,32 @@ class ILLRuleEngine extends RuleEngine {
                 return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_' + formulaAsJson.type, 'needPosition': true}]}];
 
             case 'ofcourse':
+                if (isLeftSide) {
+                    // ILL: !A on left side - handle weakening, contraction, dereliction
+                    console.log('[ILL-MODE] Setting up ofcourse rules for left side');
+                    let rules = [
+                        {
+                            'element': 'primaryConnector', 'onclick': [
+                                {'rule': 'ill_weakening', 'needPosition': true},
+                                {'rule': 'ill_contraction', 'needPosition': true}
+                            ]
+                        },
+                        {
+                            'element': 'sub-formula', 'onclick': [
+                                {'rule': 'ill_dereliction', 'needPosition': true},
+                                {'rule': 'ill_contraction', 'needPosition': true}
+                            ]
+                        }
+                    ];
+                    console.log('[ILL-MODE] Returning rules for ofcourse:', rules);
+                    return rules;
+                } else {
+                    // ILL: !A on right side - promotion rule
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_promotion', 'needPosition': true}]}];
+                }
+
             case 'whynot':
-                // Exponentials not typically used in basic ILL
+                // ILL doesn't use whynot (?A) - only ofcourse (!A)
                 return [];
 
             default:
@@ -158,6 +182,10 @@ class ILLRuleEngine extends RuleEngine {
                 console.log('[ILL-MODE] Returning top transformation rule');
                 return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_top', 'needPosition': true, 'transformation': 'apply_reversible_first'}]}];
 
+            case 'ofcourse':
+                console.log('[ILL-MODE] Returning ofcourse transformation rule');
+                return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_promotion', 'needPosition': true, 'transformation': 'apply_reversible_first'}]}];
+
             default:
                 console.log('[ILL-MODE] No transformation rules available for formula type:', formulaAsJson.type);
                 return [];
@@ -187,6 +215,14 @@ class ILLRuleEngine extends RuleEngine {
                 return this.canApplyTensorRight(sequent);
             case 'ill_with_right':
                 return sequent.cons.length === 1;
+            case 'ill_weakening':
+                return this.canApplyWeakening(sequent, ruleRequest);
+            case 'ill_contraction':
+                return this.canApplyContraction(sequent, ruleRequest);
+            case 'ill_dereliction':
+                return this.canApplyDereliction(sequent, ruleRequest);
+            case 'ill_promotion':
+                return this.canApplyPromotion(sequent);
             default:
                 return true; // Most other rules are context-dependent
         }
@@ -264,6 +300,88 @@ class ILLRuleEngine extends RuleEngine {
 
         // Check if context formula matches goal formula
         return formulasMatch(contextFormula, goalFormula);
+    }
+
+    /**
+     * Check if contraction rule is applicable for a !A formula
+     * @param {jQuery} $li - List item element containing the formula
+     * @param {Object} formulaAsJson - The !A formula being checked
+     * @return {boolean} True if contraction rule can be applied
+     */
+    isContractionApplicable($li, formulaAsJson) {
+        let $sequentTable = $li.closest('table');
+        let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
+        
+        if (!sequent || !sequent.hyp || sequent.hyp.length < 2) {
+            return false;
+        }
+
+        // Count how many formulas in the context match this !A formula
+        let matchingCount = 0;
+        for (let hypFormula of sequent.hyp) {
+            if (formulasMatch(hypFormula, formulaAsJson)) {
+                matchingCount++;
+            }
+        }
+
+        // Contraction is applicable if there are at least 2 identical !A formulas
+        return matchingCount >= 2;
+    }
+
+    /**
+     * Check if weakening rule can be applied (!w rule)
+     * @param {Object} sequent - Sequent data structure
+     * @param {Object} ruleRequest - Rule application request
+     * @return {boolean} True if weakening rule can be applied
+     */
+    canApplyWeakening(sequent, ruleRequest) {
+        // Weakening is generally applicable when we have !A in context
+        // The backend will handle the specific validation
+        return sequent && sequent.hyp && sequent.hyp.length > 0;
+    }
+
+    /**
+     * Check if contraction rule can be applied (!c rule)
+     * @param {Object} sequent - Sequent data structure
+     * @param {Object} ruleRequest - Rule application request
+     * @return {boolean} True if contraction rule can be applied
+     */
+    canApplyContraction(sequent, ruleRequest) {
+        // Contraction requires at least one !A formula in context
+        // The backend will check for duplicates
+        return sequent && sequent.hyp && sequent.hyp.length > 0;
+    }
+
+    /**
+     * Check if dereliction rule can be applied (!d rule)
+     * @param {Object} sequent - Sequent data structure
+     * @param {Object} ruleRequest - Rule application request
+     * @return {boolean} True if dereliction rule can be applied
+     */
+    canApplyDereliction(sequent, ruleRequest) {
+        // Dereliction is applicable when we have !A in context
+        return sequent && sequent.hyp && sequent.hyp.length > 0;
+    }
+
+    /**
+     * Check if promotion rule can be applied (!p rule)
+     * @param {Object} sequent - Sequent data structure
+     * @return {boolean} True if promotion rule can be applied
+     */
+    canApplyPromotion(sequent) {
+        // Promotion requires all context formulas to be of the form !B (!Gamma)
+        if (!sequent || !sequent.hyp || !sequent.cons || sequent.cons.length !== 1) {
+            return false;
+        }
+
+        // Check that all context formulas are of the form !B
+        for (let hypFormula of sequent.hyp) {
+            if (hypFormula.type !== 'ofcourse') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -862,7 +980,11 @@ const ILL_RULES = {
     'ill_lollipop_left': '⊸<sub>L</sub>',
     'ill_one': '1',
     'ill_top': '⊤',
-    'ill_cut': '<span class="italic">cut</span>'
+    'ill_cut': '<span class="italic">cut</span>',
+    'ill_weakening': '!<span class="italic">w</span>',
+    'ill_contraction': '!<span class="italic">c</span>',
+    'ill_dereliction': '!<span class="italic">d</span>',
+    'ill_promotion': '!<span class="italic">p</span>'
 };
 
 /**

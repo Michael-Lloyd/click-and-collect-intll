@@ -70,8 +70,8 @@ and convert_raw_formula_to_ill = function
         raise (Invalid_ILL_Connective "⅋ (par)")
     | Raw_sequent.With (f1, f2) ->
         With (convert_raw_formula_to_ill f1, convert_raw_formula_to_ill f2)
-    | Raw_sequent.Ofcourse _ -> 
-        raise (Invalid_ILL_Connective "! (of course)")
+    | Raw_sequent.Ofcourse f -> 
+        Ofcourse (convert_raw_formula_to_ill f)
     | Raw_sequent.Whynot _ -> 
         raise (Invalid_ILL_Connective "? (why not)")
 

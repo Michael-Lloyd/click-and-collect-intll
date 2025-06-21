@@ -144,7 +144,8 @@ and apply_rule_with_exceptions request_as_json =
         let () = Printf.printf "DEBUG: Original rule: %s\n" (Ill_rule_request.rule_name rule_request.rule) in
         let final_rule_request = 
             match rule_request.rule with
-            | ILL_With_left_1 | ILL_With_left_2 | ILL_Plus_right_1 | ILL_Plus_right_2 ->
+            | ILL_With_left_1 | ILL_With_left_2 | ILL_Plus_right_1 | ILL_Plus_right_2 
+            | ILL_Weakening | ILL_Contraction | ILL_Dereliction ->
                 (* Frontend has already specified a specific rule, don't override it *)
                 let () = Printf.printf "DEBUG: Preserving specific rule: %s\n" (Ill_rule_request.rule_name rule_request.rule) in
                 rule_request

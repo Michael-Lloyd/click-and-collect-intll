@@ -123,6 +123,9 @@ class RuleEngine {
         // Set up click handlers for each rule
         for (let ruleEvent of rules) {
             let $spanForEvent = $li.find('span.' + ruleEvent.element).first();
+            console.log(`[RULE-ENGINE] Setting up ${ruleEvent.element} handler, found ${$spanForEvent.length} elements`);
+            console.log(`[RULE-ENGINE] Element HTML:`, $spanForEvent.get(0)?.outerHTML);
+            console.log(`[RULE-ENGINE] Rules for ${ruleEvent.element}:`, ruleEvent.onclick);
 
             // Add clickable styling
             $spanForEvent.addClass('clickable');
@@ -133,9 +136,11 @@ class RuleEngine {
             // Add click events
             if (ruleEvent.onclick.length === 1) {
                 // Single click only
+                console.log(`[RULE-ENGINE] Adding single click for ${ruleEvent.element}:`, ruleEvent.onclick[0]);
                 $spanForEvent.on('click', this.buildApplyRuleCallback(ruleEvent.onclick[0], $li, options));
             } else {
                 // Single click AND double click
+                console.log(`[RULE-ENGINE] Adding single/double click for ${ruleEvent.element}:`, ruleEvent.onclick);
                 let singleClickCallback = this.buildApplyRuleCallback(ruleEvent.onclick[0], $li, options);
                 let doubleClickCallback = this.buildApplyRuleCallback(ruleEvent.onclick[1], $li, options);
                 addClickAndDoubleClickEvent($spanForEvent, singleClickCallback, doubleClickCallback);

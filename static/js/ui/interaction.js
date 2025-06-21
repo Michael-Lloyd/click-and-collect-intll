@@ -127,6 +127,10 @@ function autoProveSequent($sequentTable) {
     // Get sequent data
     let sequent = $sequentTable.data('sequentWithoutPermutation');
     let notations = getNotations($container);
+    
+    console.log('[AUTO-PROVE] Original sequent from frontend:', sequent);
+    console.log('[AUTO-PROVE] Context formulas:', sequent.context ? sequent.context.length : 'undefined');
+    console.log('[AUTO-PROVE] Intuitionistic mode:', intuitionisticMode);
 
     let $turnstile = $sequentTable.find('.turnstile');
 
@@ -142,12 +146,17 @@ function autoProveSequent($sequentTable) {
             $turnstile.removeClass('loading');
         },
         success: function(data) {
+            console.log('[AUTO-PROVE] Backend response:', data);
             if (data.success) {
+                console.log('[AUTO-PROVE] Proof successful, received proof:', data.proof);
+                console.log('[AUTO-PROVE] Proof sequent context length:', data.proof.sequent?.hyp?.length);
+                console.log('[AUTO-PROVE] Proof sequent context:', data.proof.sequent?.hyp);
                 clearSavedProof();
                 cleanPedagogicMessage($container);
                 let $sequentContainer = removeSequentTable($sequentTable);
                 createSubProof(data['proof'], $sequentContainer, options, ruleEngine);
             } else {
+                console.log('[AUTO-PROVE] Proof failed:', data);
                 if (data['is_provable']) {
                     markAsNotAutoProvable($sequentTable);
                 } else {
