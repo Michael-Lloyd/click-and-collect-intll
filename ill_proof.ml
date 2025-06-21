@@ -86,15 +86,15 @@ let rec get_conclusion_sequent = function
     | ILL_Cut_proof (head_ctx, _, tail_ctx, _, proof2) ->
         (* The conclusion is the full context (head + tail) with the goal from second premise *)
         { context = head_ctx @ tail_ctx; goal = (get_conclusion_sequent proof2).goal }
-    | ILL_Weakening_proof (context, exp_formula, goal_formula, _) ->
-        (* Weakening adds !A to context: Γ,!A ⊢ B *)
-        { context = context @ [exp_formula]; goal = goal_formula }
-    | ILL_Contraction_proof (context, exp_formula, goal_formula, _) ->
-        (* Contraction removes one copy of !A: Γ,!A ⊢ B *)
-        { context = context @ [exp_formula]; goal = goal_formula }
-    | ILL_Dereliction_proof (context, exp_formula, goal_formula, _) ->
-        (* Dereliction removes ! from context: Γ,!A ⊢ B *)
-        { context = context @ [exp_formula]; goal = goal_formula }
+    | ILL_Weakening_proof (context, _, goal_formula, _) ->
+        (* Weakening: Γ,!A ⊢ B (context already contains !A) *)
+        { context = context; goal = goal_formula }
+    | ILL_Contraction_proof (context, _, goal_formula, _) ->
+        (* Contraction: Γ,!A ⊢ B (context already contains !A) *)
+        { context = context; goal = goal_formula }
+    | ILL_Dereliction_proof (context, _, goal_formula, _) ->
+        (* Dereliction: Γ,!A ⊢ B (context already contains !A) *)
+        { context = context; goal = goal_formula }
     | ILL_Promotion_proof (context, goal_formula, _) ->
         (* Promotion adds ! to goal: !Γ ⊢ !A *)
         { context = context; goal = goal_formula }

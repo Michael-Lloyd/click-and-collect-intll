@@ -141,20 +141,16 @@ and apply_rule_with_exceptions request_as_json =
         let notations = [] in  (* TODO: Parse notations properly *)
         
         (* Use intelligent rule selection only when rule is generic or ambiguous *)
-        let () = Printf.printf "DEBUG: Original rule: %s\n" (Ill_rule_request.rule_name rule_request.rule) in
         let final_rule_request = 
             match rule_request.rule with
             | ILL_With_left_1 | ILL_With_left_2 | ILL_Plus_right_1 | ILL_Plus_right_2 
             | ILL_Weakening | ILL_Contraction | ILL_Dereliction ->
                 (* Frontend has already specified a specific rule, don't override it *)
-                let () = Printf.printf "DEBUG: Preserving specific rule: %s\n" (Ill_rule_request.rule_name rule_request.rule) in
                 rule_request
             | _ ->
                 (* Use intelligent rule selection for generic or ambiguous rules *)
-                let () = Printf.printf "DEBUG: Using rule inference for: %s\n" (Ill_rule_request.rule_name rule_request.rule) in
                 Ill_rule_request.infer_rule_from_side_and_formula rule_request ill_sequent
         in
-        let () = Printf.printf "DEBUG: Final rule: %s\n" (Ill_rule_request.rule_name final_rule_request.rule) in
         
         (* Apply the final rule *)
         apply_ill_rule_internal final_rule_request ill_sequent notations
@@ -682,7 +678,7 @@ and apply_weakening_rule rule_req ill_seq =
          let subproof = ILL_Hypothesis_proof premise in
          
          (* Return weakening proof *)
-         ILL_Weakening_proof (gamma_before @ gamma_after, exp_formula, ill_seq.goal, subproof)
+         ILL_Weakening_proof (ill_seq.context, exp_formula, ill_seq.goal, subproof)
          
      | _ -> raise (ILL_Rule_Application_Exception (true, "Weakening rule requires !A formula at specified position")))
 
@@ -760,7 +756,7 @@ and apply_dereliction_rule rule_req ill_seq =
          let subproof = ILL_Hypothesis_proof premise in
          
          (* Return dereliction proof *)
-         ILL_Dereliction_proof (gamma_before @ gamma_after, exp_formula, ill_seq.goal, subproof)
+         ILL_Dereliction_proof (ill_seq.context, exp_formula, ill_seq.goal, subproof)
          
      | _ -> raise (ILL_Rule_Application_Exception (true, "Dereliction rule requires !A formula at specified position")))
 
