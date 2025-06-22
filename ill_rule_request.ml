@@ -78,7 +78,8 @@ let rec ill_formula_to_raw = function
 *)
 type ill_rule = 
     | ILL_Axiom
-    | ILL_One
+    | ILL_One_right      (* 1R: ⊢ 1 *)
+    | ILL_One_left       (* 1L: Γ ⊢ A / Γ,1 ⊢ A *)
     | ILL_Top
     | ILL_Tensor
     | ILL_Tensor_left
@@ -127,11 +128,17 @@ let can_apply_rule rule ill_seq =
          | [Litt a], Litt b when a = b -> (true, "")
          | _ -> (false, "Axiom rule requires context A and goal A"))
     
-    | ILL_One ->
-        (* One rule requires empty context and goal 1 *)
+    | ILL_One_right ->
+        (* One right rule requires empty context and goal 1 *)
         (match ill_seq.context, ill_seq.goal with
          | [], One -> (true, "")
-         | _ -> (false, "One rule requires empty context and goal 1"))
+         | _ -> (false, "One right rule requires empty context and goal 1"))
+    
+    | ILL_One_left ->
+        (* One left rule requires 1 in context *)
+        let has_one = List.exists (function One -> true | _ -> false) ill_seq.context in
+        if has_one then (true, "")
+        else (false, "One left rule requires 1 in context")
     
     | ILL_Top ->
         (* Top rule always applicable with goal ⊤ *)
@@ -314,9 +321,19 @@ let apply_rule_to_sequent rule_req ill_seq =
         (* Axiom has no premises *)
         []
     
-    | ILL_One ->
-        (* One rule has no premises *)
+    | ILL_One_right ->
+        (* One right rule has no premises *)
         []
+    
+    | ILL_One_left ->
+        (* One left: Γ,1,Δ ⊢ A becomes Γ,Δ ⊢ A *)
+        let rec remove_first_one acc = function
+            | [] -> acc
+            | One :: rest -> acc @ rest
+            | f :: rest -> remove_first_one (acc @ [f]) rest
+        in
+        let updated_context = remove_first_one [] ill_seq.context in
+        [{ context = updated_context; goal = ill_seq.goal }]
     
     | ILL_Top ->
         (* Top rule has no premises *)
@@ -468,7 +485,8 @@ let rule_from_json json =
     | `Assoc assoc_list ->
         (match List.assoc_opt "rule" assoc_list with
          | Some (`String "ill_axiom") -> ILL_Axiom
-         | Some (`String "ill_one") -> ILL_One
+         | Some (`String "ill_one_right") -> ILL_One_right
+         | Some (`String "ill_one_left") -> ILL_One_left
          | Some (`String "ill_top") -> ILL_Top
          | Some (`String "ill_tensor_right") -> ILL_Tensor
          | Some (`String "ill_tensor") -> ILL_Tensor
@@ -562,7 +580,8 @@ let from_json_deprecated json =
 *)
 let rule_to_json = function
     | ILL_Axiom -> `String "ill_axiom"
-    | ILL_One -> `String "ill_one"
+    | ILL_One_right -> `String "ill_one_right"
+    | ILL_One_left -> `String "ill_one_left"
     | ILL_Top -> `String "ill_top"
     | ILL_Tensor -> `String "ill_tensor_right"
     | ILL_Tensor_left -> `String "ill_tensor_left"
@@ -612,6 +631,8 @@ and infer_left_rule rule_req ill_seq =
     | Some pos when pos < List.length ill_seq.context ->
         let clicked_formula = List.nth ill_seq.context pos in
         (match clicked_formula with
+         | One ->
+             { rule_req with rule = ILL_One_left }
          | Tensor (_, _) -> 
              { rule_req with rule = ILL_Tensor_left }
          | With (_, _) -> 
@@ -642,7 +663,7 @@ and infer_left_rule rule_req ill_seq =
 (* Infer which right rule to apply based on the goal formula *)
 and infer_right_rule rule_req ill_seq =
     match ill_seq.goal with
-    | One -> { rule_req with rule = ILL_One }
+    | One -> { rule_req with rule = ILL_One_right }
     | Top -> { rule_req with rule = ILL_Top }
     | Tensor (_, _) -> { rule_req with rule = ILL_Tensor }
     | With (_, _) -> { rule_req with rule = ILL_With_right }
@@ -663,7 +684,8 @@ and infer_right_rule rule_req ill_seq =
 *)
 let rule_description = function
     | ILL_Axiom -> "Axiom rule: A ⊢ A"
-    | ILL_One -> "One introduction: ⊢ 1"  
+    | ILL_One_right -> "One right: ⊢ 1"  
+    | ILL_One_left -> "One left: Γ,1 ⊢ A / Γ ⊢ A"
     | ILL_Top -> "Top introduction: Γ ⊢ ⊤"
     | ILL_Tensor -> "Tensor introduction: Γ,Δ ⊢ A⊗B / Γ ⊢ A & Δ ⊢ B"
     | ILL_Tensor_left -> "Tensor elimination: Γ,A⊗B,Δ ⊢ C / Γ,A,B,Δ ⊢ C"
@@ -687,7 +709,8 @@ let rule_description = function
 *)
 let rule_name = function
     | ILL_Axiom -> "ax"
-    | ILL_One -> "1"
+    | ILL_One_right -> "1R"
+    | ILL_One_left -> "1L"
     | ILL_Top -> "⊤"
     | ILL_Tensor -> "⊗"
     | ILL_Tensor_left -> "⊗L"
@@ -713,7 +736,8 @@ let rule_name = function
 *)
 let rule_to_json_string = function
     | ILL_Axiom -> "ill_axiom"
-    | ILL_One -> "ill_one"
+    | ILL_One_right -> "ill_one_right"
+    | ILL_One_left -> "ill_one_left"
     | ILL_Top -> "ill_top"
     | ILL_Tensor -> "ill_tensor_right"
     | ILL_Tensor_left -> "ill_tensor_left"
@@ -738,7 +762,8 @@ let rule_to_json_string = function
 *)
 let rule_from_json_string = function
     | "ill_axiom" -> ILL_Axiom
-    | "ill_one" -> ILL_One
+    | "ill_one_right" -> ILL_One_right
+    | "ill_one_left" -> ILL_One_left
     | "ill_top" -> ILL_Top
     | "ill_tensor_right" -> ILL_Tensor
     | "ill_tensor_left" -> ILL_Tensor_left

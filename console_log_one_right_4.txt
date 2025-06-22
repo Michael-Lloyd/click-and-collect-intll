@@ -1,0 +1,92 @@
+This page is in Almost Standards Mode. Page layout may be impacted. For Standards Mode use “<!DOCTYPE html>”. localhost:3000
+Loading failed for the <script> with source “https://www.googletagmanager.com/gtag/js?id=G-6M0JK9PWN1”. localhost:3000:51:109
+[ILL-MODE] setupFormulaInteraction called, formula: 
+Object { type: "one" }
+ill-mode.js:619:17
+[ILL-MODE] $li element: 
+<li>
+ill-mode.js:620:17
+[ILL-MODE] options: 
+Object { withInteraction: true, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+ill-mode.js:621:17
+[RULE-ENGINE] setupFormulaInteraction called for formula: 
+Object { type: "one" }
+rule-engine.js:111:17
+[RULE-ENGINE] Formula list classes: commaList cons ui-sortable isLeftSide: false rule-engine.js:115:17
+[ILL-MODE] getRules called for: 
+Object { type: "one" }
+ options: 
+Object { withInteraction: true, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+ isLeftSide: false $li: 
+Object { 0: li, length: 1 }
+ill-mode.js:25:17
+[ILL-MODE] getRules: Getting interactive rules ill-mode.js:33:21
+[ILL-MODE] getInteractiveRules called for formula: 
+Object { type: "one" }
+ isLeftSide: false $li exists: true ill-mode.js:52:17
+[ILL-MODE] Processing one formula, isLeftSide: false ill-mode.js:107:25
+[ILL-MODE] One formula is on right side ill-mode.js:109:29
+[ILL-MODE] Found sequent div ill-mode.js:115:37
+[ILL-MODE] Sequent div HTML: <span class="turnstile clickable">⊢</span><ul class="commaList cons ui-sortable"><span class="first-point"></span><li><span class="main-formula"><span class="primaryConnector">1</span></span><span class="comma"></span></li></ul> ill-mode.js:116:37
+[ILL-MODE] All UL elements in sequent div: 
+Array [ "commaList cons ui-sortable" ]
+ill-mode.js:117:37
+[ILL-MODE] Looking for ul.hyp, found: false ill-mode.js:121:37
+[ILL-MODE] Trying alternative selector for hypothesis list ill-mode.js:125:41
+[ILL-MODE] Found .hyp elements: 0 ill-mode.js:128:41
+[ILL-MODE] Current formula parent UL classes: commaList cons ui-sortable ill-mode.js:135:37
+[ILL-MODE] Is current formula in cons list?: true ill-mode.js:136:37
+[ILL-MODE] Current formula is in cons list, looking for hyp sibling ill-mode.js:141:41
+[ILL-MODE] Found hyp sibling: false ill-mode.js:143:41
+[ILL-MODE] Found turnstile: true ill-mode.js:147:45
+[ILL-MODE] Found UL before turnstile: false classes: undefined ill-mode.js:150:49
+[ILL-MODE] One formula not clickable ill-mode.js:172:25
+[RULE-ENGINE] Got rules: 
+Array []
+rule-engine.js:117:17
+[ILL-MODE] Setting up comma interaction ill-mode.js:630:25
+[ILL-MODE] setupFormulaInteraction called, formula: 
+Object { type: "one" }
+ill-mode.js:619:17
+[ILL-MODE] $li element: 
+<li>
+ill-mode.js:620:17
+[ILL-MODE] options: 
+Object { withInteraction: true, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+ill-mode.js:621:17
+[RULE-ENGINE] setupFormulaInteraction called for formula: 
+Object { type: "one" }
+rule-engine.js:111:17
+[RULE-ENGINE] Formula list classes: commaList cons ui-sortable isLeftSide: false rule-engine.js:115:17
+[ILL-MODE] getRules called for: 
+Object { type: "one" }
+ options: 
+Object { withInteraction: true, exportButtons: true, checkProvability: true, autoReverse: {…}, intuitionisticMode: {…}, cutMode: {…}, proofTransformation: {…}, notations: {…} }
+ isLeftSide: false $li: 
+Object { 0: li, length: 1 }
+ill-mode.js:25:17
+[ILL-MODE] getRules: Getting interactive rules ill-mode.js:33:21
+[ILL-MODE] getInteractiveRules called for formula: 
+Object { type: "one" }
+ isLeftSide: false $li exists: true ill-mode.js:52:17
+[ILL-MODE] Processing one formula, isLeftSide: false ill-mode.js:107:25
+[ILL-MODE] One formula is on right side ill-mode.js:109:29
+[ILL-MODE] Found sequent div ill-mode.js:115:37
+[ILL-MODE] Sequent div HTML: <span class="turnstile clickable">⊢</span><ul class="commaList cons ui-sortable"><span class="first-point"></span><li><span class="main-formula"><span class="primaryConnector">1</span></span><span class="comma"></span></li></ul> ill-mode.js:116:37
+[ILL-MODE] All UL elements in sequent div: 
+Array [ "commaList cons ui-sortable" ]
+ill-mode.js:117:37
+[ILL-MODE] Looking for ul.hyp, found: false ill-mode.js:121:37
+[ILL-MODE] Trying alternative selector for hypothesis list ill-mode.js:125:41
+[ILL-MODE] Found .hyp elements: 0 ill-mode.js:128:41
+[ILL-MODE] Current formula parent UL classes: commaList cons ui-sortable ill-mode.js:135:37
+[ILL-MODE] Is current formula in cons list?: true ill-mode.js:136:37
+[ILL-MODE] Current formula is in cons list, looking for hyp sibling ill-mode.js:141:41
+[ILL-MODE] Found hyp sibling: false ill-mode.js:143:41
+[ILL-MODE] Found turnstile: true ill-mode.js:147:45
+[ILL-MODE] Found UL before turnstile: false classes: undefined ill-mode.js:150:49
+[ILL-MODE] One formula not clickable ill-mode.js:172:25
+[RULE-ENGINE] Got rules: 
+Array []
+rule-engine.js:117:17
+[ILL-MODE] Setting up comma interaction ill-mode.js:630:25

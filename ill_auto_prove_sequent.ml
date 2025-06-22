@@ -314,7 +314,7 @@ and try_introduction_rules ill_seq config depth start_time =
 *)
 and try_one_rule ill_seq _config _depth _start_time =
     match ill_seq.context with
-    | [] -> ILL_Proof_Found ILL_One_proof
+    | [] -> ILL_Proof_Found ILL_One_right_proof
     | _ -> ILL_Not_Provable
 
 (* Try top rule: Γ ⊢ ⊤ (always succeeds)
@@ -523,6 +523,16 @@ and try_exponential_left_at_position ill_seq inner_formula pos config depth star
 
 and try_left_rule_at_position ill_seq formula pos config depth start_time =
     match formula with
+    | One ->
+        (* One left: Γ,1,Δ ⊢ A becomes Γ,Δ ⊢ A *)
+        let (before, _, after) = split_context_at_position ill_seq.context pos in
+        let new_context = before @ after in
+        let premise = { context = new_context; goal = ill_seq.goal } in
+        (match search_proof premise config (depth + 1) start_time with
+         | ILL_Proof_Found premise_proof ->
+             ILL_Proof_Found (ILL_One_left_proof (ill_seq.context, premise_proof))
+         | result -> result)
+    
     | Tensor (a, b) ->
         (* Tensor left: Γ,A⊗B,Δ ⊢ C becomes Γ,A,B,Δ ⊢ C *)
         let (before, _, after) = split_context_at_position ill_seq.context pos in

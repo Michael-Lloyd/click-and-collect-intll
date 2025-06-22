@@ -26,6 +26,22 @@ are just ASCII forms, and you should convert them to symbols where relevant.
 A |- A 
 ```
 
+## Left 1 
+
+```
+Gamma |- A 
+--------------(1_L)
+Gamma, 1 |- A 
+```
+
+## Right 1 
+
+```
+
+-------(1_R)
+|- 1
+```
+
 ## Left Tensor
 
 ```

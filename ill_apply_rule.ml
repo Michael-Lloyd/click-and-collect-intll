@@ -183,8 +183,10 @@ and apply_ill_rule_internal rule_req ill_seq _notations =
     match rule_req.rule with
     | ILL_Axiom ->
         apply_axiom_rule ill_seq
-    | ILL_One ->
-        apply_one_rule ill_seq
+    | ILL_One_right ->
+        apply_one_right_rule ill_seq
+    | ILL_One_left ->
+        apply_one_left_rule rule_req ill_seq
     | ILL_Top ->
         apply_top_rule ill_seq
     | ILL_Tensor ->
@@ -234,19 +236,61 @@ and apply_axiom_rule ill_seq =
     | _ ->
         raise (ILL_Rule_Application_Exception (true, "Axiom rule requires context A and goal A"))
 
-(* Apply ILL one rule: ⊢ 1
+(* Apply ILL one right rule: ⊢ 1
    @param ill_seq - Sequent with form [] ⊢ 1
-   @return ill_proof - One proof
+   @return ill_proof - One right proof
 *)
-and apply_one_rule ill_seq =
+and apply_one_right_rule ill_seq =
     (* Validate ILL constraint: exactly one formula on RHS *)
     validate_single_conclusion ill_seq;
     
     match ill_seq.context, ill_seq.goal with
     | [], One ->
-        ILL_One_proof
+        ILL_One_right_proof
     | _ ->
-        raise (ILL_Rule_Application_Exception (true, "One rule requires empty context and goal 1"))
+        raise (ILL_Rule_Application_Exception (true, "One right rule requires empty context and goal 1"))
+
+(* Apply ILL one left rule: Γ,1,Δ ⊢ A becomes Γ,Δ ⊢ A
+   @param rule_req - Rule request with position information  
+   @param ill_seq - Sequent with 1 in context
+   @return ill_proof - One left proof
+*)
+and apply_one_left_rule rule_req ill_seq =
+    (* Validate ILL constraint: exactly one formula on RHS *)
+    validate_single_conclusion ill_seq;
+    
+    match rule_req.formula_position with
+    | Some pos when pos >= 0 && pos < List.length ill_seq.context ->
+        (* Use specific position if provided *)
+        let context_list = ill_seq.context in
+        let (before, at_pos, after) = split_list_at_position context_list pos in
+        (match at_pos with
+         | One ->
+             let new_context = before @ after in
+             let premise = { context = new_context; goal = ill_seq.goal } in
+             
+             validate_ill_sequent_constraints premise;
+             let subproof = ILL_Hypothesis_proof premise in
+             ILL_One_left_proof (ill_seq.context, subproof)
+         | _ ->
+             raise (ILL_Rule_Application_Exception (true, 
+                 "Position " ^ string_of_int pos ^ " does not contain 1")))
+    | _ ->
+        (* Fallback to finding first 1 *)
+        let rec find_and_remove_one acc = function
+            | [] -> raise (ILL_Rule_Application_Exception (true, "One left rule requires 1 in context"))
+            | One :: rest ->
+                let new_context = acc @ rest in
+                let premise = { context = new_context; goal = ill_seq.goal } in
+                
+                (* Validate that premise maintains ILL constraints *)
+                validate_ill_sequent_constraints premise;
+                
+                let subproof = ILL_Hypothesis_proof premise in
+                ILL_One_left_proof (ill_seq.context, subproof)
+            | f :: rest -> find_and_remove_one (acc @ [f]) rest
+        in
+        find_and_remove_one [] ill_seq.context
 
 (* Apply ILL top rule: Γ ⊢ ⊤
    @param ill_seq - Sequent with goal ⊤

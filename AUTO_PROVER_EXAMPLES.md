@@ -1,26 +1,99 @@
+# Examples to test ILL Auto-Prover
 
-## Cases where Auto Prover fails in ILL mode: 
+## Multiplicatives  
 
-### (A-oB)*C |- A-o(B*C)
+A⊗B ⊢ B⊗A 
+Status=Pass
 
-Entered proof: 
+(A⊗B)⊗C ⊢ A⊗(B⊗C)
+Status=Pass
 
-```
-(A⊸B)⊗C ⊢ A⊸(B⊗C) 
-```
+A⊸B⊸C ⊢ A⊗B⊸C 
+Status=Pass
 
-Result:
+A⊗(B⊗C) ⊢ (A⊗B)⊗C
+Status=Pass
 
-Proof disappears
+A⊗B⊸C ⊢ A⊸B⊸C 
+Status=Pass
 
-### !(A&B) |- !A*!B: 
+A ⊢ A⊗1
+Status=Pass
 
-Entered proof: 
+1⊸A ⊢ A 
+Status=Pass
 
-```
-!(A&B) ⊢ !A⊗!B 
-```
+A⊗1 ⊢ A
+Status=Fail
 
-Result: 
+A ⊢ 1⊸A 
+Status=Fail
 
-Proof disappears 
+(A⊸B)⊗C ⊢ A⊸(B⊗C)
+Status=Pass
+
+A⊸A
+Status=Pass
+
+A⊸B, B⊸C ⊢ A⊸C
+Status=Pass
+
+A⊗(A⊸B) ⊢ B
+Status=Pass
+
+## Additives 
+
+A&B ⊢ B&A
+Status=Pass
+
+A⊕B ⊢ B⊕A 
+Status=Pass
+
+(A&B)&C ⊢ A&(B&C) 
+Status=Pass
+
+A⊕(B⊕C) ⊢ (A⊕B)⊕C
+Status=Pass
+
+A&(B&C) ⊢ (A&B)&C
+Status=Pass
+
+(A⊕B)⊕C ⊢ A⊕(B⊕C)
+Status=Pass
+
+A ⊢ A&⊤
+Status=Pass
+
+A⊕0 ⊢ A
+Status=Fail
+
+A&⊤ ⊢ A
+Status=Pass
+
+A ⊢ A⊕0 
+Status=Fail
+
+A ⊢ A&A
+Status=Pass
+
+A⊕A ⊢ A
+Status=Pass
+
+A&B ⊢ A
+Status=Pass
+
+A ⊢ A⊕B
+Status=Pass
+
+A ⊢ ⊤
+Status=Pass
+
+0 ⊢ A
+Status=Fail
+
+A⊕(B&C) ⊢ (A⊕B)&(A⊕C)
+Status=Pass
+
+(A&B)⊕(A&C) ⊢ A&(B⊕C)
+Status=Pass
+

@@ -25,7 +25,8 @@ open Ill_sequent
 *)
 type ill_proof =
     | ILL_Axiom_proof of string                                           (* ax: A ⊢ A *)
-    | ILL_One_proof                                                       (* 1: ⊢ 1 *)
+    | ILL_One_right_proof                                                 (* 1R: ⊢ 1 *)
+    | ILL_One_left_proof of formula list * ill_proof                     (* 1L: Γ,1 ⊢ A / Γ ⊢ A *)
     | ILL_Top_proof of formula list                                       (* ⊤: Γ ⊢ ⊤ *)
     | ILL_Tensor_proof of formula list * formula * formula * ill_proof * ill_proof  (* ⊗: Γ,Δ ⊢ A⊗B / Γ ⊢ A & Δ ⊢ B *)
     | ILL_Tensor_left_proof of formula list * formula * formula * ill_proof         (* ⊗L: Γ,A⊗B,Δ ⊢ C / Γ,A,B,Δ ⊢ C *)
@@ -57,8 +58,10 @@ exception ILL_Proof_Exception of bool * string;;
 let rec get_conclusion_sequent = function
     | ILL_Axiom_proof atom -> 
         { context = [Litt atom]; goal = Litt atom }
-    | ILL_One_proof -> 
+    | ILL_One_right_proof -> 
         { context = []; goal = One }
+    | ILL_One_left_proof (context, premise_proof) -> 
+        { context = context; goal = (get_conclusion_sequent premise_proof).goal }
     | ILL_Top_proof context -> 
         { context = context; goal = Top }
     | ILL_Tensor_proof (context, f1, f2, _, _) -> 
@@ -107,7 +110,8 @@ let rec get_conclusion_sequent = function
 *)
 let get_premises = function
     | ILL_Axiom_proof _ -> []
-    | ILL_One_proof -> []
+    | ILL_One_right_proof -> []
+    | ILL_One_left_proof (_, p) -> [p]
     | ILL_Top_proof _ -> []
     | ILL_Tensor_proof (_, _, _, p1, p2) -> [p1; p2]
     | ILL_Tensor_left_proof (_, _, _, p) -> [p]
@@ -134,7 +138,8 @@ let get_premises = function
 *)
 let set_premises proof new_premises = match proof, new_premises with
     | ILL_Axiom_proof _, [] -> proof
-    | ILL_One_proof, [] -> proof
+    | ILL_One_right_proof, [] -> proof
+    | ILL_One_left_proof (ctx, _), [p] -> ILL_One_left_proof (ctx, p)
     | ILL_Top_proof _, [] -> proof
     | ILL_Tensor_proof (ctx, f1, f2, _, _), [p1; p2] -> ILL_Tensor_proof (ctx, f1, f2, p1, p2)
     | ILL_Tensor_left_proof (ctx, f1, f2, _), [p] -> ILL_Tensor_left_proof (ctx, f1, f2, p)
@@ -167,8 +172,12 @@ let get_rule_request proof =
         { rule = ILL_Axiom; formula_position = None; side = None; 
           context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
     
-    | ILL_One_proof -> 
-        { rule = ILL_One; formula_position = None; side = None; 
+    | ILL_One_right_proof -> 
+        { rule = ILL_One_right; formula_position = None; side = None; 
+          context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
+    
+    | ILL_One_left_proof (_, _) -> 
+        { rule = ILL_One_left; formula_position = None; side = None; 
           context_split = None; sequent_side = None; cut_formula = None; cut_position = None }
     
     | ILL_Top_proof _ -> 
@@ -271,10 +280,18 @@ and from_sequent_and_rule_request_and_premises ill_seq rule_request premises =
          | [Litt a], Litt b when a = b -> ILL_Axiom_proof a
          | _ -> raise (ILL_Proof_Exception (false, "Invalid axiom: context and goal must match")))
     
-    | ILL_One, [] ->
+    | ILL_One_right, [] ->
         (match ill_seq.context, ill_seq.goal with
-         | [], One -> ILL_One_proof
-         | _ -> raise (ILL_Proof_Exception (false, "Invalid one rule: context must be empty and goal must be 1")))
+         | [], One -> ILL_One_right_proof
+         | _ -> raise (ILL_Proof_Exception (false, "Invalid one right rule: context must be empty and goal must be 1")))
+    
+    | ILL_One_left, [premise] ->
+        (* Context should contain 1 *)
+        let has_one = List.exists (function One -> true | _ -> false) ill_seq.context in
+        if has_one then
+            ILL_One_left_proof (ill_seq.context, premise)
+        else
+            raise (ILL_Proof_Exception (false, "Invalid one left rule: context must contain 1"))
     
     | ILL_Top, [] ->
         (match ill_seq.goal with
@@ -397,7 +414,8 @@ and from_sequent_and_rule_request_and_premises ill_seq rule_request premises =
 let rec is_complete_proof = function
     | ILL_Hypothesis_proof _ -> false  (* Open hypothesis *)
     | ILL_Axiom_proof _ -> true
-    | ILL_One_proof -> true
+    | ILL_One_right_proof -> true
+    | ILL_One_left_proof (_, p) -> is_complete_proof p
     | ILL_Top_proof _ -> true
     | ILL_Tensor_proof (_, _, _, p1, p2) -> is_complete_proof p1 && is_complete_proof p2
     | ILL_Tensor_left_proof (_, _, _, p) -> is_complete_proof p
@@ -425,7 +443,8 @@ let rec is_valid_proof proof =
     match proof with
     | ILL_Hypothesis_proof _ -> true  (* Hypotheses are always valid *)
     | ILL_Axiom_proof _ -> true       (* TODO: Check axiom validity *)
-    | ILL_One_proof -> true
+    | ILL_One_right_proof -> true
+    | ILL_One_left_proof (_, p) -> is_valid_proof p
     | ILL_Top_proof _ -> true
     | ILL_Tensor_proof (_, _, _, p1, p2) -> is_valid_proof p1 && is_valid_proof p2
     | ILL_Tensor_left_proof (_, _, _, p) -> is_valid_proof p
@@ -548,7 +567,8 @@ let rec from_json json =
 let rec count_inference_rules = function
     | ILL_Hypothesis_proof _ -> 0
     | ILL_Axiom_proof _ -> 1
-    | ILL_One_proof -> 1
+    | ILL_One_right_proof -> 1
+    | ILL_One_left_proof (_, p) -> 1 + count_inference_rules p
     | ILL_Top_proof _ -> 1
     | ILL_Tensor_proof (_, _, _, p1, p2) -> 1 + count_inference_rules p1 + count_inference_rules p2
     | ILL_Tensor_left_proof (_, _, _, p) -> 1 + count_inference_rules p
@@ -573,7 +593,8 @@ let rec count_inference_rules = function
 let rec count_open_hypotheses = function
     | ILL_Hypothesis_proof _ -> 1
     | ILL_Axiom_proof _ -> 0
-    | ILL_One_proof -> 0
+    | ILL_One_right_proof -> 0
+    | ILL_One_left_proof (_, p) -> count_open_hypotheses p
     | ILL_Top_proof _ -> 0
     | ILL_Tensor_proof (_, _, _, p1, p2) -> count_open_hypotheses p1 + count_open_hypotheses p2
     | ILL_Tensor_left_proof (_, _, _, p) -> count_open_hypotheses p

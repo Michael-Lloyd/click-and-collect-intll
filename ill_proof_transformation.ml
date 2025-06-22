@@ -36,12 +36,15 @@ let can_commute_with_cut_left _cut_formula_position cut_formula = function
         Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: Hypothesis goal doesn't match cut formula - INVALID\n%!";
         Printf.eprintf "[ILL-TRANSFORM] Hypothesis context: %d formulas, goal: (formula), cut formula: (formula)\n%!" (List.length sequent.context);
         false, "Hypothesis doesn't prove cut formula"
-    | ILL_One_proof when cut_formula = One -> 
-        Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: One proof matches cut formula One - VALID\n%!";
+    | ILL_One_right_proof when cut_formula = One -> 
+        Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: One right proof matches cut formula One - VALID\n%!";
         true, "Eliminate 1-cut"
-    | ILL_One_proof -> 
-        Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: One proof doesn't match cut formula - INVALID\n%!";
-        false, "One rule doesn't match cut formula"
+    | ILL_One_right_proof -> 
+        Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: One right proof doesn't match cut formula - INVALID\n%!";
+        false, "One right rule doesn't match cut formula"
+    | ILL_One_left_proof (_, _) ->
+        (* One left can be commuted with cut *)
+        true, "Commute with 1L rule"
     | ILL_Top_proof _ when cut_formula = Top -> 
         Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_left: Top proof matches cut formula Top - VALID\n%!";
         true, "Commute with ⊤ rule"
@@ -122,10 +125,15 @@ let can_commute_with_cut_right cut_context = function
          | _ ->
              Printf.eprintf "[ILL-TRANSFORM] can_commute_with_cut_right: Hypothesis proof is incomplete\n%!";
              false, "Cannot eliminate cut: right side is an incomplete hypothesis")
-    | ILL_One_proof -> 
+    | ILL_One_right_proof -> 
         (match cut_context with 
          | [One] -> true, "Eliminate 1-cut"
-         | _ -> false, "One rule doesn't match cut context")
+         | _ -> false, "One right rule doesn't match cut context")
+    | ILL_One_left_proof (context, _) when 
+        (match cut_context with [] -> true | cut_formula :: _ -> not (List.mem cut_formula context)) -> 
+        true, "Commute with 1L rule"
+    | ILL_One_left_proof (_, _) ->
+        false, "Cannot commute with 1L rule due to context conflict"
     | ILL_Top_proof _ -> 
         (match cut_context with 
          | [Top] -> true, "Commute with ⊤ rule"
@@ -249,8 +257,8 @@ let get_transform_options = function
         Printf.eprintf "[ILL-TRANSFORM] get_transform_options: Analyzing cut proof\n%!";
         Printf.eprintf "[ILL-TRANSFORM] Head context: %d formulas, tail context: %d formulas\n%!" (List.length head_ctx) (List.length tail_ctx);
         Printf.eprintf "[ILL-TRANSFORM] Cut formula: (formula type), Left proof type: %s, Right proof type: %s\n%!" 
-            (match left_proof with | ILL_Axiom_proof _ -> "Axiom" | ILL_Hypothesis_proof _ -> "Hypothesis" | ILL_One_proof -> "One" | ILL_Top_proof _ -> "Top" | ILL_Tensor_proof _ -> "Tensor" | ILL_Tensor_left_proof _ -> "TensorLeft" | ILL_With_left_1_proof _ -> "WithLeft1" | ILL_With_left_2_proof _ -> "WithLeft2" | ILL_With_right_proof _ -> "WithRight" | ILL_Plus_left_proof _ -> "PlusLeft" | ILL_Plus_right_1_proof _ -> "PlusRight1" | ILL_Plus_right_2_proof _ -> "PlusRight2" | ILL_Lollipop_proof _ -> "Lollipop" | ILL_Lollipop_left_proof _ -> "LollipopLeft" | ILL_Cut_proof _ -> "Cut" | ILL_Weakening_proof _ -> "Weakening" | ILL_Contraction_proof _ -> "Contraction" | ILL_Dereliction_proof _ -> "Dereliction" | ILL_Promotion_proof _ -> "Promotion")
-            (match right_proof with | ILL_Axiom_proof _ -> "Axiom" | ILL_Hypothesis_proof _ -> "Hypothesis" | ILL_One_proof -> "One" | ILL_Top_proof _ -> "Top" | ILL_Tensor_proof _ -> "Tensor" | ILL_Tensor_left_proof _ -> "TensorLeft" | ILL_With_left_1_proof _ -> "WithLeft1" | ILL_With_left_2_proof _ -> "WithLeft2" | ILL_With_right_proof _ -> "WithRight" | ILL_Plus_left_proof _ -> "PlusLeft" | ILL_Plus_right_1_proof _ -> "PlusRight1" | ILL_Plus_right_2_proof _ -> "PlusRight2" | ILL_Lollipop_proof _ -> "Lollipop" | ILL_Lollipop_left_proof _ -> "LollipopLeft" | ILL_Cut_proof _ -> "Cut" | ILL_Weakening_proof _ -> "Weakening" | ILL_Contraction_proof _ -> "Contraction" | ILL_Dereliction_proof _ -> "Dereliction" | ILL_Promotion_proof _ -> "Promotion");
+            (match left_proof with | ILL_Axiom_proof _ -> "Axiom" | ILL_Hypothesis_proof _ -> "Hypothesis" | ILL_One_right_proof -> "OneRight" | ILL_One_left_proof _ -> "OneLeft" | ILL_Top_proof _ -> "Top" | ILL_Tensor_proof _ -> "Tensor" | ILL_Tensor_left_proof _ -> "TensorLeft" | ILL_With_left_1_proof _ -> "WithLeft1" | ILL_With_left_2_proof _ -> "WithLeft2" | ILL_With_right_proof _ -> "WithRight" | ILL_Plus_left_proof _ -> "PlusLeft" | ILL_Plus_right_1_proof _ -> "PlusRight1" | ILL_Plus_right_2_proof _ -> "PlusRight2" | ILL_Lollipop_proof _ -> "Lollipop" | ILL_Lollipop_left_proof _ -> "LollipopLeft" | ILL_Cut_proof _ -> "Cut" | ILL_Weakening_proof _ -> "Weakening" | ILL_Contraction_proof _ -> "Contraction" | ILL_Dereliction_proof _ -> "Dereliction" | ILL_Promotion_proof _ -> "Promotion")
+            (match right_proof with | ILL_Axiom_proof _ -> "Axiom" | ILL_Hypothesis_proof _ -> "Hypothesis" | ILL_One_right_proof -> "OneRight" | ILL_One_left_proof _ -> "OneLeft" | ILL_Top_proof _ -> "Top" | ILL_Tensor_proof _ -> "Tensor" | ILL_Tensor_left_proof _ -> "TensorLeft" | ILL_With_left_1_proof _ -> "WithLeft1" | ILL_With_left_2_proof _ -> "WithLeft2" | ILL_With_right_proof _ -> "WithRight" | ILL_Plus_left_proof _ -> "PlusLeft" | ILL_Plus_right_1_proof _ -> "PlusRight1" | ILL_Plus_right_2_proof _ -> "PlusRight2" | ILL_Lollipop_proof _ -> "Lollipop" | ILL_Lollipop_left_proof _ -> "LollipopLeft" | ILL_Cut_proof _ -> "Cut" | ILL_Weakening_proof _ -> "Weakening" | ILL_Contraction_proof _ -> "Contraction" | ILL_Dereliction_proof _ -> "Dereliction" | ILL_Promotion_proof _ -> "Promotion");
         
         let cut_position = List.length head_ctx in
         let _ = tail_ctx in  (* TODO: Use tail_ctx for more sophisticated transformation options *)
@@ -300,7 +308,7 @@ let get_transform_options_as_json proof =
 let expand_axiom = function
     | One -> 
         (* 1 axiom becomes ⊢ 1 rule *)
-        ILL_One_proof
+        ILL_One_right_proof
     
     | Top -> 
         (* ⊤ axiom becomes Γ ⊢ ⊤ rule with any context *)
@@ -402,7 +410,7 @@ let eliminate_cut_left = function
              (* Axiom-cut elimination: just return the right proof with context *)
              right_proof
          
-         | ILL_One_proof when cut_formula = One ->
+         | ILL_One_right_proof when cut_formula = One ->
              (* One-cut elimination: right proof must have empty context where cut formula was *)
              right_proof
          
@@ -535,9 +543,14 @@ let substitute_tensor_in_context tensor_left_proof tensor_right_proof target_pre
             let new_context = substitute_tensor_in_formula_list sequent.context in
             ILL_Hypothesis_proof { sequent with context = new_context }
         
-        | ILL_Axiom_proof _ | ILL_One_proof | ILL_Top_proof _ ->
+        | ILL_Axiom_proof _ | ILL_One_right_proof | ILL_Top_proof _ ->
             (* These have no premises to update *)
             proof
+        
+        | ILL_One_left_proof (ctx, p) ->
+            let new_ctx = substitute_tensor_in_formula_list ctx in
+            let new_p = substitute_in_proof p in
+            ILL_One_left_proof (new_ctx, new_p)
         
         | ILL_Tensor_proof (ctx, f1, f2, p1, p2) ->
             let new_ctx = substitute_tensor_in_formula_list ctx in
@@ -676,8 +689,13 @@ let substitute_formula_in_proof source_formula replacement_formula target_proof 
             (* Axiom proofs use literal strings, but we should check if the atom matches *)
             proof  (* For now, keep unchanged - full implementation might need atom substitution *)
         
-        | ILL_One_proof ->
+        | ILL_One_right_proof ->
             proof  (* No formulas to substitute *)
+        
+        | ILL_One_left_proof (ctx, p) ->
+            let new_ctx = substitute_in_formula_list ctx in
+            let new_p = substitute_in_proof p in
+            ILL_One_left_proof (new_ctx, new_p)
         
         | ILL_Top_proof ctx ->
             let new_ctx = substitute_in_formula_list ctx in
@@ -949,7 +967,7 @@ let apply_transformation transform_req proof =
                 simplify_proof right_proof
             
             (* Remove redundant cut-one combinations *)
-            | ILL_Cut_proof (_, One, _, ILL_One_proof, right_proof) ->
+            | ILL_Cut_proof (_, One, _, ILL_One_right_proof, right_proof) ->
                 Printf.eprintf "[ILL-TRANSFORM] Removing redundant cut-one combination\n%!";
                 simplify_proof right_proof
             
@@ -991,7 +1009,7 @@ let apply_transformation transform_req proof =
                 | One -> 
                     Printf.eprintf "[ILL-TRANSFORM] Applying reversible One rule\n%!";
                     (* One rule is always reversible *)
-                    ILL_One_proof
+                    ILL_One_right_proof
                 | Top ->
                     Printf.eprintf "[ILL-TRANSFORM] Applying reversible Top rule\n%!";
                     (* Top rule is always reversible *)

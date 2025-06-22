@@ -164,7 +164,7 @@ and apply_right_focus focused_seq goal_formula config =
 *)
 and apply_one_right_rule focused_seq config =
     match focused_seq.ill_seq.context with
-    | [] -> Some ILL_One_proof
+    | [] -> Some ILL_One_right_proof
     | _ -> None  (* One rule requires empty context *)
 
 (* Apply top right rule in focused manner.

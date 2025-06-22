@@ -96,9 +96,38 @@ class ILLRuleEngine extends RuleEngine {
                 }
 
             case 'one':
-                // In ILL mode, one rule only applicable on right side with empty context
-                if (!isLeftSide && $li && this.isOneRuleApplicable($li.closest('table'))) {
-                    return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_' + formulaAsJson.type, 'needPosition': false}]}];
+                // In ILL mode, one right rule only applicable on right side with empty context
+                if (!isLeftSide) {
+                    // For the one right rule, we need to check if the context is empty
+                    if ($li) {
+                        let $sequentDiv = $li.closest('div.sequent');
+                        if ($sequentDiv.length > 0) {
+                            // Check if there's a hyp list (left side of turnstile)
+                            let $hypList = $sequentDiv.find('ul.hyp');
+                            
+                            // The key insight: if there's no hyp list at all, the context is empty!
+                            if ($hypList.length === 0) {
+                                // Double-check by looking at all UL elements
+                                let allULs = $sequentDiv.find('ul');
+                                let hasHypList = false;
+                                allULs.each(function() {
+                                    if ($(this).hasClass('hyp')) {
+                                        hasHypList = true;
+                                    }
+                                });
+                                
+                                if (!hasHypList) {
+                                    return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_one_right', 'needPosition': false}]}];
+                                }
+                            } else {
+                                // There is a hyp list, check if it has any formulas
+                                let hypFormulas = $hypList.find('li').length;
+                                if (hypFormulas === 0) {
+                                    return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_one_right', 'needPosition': false}]}];
+                                }
+                            }
+                        }
+                    }
                 }
                 return [];
 
@@ -207,7 +236,8 @@ class ILLRuleEngine extends RuleEngine {
         switch (ruleRequest.rule) {
             case 'ill_axiom':
                 return this.canApplyAxiom(sequent);
-            case 'ill_one':
+            case 'ill_one_right':
+                // One right rule requires empty context and single formula on right
                 return sequent.hyp.length === 0 && sequent.cons.length === 1;
             case 'ill_top':
                 return sequent.cons.length === 1;
@@ -261,18 +291,18 @@ class ILLRuleEngine extends RuleEngine {
     }
 
     /**
-     * Check if one rule is applicable (requires empty context)
+     * Check if one right rule is applicable (requires empty context and goal 1)
      * @param {jQuery} $sequentTable - Sequent table element
-     * @return {boolean} True if one rule can be applied
+     * @return {boolean} True if one right rule can be applied
      */
-    isOneRuleApplicable($sequentTable) {
+    isOneRightRuleApplicable($sequentTable) {
         let sequent = $sequentTable.data('sequent') || $sequentTable.data('sequentWithoutPermutation');
         
         if (!sequent || !sequent.hyp || !sequent.cons || sequent.cons.length !== 1) {
             return false;
         }
 
-        // One rule requires empty context
+        // One right rule requires empty context and goal must be 1
         return sequent.hyp.length === 0;
     }
 
@@ -978,7 +1008,7 @@ const ILL_RULES = {
     'ill_lollipop_right': '⊸<sub>R</sub>',
     'ill_lollipop': '⊸<sub>R</sub>',
     'ill_lollipop_left': '⊸<sub>L</sub>',
-    'ill_one': '1',
+    'ill_one_right': '1<sub>R</sub>',
     'ill_top': '⊤',
     'ill_cut': '<span class="italic">cut</span>',
     'ill_weakening': '!<span class="italic">w</span>',
