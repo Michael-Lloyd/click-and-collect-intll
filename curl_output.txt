@@ -1,4 +1,0 @@
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100   658  100    79  100   579  44084   315k --:--:-- --:--:-- --:--:--  642k
-{"success":false,"is_provable":false,"reason":"Sequent is not provable in ILL"}
