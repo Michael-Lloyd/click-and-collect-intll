@@ -137,8 +137,8 @@ img.export { height: 1em; margin: 0 0.2em -0.2em 0.2em; cursor: pointer; }
 .pedagogic-message .close-button { display: inline-block; cursor: pointer; margin-left: 10px; }
 
 /* RULES */
-.rules .row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; }
-.rules .proof-container { display: inline-block; vertical-align: bottom; }
+.rules .row, .ill-rules .row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; }
+.rules .proof-container, .ill-rules .proof-container { display: inline-block; vertical-align: bottom; }
 
 .section.footer .subsection { display: table; margin: auto; font-size: 0.8em; max-width: none; text-align: center; text-indent: 0; }
 
