@@ -128,6 +128,13 @@ function autoProveSequent($sequentTable) {
     let sequent = $sequentTable.data('sequentWithoutPermutation');
     let notations = getNotations($container);
     
+    // Debug logging for auto-prover request
+    console.log('[ILL Auto-Prover] Sending request to backend:', {
+        intuitionisticMode,
+        sequent,
+        notations,
+        url: '/auto_prove_sequent'
+    });
 
     let $turnstile = $sequentTable.find('.turnstile');
 
@@ -136,19 +143,29 @@ function autoProveSequent($sequentTable) {
         url: '/auto_prove_sequent',
         contentType: 'application/json; charset=utf-8',
         data: compressJson(JSON.stringify({sequent, notations, intuitionisticMode})),
+        timeout: 30000, // 30 second timeout for auto-prover
         beforeSend: function() {
             $turnstile.addClass('loading');
+            console.log('[ILL Auto-Prover] Request started - turnstile loading');
         },
         complete: function() {
             $turnstile.removeClass('loading');
+            console.log('[ILL Auto-Prover] Request completed - turnstile loading removed');
         },
         success: function(data) {
+            console.log('[ILL Auto-Prover] Response received:', data);
+            
             if (data.success) {
+                console.log('[ILL Auto-Prover] Proof found successfully');
                 clearSavedProof();
                 cleanPedagogicMessage($container);
                 let $sequentContainer = removeSequentTable($sequentTable);
                 createSubProof(data['proof'], $sequentContainer, options, ruleEngine);
             } else {
+                console.log('[ILL Auto-Prover] Proof not found:', {
+                    is_provable: data['is_provable'],
+                    reason: data['is_provable'] ? 'Not auto-provable (timeout/complexity)' : 'Not provable'
+                });
                 if (data['is_provable']) {
                     markAsNotAutoProvable($sequentTable);
                 } else {
@@ -156,7 +173,27 @@ function autoProveSequent($sequentTable) {
                 }
             }
         },
-        error: onAjaxError
+        error: function(jqXHR, textStatus, errorThrown) {
+            if (textStatus === 'timeout') {
+                console.error('[ILL Auto-Prover] Request timed out after 30 seconds:', {
+                    sequent,
+                    intuitionisticMode,
+                    status: 'TIMEOUT',
+                    message: 'Auto-prover exceeded 30 second time limit'
+                });
+                // Mark as not auto-provable due to timeout
+                markAsNotAutoProvable($sequentTable);
+            } else {
+                console.error('[ILL Auto-Prover] AJAX error:', {
+                    status: jqXHR.status,
+                    statusText: jqXHR.statusText,
+                    textStatus,
+                    errorThrown,
+                    responseText: jqXHR.responseText
+                });
+                onAjaxError(jqXHR, textStatus, errorThrown);
+            }
+        }
     });
 }
 

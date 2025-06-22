@@ -1,0 +1,45 @@
+This page is in Almost Standards Mode. Page layout may be impacted. For Standards Mode use “<!DOCTYPE html>”. localhost:3000
+Loading failed for the <script> with source “https://www.googletagmanager.com/gtag/js?id=G-6M0JK9PWN1”. localhost:3000:51:109
+[RULE-ENGINE] Setting up main-formula handler, found 1 elements rule-engine.js:126:21
+[RULE-ENGINE] Element HTML: <span class="main-formula hoverable"><span class="left-formula">(A<span class="binary-connector">⊸</span>B)</span><span class="primaryConnector"><span class="binary-connector">⊗</span></span><span class="right-formula">C</span></span> rule-engine.js:127:21
+[RULE-ENGINE] Rules for main-formula: 
+Array [ {…} ]
+rule-engine.js:128:21
+[RULE-ENGINE] Adding single click for main-formula: 
+Object { rule: "ill_tensor_left", needPosition: true }
+rule-engine.js:139:25
+[RULE-ENGINE] Setting up main-formula handler, found 1 elements rule-engine.js:126:21
+[RULE-ENGINE] Element HTML: <span class="main-formula hoverable"><span class="left-formula">A</span><span class="primaryConnector"><span class="binary-connector">⊸</span></span><span class="right-formula">(B<span class="binary-connector">⊗</span>C)</span></span> rule-engine.js:127:21
+[RULE-ENGINE] Rules for main-formula: 
+Array [ {…} ]
+rule-engine.js:128:21
+[RULE-ENGINE] Adding single click for main-formula: 
+Object { rule: "ill_lollipop_right", needPosition: true }
+rule-engine.js:139:25
+[RULE-ENGINE] Setting up main-formula handler, found 1 elements rule-engine.js:126:21
+[RULE-ENGINE] Element HTML: <span class="main-formula hoverable"><span class="left-formula">(A<span class="binary-connector">⊸</span>B)</span><span class="primaryConnector"><span class="binary-connector">⊗</span></span><span class="right-formula">C</span></span> rule-engine.js:127:21
+[RULE-ENGINE] Rules for main-formula: 
+Array [ {…} ]
+rule-engine.js:128:21
+[RULE-ENGINE] Adding single click for main-formula: 
+Object { rule: "ill_tensor_left", needPosition: true }
+rule-engine.js:139:25
+[RULE-ENGINE] Setting up main-formula handler, found 1 elements rule-engine.js:126:21
+[RULE-ENGINE] Element HTML: <span class="main-formula hoverable"><span class="left-formula">A</span><span class="primaryConnector"><span class="binary-connector">⊸</span></span><span class="right-formula">(B<span class="binary-connector">⊗</span>C)</span></span> rule-engine.js:127:21
+[RULE-ENGINE] Rules for main-formula: 
+Array [ {…} ]
+rule-engine.js:128:21
+[RULE-ENGINE] Adding single click for main-formula: 
+Object { rule: "ill_lollipop_right", needPosition: true }
+rule-engine.js:139:25
+[ILL Auto-Prover] Sending request to backend: 
+Object { intuitionisticMode: true, sequent: {…}, notations: [], url: "/auto_prove_sequent" }
+interaction.js:132:13
+[ILL Auto-Prover] Request started - turnstile loading interaction.js:149:21
+[ILL Auto-Prover] Response received: 
+Object { success: false, is_provable: false, reason: "Sequent is not provable in ILL" }
+interaction.js:156:21
+[ILL Auto-Prover] Proof not found: 
+Object { is_provable: false, reason: "Not provable" }
+interaction.js:165:25
+[ILL Auto-Prover] Request completed - turnstile loading removed interaction.js:153:21
