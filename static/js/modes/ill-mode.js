@@ -96,8 +96,11 @@ class ILLRuleEngine extends RuleEngine {
                 }
 
             case 'one':
-                // In ILL mode, one right rule only applicable on right side with empty context
-                if (!isLeftSide) {
+                if (isLeftSide) {
+                    // ILL: Left side one elimination (1_L rule)
+                    return [{'element': 'main-formula', 'onclick': [{'rule': 'ill_one_left', 'needPosition': true}]}];
+                } else {
+                    // In ILL mode, one right rule only applicable on right side with empty context
                     // For the one right rule, we need to check if the context is empty
                     if ($li) {
                         let $sequentDiv = $li.closest('div.sequent');
@@ -1009,6 +1012,7 @@ const ILL_RULES = {
     'ill_lollipop': '⊸<sub>R</sub>',
     'ill_lollipop_left': '⊸<sub>L</sub>',
     'ill_one_right': '1<sub>R</sub>',
+    'ill_one_left': '1<sub>L</sub>',
     'ill_top': '⊤',
     'ill_cut': '<span class="italic">cut</span>',
     'ill_weakening': '!<span class="italic">w</span>',
